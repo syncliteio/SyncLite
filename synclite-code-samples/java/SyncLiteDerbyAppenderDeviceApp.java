@@ -33,7 +33,7 @@ public class SyncLiteDerbyAppenderDeviceApp {
 	public static void appStartup() throws SQLException, ClassNotFoundException {
 		Class.forName("io.synclite.logger.DerbyAppender");
 		Path dbPath = Path.of("test_derby_appender.db");
-		SQLiteAppender.initialize(dbPath, Path.of("synclite_logger.conf"));
+		DerbyAppender.initialize(dbPath, Path.of("synclite_logger.conf"));
 	}	
 	
 	public void myAppBusinessLogic() throws SQLException {

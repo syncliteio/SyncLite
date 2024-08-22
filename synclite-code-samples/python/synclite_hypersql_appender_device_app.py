@@ -6,7 +6,7 @@ props = {
 conn = jaydebeapi.connect("io.synclite.logger.HyperSQLAppender",
                            "jdbc:synclite_hsqldb_appender:c:\\synclite\\python\\data\\test_hypersql_appender.db",
                            props,
-                           "synclite-logger-extended-<version>.jar",)
+                           "synclite-logger-<version>.jar",)
 
 curs = conn.cursor()
 

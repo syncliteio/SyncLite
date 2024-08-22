@@ -33,7 +33,7 @@ public class SyncLiteH2AppenderDeviceApp {
 	public static void appStartup() throws SQLException, ClassNotFoundException {
 		Class.forName("io.synclite.logger.H2Appender");
 		Path dbPath = Path.of("test_h2_appender.db");
-		SQLiteAppender.initialize(dbPath, Path.of("synclite_logger.conf"));
+		H2Appender.initialize(dbPath, Path.of("synclite_logger.conf"));
 	}	
 	
 	public void myAppBusinessLogic() throws SQLException {

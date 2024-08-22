@@ -6,7 +6,7 @@ props = {
 conn = jaydebeapi.connect("io.synclite.logger.H2Appender",
                            "jdbc:synclite_h2_appender:c:\\synclite\\python\\data\\test_h2_appender.db",
                            props,
-                           "synclite-logger-extended-<version>.jar",)
+                           "synclite-logger-<version>.jar",)
 
 curs = conn.cursor()
 
