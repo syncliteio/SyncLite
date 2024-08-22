@@ -1,0 +1,3 @@
+[submodule "synclite-logger-java"]
+	path = synclite-logger-java
+	url = https://github.com/syncliteio/synclite-logger-java
