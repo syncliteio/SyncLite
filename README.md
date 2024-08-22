@@ -28,21 +28,23 @@ Website : https://www.synclite.io
 
 # Build and Deploy
 
-```
-git clone --recurse-submodules git@github.com:syncliteio/SyncLite.git SyncLite
-
-cd SyncLite
-
-mvn -Drevision=dev clean install
-
-```
-Release should be created under SyncLite/target 
+1. Install/Download Apache Maven(3.8.6 or above): https://maven.apache.org/download.cgi
+2. Run following: 
+	```
+	git clone --recurse-submodules git@github.com:syncliteio/SyncLite.git SyncLite
+	
+	cd SyncLite
+	
+	mvn -Drevision=dev clean install
+	
+	```
+3. Release is created under SyncLite/target 
 
 ## Release Structure:
 
 The build process creates following release structure under SyncLite\target: 
 ```
-synclite-platform-<version>
+synclite-platform-dev
 |
 |
 --------lib
