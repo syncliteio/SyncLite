@@ -15,12 +15,15 @@ SyncLite's novel CDC replication framework for embedded databases, is designed t
 {Edge/Desktop/Phone Apps} + {SyncLite Logger + Embedded Databases} ------> { SyncLite Consolidator} -----> {Destination DB/DW/DataLakes}
 ```
 Learn more: 
+
 https://www.synclite.io/synclite/sync-ready-apps
+
 https://www.synclite.io/solutions/gen-ai-search-rag
 
 
 ## Build Streaming Applications For Last Mile Data Integration: 
 SyncLite facilitates development of large-scale data streaming applications through SyncLite Logger, which offers both a Kafka Producer API and SQL API. This allows for the ingestion of massive amounts of data and provides the capability to query the ingested data using the SQL API within applications. Together, SyncLite Logger and SyncLite Consolidator enable seamless last-mile data integration from thousands of streaming application instances into a diverse array of final data destinations.
+
 Learn more: https://www.synclite.io/synclite/last-mile-streaming
 
 
@@ -31,6 +34,7 @@ Learn More: https://www.synclite.io/solutions/smart-database-etl
 
 ## Setup Rapid IoT Data Connectors:
 Effortlessly connect numerous MQTT brokers (IoT gateways) to one or more final data destinations.
+
 Learn More: https://www.synclite.io/solutions/iot-data-connector
 
 # SyncLite Components
@@ -172,7 +176,18 @@ synclite-platform-dev
 --------tools
         |
         |
-        --------synclite-cli    ==> Contains a CLI tool to execute SQL operations on SyncLite databases/devices.
+        --------synclite-cli    ==> CLI tool to execute SQL operations on SyncLite databases/devices.
+	|
+	|
+        --------synclite-dbreader    ==> Smart database ETL/Replication/Migration tool
+	|
+	|
+	--------synclite-qreader     ==> Rapid IoT data connector tool
+	|
+	|
+	--------synclite-job-monitor     ==> Job Monitor tool to manage, monitor and schedule SyncLite jobs.
+ 
+
 
 ```
 
@@ -242,6 +257,10 @@ PostgreSQL server and you will be all set to configure and start a SyncLite cons
 
 15. After a successful trial, if you need to perform another trial, stop the docker containers, and delete contents under /home/synclite to start a fresh trial of a different scenario etc.
 
+16. Open http://localhost:8080/synclite-dbreader (and open http://localhost:8080/synclite-consolidator) to setup database ETL/Replication/Migration pipelines.
+
+17. Open http://localhost:8080/synclite-qreader (and open http://localhost:8080/synclite-consolidator) to setup rapid IoT pipelines.
+    
 Refer documentation at https://www.synclite.io/resources/documentation for more details.
 
 NOTE : For production usage, it is recommended to install OpenJDK11 and Tomcat as a service (or any other application server of your choice) and deploy SyncLite consolidator web archive release, Please refer our documentation at www.synclite.io for detailed installation steps for Windows and Ubuntu.
