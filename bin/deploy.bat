@@ -7,9 +7,9 @@ set "PARENT_DIR=%~dp0"
 curl -o apache-tomcat-9.0.93.zip %URL%
 
 REM Extract the zip file using expand
-REM expand -r openjdk-11+28_windows-x64_bin.zip -d %PARENT_DIR%
 powershell -Command "Add-Type -A 'System.IO.Compression.FileSystem'; [System.IO.Compression.ZipFile]::ExtractToDirectory('apache-tomcat-9.0.93.zip', '%PARENT_DIR%')"
 
+del apache-tomcat-9.0.93.zip
 
 REM Set the URL of the zip file to download
 set URL=https://download.java.net/openjdk/jdk11/ri/openjdk-11+28_windows-x64_bin.zip
@@ -27,7 +27,7 @@ powershell -Command "Add-Type -A 'System.IO.Compression.FileSystem'; [System.IO.
 
 
 REM Clean up the downloaded zip file
-REM del openjdk-11+28_windows-x64_bin.zip
+del openjdk-11+28_windows-x64_bin.zip
 
 echo F | xcopy /Y ..\lib\consolidator\synclite-consolidator-*.war apache-tomcat-9.0.93\webapps\synclite-consolidator.war
 echo F | xcopy /Y ..\sample-apps\jsp-servlet\web\target\*.war apache-tomcat-9.0.93\webapps\synclite-sample-app.war
