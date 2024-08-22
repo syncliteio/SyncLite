@@ -1,0 +1,26 @@
+1. Install OpenJDK 11 or above and make sure $JAVA_HOME is set appropriately.
+
+2. Install package JayDeBeApi
+    
+    pip install JayDeBeApi
+
+3. Create a fresh project directory to try out this app. 
+
+4. Copy synclite-logger-<version>.jar and synclite_logger.conf from the release directory : synclite-platform-<version>/logger/ into your current directory
+
+5. Copy pyhton script files from release directory synclite-platform-<version>/sample-apps/python/ into your current directory.
+
+6. Edit synclite_sqlite_device.py and replace "synclite-logger.jar" in the source code by "synclite-logger-<version>.jar".
+
+7. Make changes to synclite_logger.conf as approproate. 
+
+8. Run synclite_sqlite_device_app.py (or other apps):
+    
+    python synclite_sqlite_device_app.py
+
+    and after it executes you can find the following created in current directory 
+
+    - test_sqlite.db : This is the db file created as specified in the python app. You can enhance the application further to query data as well. 
+    - synclite_<deviceName>_<deviceUUID> : Device/Database directory created which holds the data and log files of this SyncLite device.
+
+9. You can refer or use these applications as a starting point to build your own applications.

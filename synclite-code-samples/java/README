@@ -1,0 +1,22 @@
+1. Install OpenJDK 11 or above and make sure $JAVA_HOME is set appropriately.
+
+2. Create a fresh project directory to try out this app. 
+
+3. Copy synclite-logger-<version>.jar and synclite_logger.conf from the release directory : synclite-platform-<version>/logger/ into your current directory
+
+4. Copy source files from release directory synclite-platform-<version>/sample-apps/java/ into your current directory.
+
+5. Make changes to synclite_logger.conf as approproate. 
+
+6. Compile and run SyncliteSQLiteDeviceApp.java (or any other apps):
+    
+    javac -cp synclite-logger-<version>.jar SyncLiteSQLiteDeviceApp.java
+
+    java -cp synclite-logger-<version>.jar; SyncLiteSQLiteDeviceApp 
+
+    and after it executes you can find the following created in current directory 
+
+    - test_sqlite.db : This is the database file created as specified in the java app. You can enhance the application further to query data as well. 
+    - synclite_<deviceName>_<deviceUUID> : Device/Database directory created which holds the data and log files of this SyncLite device.
+
+7. You can refer or use these applications as a starting point to build your own applications.

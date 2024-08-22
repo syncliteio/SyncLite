@@ -1,3 +1,12 @@
 [submodule "synclite-logger-java"]
 	path = synclite-logger-java
 	url = https://github.com/syncliteio/synclite-logger-java
+[submodule "synclite-consolidator"]
+	path = synclite-consolidator
+	url = https://github.com/syncliteio/synclite-consolidator
+[submodule "synclite-sample-web-app"]
+	path = synclite-sample-web-app
+	url = https://github.com/syncliteio/synclite-sample-web-app
+[submodule "synclite-cli"]
+	path = synclite-cli
+	url = https://github.com/syncliteio/synclite-cli
