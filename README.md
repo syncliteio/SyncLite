@@ -162,16 +162,18 @@ on your Windows/Ubuntu host.
 
 2. (One time) Run deploy.bat(WINDOWS) / deploy.sh (UBUNTU) to deploy the SyncLite consolidator and a SyncLite sample application.
    OR Run docker-deploy.sh (UBUNTU) to deploy a docker container for SyncLite platform.
-
-4. Run start.bat(WINDOWS) / start.sh(UBUNTU) to start tomcat and the deployed SyncLite applications. (Please note the username/password for tomcat manager web console is synclite/synclite)
+   OR Manually deploy the war files on your tomcat server: SyncLite\target\synclite-platform-dev\lib\consolidator\synclite-consolidator-dev.war, SyncLite\target\synclite-platform-dev\sample-apps\jsp-servlet\web\target\synclite-sample-app-dev.war
+   
+3. Run start.bat(WINDOWS) / start.sh(UBUNTU) to start tomcat and the deployed SyncLite applications. (Please note the username/password for tomcat manager web console is synclite/synclite)
    OR Run docker-start.sh to run the docker container (Please check options passed to docker run command e.g. the home directory of the current user is mapped to /root inside docker to persist all the
    SyncLite storage in the native host).
+   OR manually start applications from your tomcat manager console.
 
-4. Open http://localhost:8080/synclite-consolidator to launch SyncLite Consolidator dashboard
+4. Open http://localhost:8080/synclite-consolidator to launch SyncLite Consolidator application
 
-5. Open http://localhost:8080/synclite-sample-app to launch SyncLite sample application 
+5. Open http://localhost:8080/synclite-sample-app to launch SyncLite sample web application 
 
-6. Configure and start SyncLite consolidator job in the SyncLite Consolidator application. You can follow through the "Configure Job" wizard reviewing all the default configuration values. Create databases/devices of any type from the deployed sample web application and run SQL workload. Observe data consolidator in the SyncLite Cosolidator dashboard. You can check device specific data consolidation progress on individual device pages (from "List Devices" page), query destination database on the "Analyze Data" page. 
+6. Configure and start SyncLite consolidator job in the SyncLite Consolidator application. You can follow through the "Configure Job" wizard reviewing all the default configuration values. Create databases/devices of any type from the deployed sample web application and execute SQL workloads on several devices at once specifying the device index range. Observe data consolidator in the SyncLite Cosolidator dashboard. You can check device specific data consolidation progress on individual device pages (from "List Devices" page), query destination database on the "Analyze Data" page. 
 
 7. This release also comes with a CLI client for SyncLite under tools/synclite-cli. You can run synclite.bat(WINDOWS)/synclite.sh(UBUNTU) to start the CLI tool and execute SQL operations which are not only executed/persisted on the native database but also consolidated by the SyncLite consolidator into destination DB.
    - Usage 1 : ```synclite.bat/synclite.sh ==> Will start with DB = <USER.HOME>/synclite/job1/db/test.db, DEVICE_TYPE = SQLITE, CONFIG = <USER.HOME>/synclite/db/synclite_logger.conf```
