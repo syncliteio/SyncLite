@@ -11,6 +11,9 @@
 		<module>synclite-logger-java\logger</module>
 		<module>synclite-cli\client</module>
 		<module>synclite-sample-web-app\web</module>
+		<module>synclite-dbreader\root</module>
+		<module>synclite-qreader\root</module>
+		<module>synclite-job-monitor\root</module>
 	</modules>
 	
 	<build>

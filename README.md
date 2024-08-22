@@ -1,30 +1,54 @@
 # SyncLite - Build Anything Sync Anywhere
 
-SyncLite is an open-source, no-code, real-time, relational data consolidation platform empowering developers to rapidly build data-intensive applications for edge, desktop and mobile environments, with the capability to perform in-app data management,analytics, Gen AI Search/RAG use-cases while enabling real-time data replication/consolidation from numerous application instances into one or more industry leading databases, data warehouses, or data lakes of your choice.
+SyncLite is an open-source, no-code, no-limits relational data consolidation platform empowering developers to rapidly build data intensive applications for edge, desktop and mobile environments.
 
 ```
-{Edge Apps} + {SyncLite Logger + Embedded databases} ------> {Staging Storage} ------> { SyncLite Consolidator} -----> {Destination DB/DW/DataLakes}
+{Edge/Desktop/Phone Apps} + {SyncLite Logger} ------> {Staging Storage} ------> { SyncLite Consolidator} -----> {Destination DB/DW/DataLakes}
 ```
+
+SyncLite enables following scenarios for industry leading databases, data warehouse and data lakes.
 
 ## Build Sync-Ready Applications with Zero-Coding: 
+SyncLite's novel CDC replication framework for embedded databases, is designed to empower general purpose data-intensive applications, Gen AI Search/RAG applications for edge, desktop, and mobile environments. It seamlessly integrates with embedded databases like SQLite, DuckDB, Apache Derby, H2, HyperSQL(HSQLDB), enabling Change Data Capture + transactional, real-time data replication and consolidation from them into a diverse range of industry leading databases, data warehouses, and data lakes, enabling global analytics, AI Search and RAG applications.
 
-SyncLite is the pioneering CDC replication framework for embedded databases, designed to empower general purpose data-intensive applications, GenAI search and RAG applications for edge, desktop, and mobile environments. It seamlessly integrates with embedded databases like SQLite, DuckDB , Apache Derby, H2 Database, HyperSQL(HSQLDB), enabling transactional, real-time data replication and consolidation for them. SyncLite EdgeDB, also known as SyncLite Logger, efficiently performs Change Data Capture (CDC) from numerous application instances built on top of embedded databases. These generated log files are synchronized with SyncLite Consolidator, which replicates and consolidates them into a diverse range of industry leading databases, data warehouses, and data lakes, enabling global analytics, GenAI search and RAG applications.
-Learn more: https://www.synclite.io/synclite/sync-ready-apps
+```
+{Edge/Desktop/Phone Apps} + {SyncLite Logger + Embedded Databases} ------> { SyncLite Consolidator} -----> {Destination DB/DW/DataLakes}
+```
+Learn more: 
+https://www.synclite.io/synclite/sync-ready-apps
+https://www.synclite.io/solutions/gen-ai-search-rag
+
 
 ## Build Streaming Applications For Last Mile Data Integration: 
-SyncLite facilitates development of large-scale data streaming applications through SyncLite Logger, which offers both a Kafka Producer API and SQL API. This allows for the ingestion of massive amounts of data and provides the capability to query the ingested data using the SQL API within applications. Together, SyncLite Logger and SyncLite Consolidator enable seamless last-mile data integration from thousands of streaming application instances into a diverse array of final data destinations, including all the industry leading databases, data warehouses, and data lakes.
+SyncLite facilitates development of large-scale data streaming applications through SyncLite Logger, which offers both a Kafka Producer API and SQL API. This allows for the ingestion of massive amounts of data and provides the capability to query the ingested data using the SQL API within applications. Together, SyncLite Logger and SyncLite Consolidator enable seamless last-mile data integration from thousands of streaming application instances into a diverse array of final data destinations.
 Learn more: https://www.synclite.io/synclite/last-mile-streaming
 
-For more details, check out 
-Website : https://www.synclite.io
+
+## Deploy Smart Database ETL/Replication/Migration Pipelines:
+Set up replication, migration, or incremental ETL pipelines from a diverse range of source databases and raw data files into a diverse range of destinations.
+
+Learn More: https://www.synclite.io/solutions/smart-database-etl
+
+## Setup Rapid IoT Data Connectors:
+Effortlessly connect numerous MQTT brokers (IoT gateways) to one or more final data destinations.
+Learn More: https://www.synclite.io/solutions/iot-data-connector
 
 # SyncLite Components
 
-```SyncLite Logger``` : SyncLite Logger is a lighweight JDBC wrapper built over popular embedded databases (SQLite, DuckDB, Apache Derby, H2, HyperSQL), enabling consuming applications for in-app data management/analytics using one or more embedded databases, while logging all SQL transactional activity into log files and shipping them to one of more configured staging storages like SFTP/S3/MinIO/Kafka/GoogleDrive/MSOneDrive/NFS etc. 
+```SyncLite Logger``` enables 
+	- developers to quickly build sync-ready, robust, responsive, high-performance, low-latency, transactional, data intensive applications for edge/mobile/desktop platforms using their favorite embedded databases (SQLite, DuckDB, Apache Derby, H2, HyperSQL)
 
-```SyncLite Consolidator``` : SyncLite Consolidator is a Java application deployed on an on-premise host or a cloud VM, configured to scan thousands of SyncLite devices/databases and their logs continously from the configured staging storage which are continously uploaded by numerous edge/desktop applications, performing real-time transactional data replication/consolidation into one or more configured databases, data warehouses or data lakes of user's choice.
+	- massive scale data streaming solutions for last mile data integrations into a wide range of industry leading databases, while offering ability to perform real-time analytics using the native embedded databases over streaming data, at the producer end of the pipelines.
 
-```SyncLite Client```: SyncLite Client is a command line tool to operate SyncLite devices, to execute SQL queries and workloads.
+```SyncLite DBReader``` enables data teams and data engineers effortlessly configure and orchestrate many-to-many, highly scalable, incremental/log-based database ETL/replication/migration jobs across a diverse array of databases, data warehouses and data lakes.
+
+```SyncLite QReader``` enables IoT developers integrate vast amounts of data published to message queue brokers, into a diverse array of databases, data warehouses and data lakes, enabling real-time analytics and AI use cases at all three levels: edge, fog and cloud.
+
+```SyncLite Consolidator``` is the centralized application to all the reader/producer tools mentioned above, which receives and consolidates the incoming data and loig files in real-time into one or more databases, data warehouses and data lakes of user’s choice.
+
+```SyncLite JobMonitor``` enables managing, scheduling and monitoring all the SyncLite jobs created on a given host.
+
+```SyncLite Client``` is a command line tool to operate SyncLite devices, to execute SQL queries and workloads.
 
 # Build and Deploy
 
@@ -35,7 +59,7 @@ Website : https://www.synclite.io
 	
 	cd SyncLite
 	
-	mvn -Drevision=dev clean install
+	mvn -Drevision=oss clean install
 	
 	```
 3. Release is created under SyncLite/target 

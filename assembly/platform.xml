@@ -62,6 +62,36 @@
 			<outputDirectory>tools/synclite-cli</outputDirectory>
 		</fileSet>
 		<fileSet>
+			<directory>${project.basedir}/synclite-dbreader/root/web/target
+			</directory>
+			<includes>
+				<include>*.war</include>
+			</includes>
+			<fileMode>755</fileMode>
+			<directoryMode>755</directoryMode>			
+			<outputDirectory>tools/synclite-dbreader</outputDirectory>
+		</fileSet>
+		<fileSet>
+			<directory>${project.basedir}/synclite-qreader/root/web/target
+			</directory>
+			<includes>
+				<include>*.war</include>
+			</includes>
+			<fileMode>755</fileMode>
+			<directoryMode>755</directoryMode>			
+			<outputDirectory>tools/synclite-qreader</outputDirectory>
+		</fileSet>
+		<fileSet>
+			<directory>${project.basedir}/synclite-job-monitor/root/web/target
+			</directory>
+			<includes>
+				<include>*.war</include>
+			</includes>
+			<fileMode>755</fileMode>
+			<directoryMode>755</directoryMode>		
+			<outputDirectory>tools/synclite-job-monitor</outputDirectory>
+		</fileSet>
+		<fileSet>
 			<directory>${project.basedir}/synclite-consolidator/root/core/target/generated-resources</directory>
 			<outputDirectory>license/third-party-software</outputDirectory>
 		</fileSet>

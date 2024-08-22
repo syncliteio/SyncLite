@@ -10,3 +10,12 @@
 [submodule "synclite-cli"]
 	path = synclite-cli
 	url = https://github.com/syncliteio/synclite-cli
+[submodule "synclite-dbreader"]
+	path = synclite-dbreader
+	url = https://github.com/syncliteio/synclite-dbreader
+[submodule "synclite-qreader"]
+	path = synclite-qreader
+	url = https://github.com/syncliteio/synclite-qreader
+[submodule "synclite-job-monitor"]
+	path = synclite-job-monitor
+	url = https://github.com/syncliteio/synclite-job-monitor
