@@ -750,5 +750,8 @@ public class TestKafkaProducer {
 4. SQLite
 5. DuckDB
 
+# Patent
+SyncLite is backed by patented technlogy, more info : https://www.synclite.io/resources/patent  
+
 # Support
 We encourage use of GitHub Discussions for support and feedback.
