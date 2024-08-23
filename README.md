@@ -705,7 +705,7 @@ public class TestKafkaProducer {
 ```
 
 
-# Pre-Built Releases
+# Pre-Built Releases:
 
 ## SyncLite Logger
 
@@ -726,6 +726,29 @@ public class TestKafkaProducer {
 
 2. OR A release zip file can be downloaded from : https://www.synclite.io/resources/download
 
-# Support
+# Supported Systems
 
-We encourage using GitHub Discussions for support and feedback.
+## Source Systems
+1. Edge Applications(Java/Python) +  Embedded Databases (SQLite, DuckDB, Apache Derby, H2, HyperSQL)
+2. Databases : PostgreSQL, MySQL, MongoDB, SQLite
+3. Message Brokers : Eclipse Mosquitto MQTT broker
+4. Data Files : CSV ( stored on FS/S3/MinIO)
+
+## Staging Storages
+1. Local FS
+2. SFTP
+3. S3
+4. MinIO
+5. Kafka
+6. Microsoft OneDrive
+7. Google Drive
+   
+## Destination Systems
+1. PostgreSQL
+2. MySQL
+3. MongoDB
+4. SQLite
+5. DuckDB
+
+# Support
+We encourage use of GitHub Discussions for support and feedback.
