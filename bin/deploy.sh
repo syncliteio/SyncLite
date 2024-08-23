@@ -11,6 +11,9 @@ wget -O "$DESTINATION/apache-tomcat-9.0.93.zip" "$URL" --no-check-certificate
 # Extract the zip file using unzip
 tar -xzf "$DESTINATION/apache-tomcat-9.0.93.zip" -C "$DESTINATION"
 
+# Copy tomcat-users.xml file into extracted tomcat folder
+cp -f tomcat-users.xml apache-tomcat-9.0.93/conf/tomcat-users.xml
+
 # Clean up the downloaded zip file
 rm $DESTINATION/apache-tomcat-9.0.93.zip
 

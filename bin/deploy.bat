@@ -9,6 +9,9 @@ curl -o apache-tomcat-9.0.93.zip %URL%
 REM Extract the zip file using expand
 powershell -Command "Add-Type -A 'System.IO.Compression.FileSystem'; [System.IO.Compression.ZipFile]::ExtractToDirectory('apache-tomcat-9.0.93.zip', '%PARENT_DIR%')"
 
+REM Copy tomcat-users.xml file into extracted tomcat folder
+echo F | xcopy /Y tomcat-users.xml apache-tomcat-9.0.93\conf\tomcat-users.xml
+
 del apache-tomcat-9.0.93.zip
 
 REM Set the URL of the zip file to download

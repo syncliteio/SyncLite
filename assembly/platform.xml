@@ -89,7 +89,7 @@
 			</includes>
 			<fileMode>755</fileMode>
 			<directoryMode>755</directoryMode>		
-			<outputDirectory>tools/synclite-job-monitor</outputDirectory>
+			<outputDirectory>tools/synclite-jobmonitor</outputDirectory>
 		</fileSet>
 		<fileSet>
 			<directory>${project.basedir}/synclite-consolidator/root/core/target/generated-resources</directory>
