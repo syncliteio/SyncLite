@@ -218,38 +218,50 @@ on your Windows/Ubuntu host.
 1. Enter bin directory.
 
 2. (One time) Run deploy.bat(WINDOWS) / deploy.sh (UBUNTU) to deploy the SyncLite consolidator and a SyncLite sample application.
-   OR Run docker-deploy.sh (UBUNTU) to deploy a docker container for SyncLite platform.
-   OR Manually deploy the war files on your tomcat server: SyncLite\target\synclite-platform-dev\lib\consolidator\synclite-consolidator-dev.war, SyncLite\target\synclite-platform-dev\sample-apps\jsp-servlet\web\target\synclite-sample-app-dev.war
    
-3. Run start.bat(WINDOWS) / start.sh(UBUNTU) to start tomcat and the deployed SyncLite applications. (Please note the username/password for tomcat manager web console is synclite/synclite)
+   OR Run docker-deploy.sh (UBUNTU) to deploy a docker container for SyncLite platform.
+
+   OR Manually deploy below war files on your tomcat server:
+   - SyncLite\target\synclite-platform-dev\lib\consolidator\synclite-consolidator-oss.war,
+   - SyncLite\target\synclite-platform-dev\sample-apps\jsp-servlet\web\target\synclite-sample-app-oss.war
+   - SyncLite\target\synclite-platform-dev\tools\synclite-dbreader\synclite-dbreader-oss.war
+   - SyncLite\target\synclite-platform-dev\tools\synclite-dbreader\synclite-qreader-oss.war
+   - SyncLite\target\synclite-platform-dev\tools\synclite-dbreader\synclite-job-monitor-oss.war
+     
+   
+4. Run start.bat(WINDOWS) / start.sh(UBUNTU) to start tomcat and the deployed SyncLite applications. (Please note the username/password for tomcat manager web console is synclite/synclite)
+
    OR Run docker-start.sh to run the docker container (Please check options passed to docker run command e.g. the home directory of the current user is mapped to /root inside docker to persist all the
    SyncLite storage in the native host).
+
    OR manually start applications from your tomcat manager console.
 
-4. Open http://localhost:8080/synclite-consolidator to launch SyncLite Consolidator application
+5. Open tomcat manager console http://localhost:8080/manager (Use synclite/synclite as the default user/password when prompted as set by the deploy script). The manager web console will show all the SyncLite applications deployed. 
 
-5. Open http://localhost:8080/synclite-sample-app to launch SyncLite sample web application 
+6. Open http://localhost:8080/synclite-consolidator to launch SyncLite Consolidator application
 
-6. Configure and start SyncLite consolidator job in the SyncLite Consolidator application. You can follow through the "Configure Job" wizard reviewing all the default configuration values. Create databases/devices of any type from the deployed sample web application and execute SQL workloads on several devices at once specifying the device index range. Observe data consolidator in the SyncLite Cosolidator dashboard. You can check device specific data consolidation progress on individual device pages (from "List Devices" page), query destination database on the "Analyze Data" page. 
+7. Open http://localhost:8080/synclite-sample-app to launch SyncLite sample web application 
 
-7. This release also comes with a CLI client for SyncLite under tools/synclite-cli. You can run synclite.bat(WINDOWS)/synclite.sh(UBUNTU) to start the CLI tool and execute SQL operations which are not only executed/persisted on the native database but also consolidated by the SyncLite consolidator into destination DB.
+8. Configure and start SyncLite consolidator job in the SyncLite Consolidator application. You can follow through the "Configure Job" wizard reviewing all the default configuration values. Create databases/devices of any type from the deployed sample web application and execute SQL workloads on several devices at once specifying the device index range. Observe data consolidator in the SyncLite Cosolidator dashboard. You can check device specific data consolidation progress on individual device pages (from "List Devices" page), query destination database on the "Analyze Data" page. 
+
+9. This release also comes with a CLI client for SyncLite under tools/synclite-cli. You can run synclite.bat(WINDOWS)/synclite.sh(UBUNTU) to start the CLI tool and execute SQL operations which are not only executed/persisted on the native database but also consolidated by the SyncLite consolidator into destination DB.
    - Usage 1 : ```synclite.bat/synclite.sh ==> Will start with DB = <USER.HOME>/synclite/job1/db/test.db, DEVICE_TYPE = SQLITE, CONFIG = <USER.HOME>/synclite/db/synclite_logger.conf```
    - Usage 2 : ```synclite.bat/synclite.sh <path/to/db/file> --device-type <SQLITE|DUCKDB|DERBY|H2|HYPERSQL|STREAMING|SQLITE_APPENDER|DUCKDB_APPENDER|DERBY_APPENDER|H2_APPENDER|HYPERSQL_APPENDER> --config <path/to/synclite/logger/config>```
 
 
-8. Use stop.bat (Windows) / stop.sh(LINUX) to stop SyncLite consolidator job (if running) and tomcat.
+10. Use stop.bat (Windows) / stop.sh(LINUX) to stop SyncLite consolidator job (if running) and tomcat.
    OR RUN docker-stop.sh to stop the docker container.
 
-9. Refer sample_apps and use any of them as a starting point to build your own application.
+11. Refer sample_apps and use any of them as a starting point to build your own application.
 
-10. You can install/use a database of your choice and  perform data consolidation to it (instead of the default SQLite destination)
+12. You can install/use a database of your choice and  perform data consolidation to it (instead of the default SQLite destination)
 Note : Supported destination databases with this OSS version : PostgreSQL, MySQL, MongoDB, SQLite, DuckDB.
 
-11. This release also packages docker scripts to setup PostgreSQL and MySQL to serve as SyncLite destinations.
+13. This release also packages docker scripts to setup PostgreSQL and MySQL to serve as SyncLite destinations.
     - bin/dst/postgresql contains docker-deploy.sh, docker-start.sh and docker-stop.sh
     - bin/dst/mysql contains docker-deploy.sh, docker-start.sh and docker.stop.sh
 
-12. You can deploy your applications on remote hosts/devices and share the local-stage-directory of your respective SyncLite applications with SyncLite Consolidator host via one of the following file staging storages: 
+14. You can deploy your applications on remote hosts/devices and share the local-stage-directory of your respective SyncLite applications with SyncLite Consolidator host via one of the following file staging storages: 
     - SFTP
     - Amazon S3
     - MinIO Object Storage Server
@@ -278,6 +290,8 @@ PostgreSQL server and you will be all set to configure and start a SyncLite cons
 16. Open http://localhost:8080/synclite-dbreader (and open http://localhost:8080/synclite-consolidator) to setup database ETL/Replication/Migration pipelines.
 
 17. Open http://localhost:8080/synclite-qreader (and open http://localhost:8080/synclite-consolidator) to setup rapid IoT pipelines.
+
+18. Open http://localhost:8080/synclite-job-monitor to manage, monitor and schedule various SyncLite jobs.
     
 Refer documentation at https://www.synclite.io/resources/documentation for more details.
 
