@@ -57,7 +57,13 @@ Learn More: https://www.synclite.io/solutions/iot-data-connector
 # Build and Deploy
 
 1. Install/Download Apache Maven(3.8.6 or above): https://maven.apache.org/download.cgi
-2. Run following: 
+2. If you opt to not use the deploy scripts generated in the release which download the prerequisite software : Apache Tomcat and OpenJDK, then manually install them
+	
+ 	a. OpenJDK 11 : https://jdk.java.net/java-se-ri/11
+	
+ 	b. Apache Tomcat 9.0.93 : https://tomcat.apache.org/download-90.cgi
+
+4. Run following: 
 	```
 	git clone --recurse-submodules git@github.com:syncliteio/SyncLite.git SyncLite
 	
@@ -66,7 +72,7 @@ Learn More: https://www.synclite.io/solutions/iot-data-connector
 	mvn -Drevision=oss clean install
 	
 	```
-3. Release is created under SyncLite/target 
+5. Release is created under SyncLite/target 
 
 ## Release Structure:
 
