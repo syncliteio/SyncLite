@@ -3,7 +3,7 @@
 SyncLite is an open-source, no-code, no-limits relational data consolidation platform empowering developers to rapidly build data intensive applications for edge, desktop and mobile environments.
 
 ```
-{Edge/Desktop/Phone Apps} + {SyncLite Logger} ------> {Staging Storage} ------> { SyncLite Consolidator} -----> {Destination DB/DW/DataLakes}
+{Edge/Desktop Apps} + {SyncLite Logger} ---> {Staging Storage} ---> {SyncLite Consolidato} ---> {Destination DB/DW/DataLakes}
 ```
 
 SyncLite enables following scenarios for industry leading databases, data warehouse and data lakes.
@@ -12,7 +12,7 @@ SyncLite enables following scenarios for industry leading databases, data wareho
 SyncLite's novel CDC replication framework for embedded databases, is designed to empower general purpose data-intensive applications, Gen AI Search/RAG applications for edge, desktop, and mobile environments. It seamlessly integrates with embedded databases like SQLite, DuckDB, Apache Derby, H2, HyperSQL(HSQLDB), enabling Change Data Capture + transactional, real-time data replication and consolidation from them into a diverse range of industry leading databases, data warehouses, and data lakes, enabling global analytics, AI Search and RAG applications.
 
 ```
-{Edge/Desktop/Phone Apps} + {SyncLite Logger + Embedded Databases} ------> { SyncLite Consolidator} -----> {Destination DB/DW/DataLakes}
+{Edge/Desktop Apps} + {SyncLite Logger + Embedded Databases} ---> {Staging Storage} ---> {SyncLite Consolidator} ---> {Destination DB/DW/DataLakes}
 ```
 Learn more: 
 
@@ -24,16 +24,28 @@ https://www.synclite.io/solutions/gen-ai-search-rag
 ## Build Streaming Applications For Last Mile Data Integration: 
 SyncLite facilitates development of large-scale data streaming applications through SyncLite Logger, which offers both a Kafka Producer API and SQL API. This allows for the ingestion of massive amounts of data and provides the capability to query the ingested data using the SQL API within applications. Together, SyncLite Logger and SyncLite Consolidator enable seamless last-mile data integration from thousands of streaming application instances into a diverse array of final data destinations.
 
+```
+{Data Streaming Apps} + {SyncLite Logger} ---> {Staging Storage} ---> {SyncLite Consolidator} ---> {Destination DB/DW/DataLakes}
+```
+
 Learn more: https://www.synclite.io/synclite/last-mile-streaming
 
 
 ## Deploy Smart Database ETL/Replication/Migration Pipelines:
 Set up replication, migration, or incremental ETL pipelines from a diverse range of source databases and raw data files into a diverse range of destinations.
 
+```
+{Source Databases} ---> {SyncLite DBReader} ---> {Staging Storage} ---> {SyncLite Consolidator} ---> {Destination DB/DW/DataLakes}
+```
+
 Learn More: https://www.synclite.io/solutions/smart-database-etl
 
 ## Setup Rapid IoT Data Connectors:
 Effortlessly connect numerous MQTT brokers (IoT gateways) to one or more final data destinations.
+
+```
+{IoT Message Brokers} ---> {SyncLite QReader} ---> {Staging Storage} ---> {SyncLite Consolidator} ---> {Destination DB/DW/DataLakes}
+```
 
 Learn More: https://www.synclite.io/solutions/iot-data-connector
 
