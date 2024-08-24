@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 
 # Set the URL of the tar file to download
-URL="https://dlcdn.apache.org/tomcat/tomcat-9/v9.0.93/bin/apache-tomcat-9.0.93.zip"
+URL="https://dlcdn.apache.org/tomcat/tomcat-9/v9.0.93/bin/apache-tomcat-9.0.93.tar.gz"
 # Set the destination directory for the downloaded tar file
 DESTINATION="."
 
 # Download the tar file using curl
-wget -O "$DESTINATION/apache-tomcat-9.0.93.zip" "$URL" --no-check-certificate
+wget -O "$DESTINATION/apache-tomcat-9.0.93.tar.gz" "$URL" --no-check-certificate
 
 # Extract the zip file using unzip
-tar -xzf "$DESTINATION/apache-tomcat-9.0.93.zip" -C "$DESTINATION"
+tar -xzf "$DESTINATION/apache-tomcat-9.0.93.tar.gz" -C "$DESTINATION"
 
 # Copy tomcat-users.xml file into extracted tomcat folder
 cp -f tomcat-users.xml apache-tomcat-9.0.93/conf/tomcat-users.xml
