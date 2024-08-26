@@ -3,7 +3,7 @@
 SyncLite is an open-source, no-code, no-limits relational data consolidation platform empowering developers to rapidly build data intensive applications for edge, desktop and mobile environments.
 
 ```
-{Edge/Desktop Apps} + {SyncLite Logger} ---> {Staging Storage} ---> {SyncLite Consolidato} ---> {Destination DB/DW/DataLakes}
+{Edge/Desktop Apps} + {SyncLite Logger} ---> {Staging Storage} ---> {SyncLite Consolidator} ---> {Destination DB/DW/DataLakes}
 ```
 
 SyncLite enables following scenarios for industry leading databases, data warehouse and data lakes.
@@ -32,7 +32,7 @@ Learn more: https://www.synclite.io/synclite/last-mile-streaming
 
 
 ## Deploy Smart Database ETL/Replication/Migration Pipelines:
-Set up replication, migration, or incremental ETL pipelines from a diverse range of source databases and raw data files into a diverse range of destinations.
+Set up many-to-many, scalable database replication/migration/incremental ETL pipelines from a diverse range of source databases and raw data files into a diverse range of destinations.
 
 ```
 {Source Databases} ---> {SyncLite DBReader} ---> {Staging Storage} ---> {SyncLite Consolidator} ---> {Destination DB/DW/DataLakes}
@@ -57,13 +57,13 @@ Learn More: https://www.synclite.io/solutions/iot-data-connector
   	
 -massive scale data streaming solutions for last mile data integrations into a wide range of industry leading databases, while offering ability to perform real-time analytics using the native embedded databases over streaming data, at the producer end of the pipelines.
 
-```SyncLite DBReader``` enables data teams and data engineers effortlessly configure and orchestrate many-to-many, highly scalable, incremental/log-based database ETL/replication/migration jobs across a diverse array of databases, data warehouses and data lakes.
+```SyncLite DBReader``` enables data teams and data engineers to effortlessly configure and orchestrate many-to-many, highly scalable, incremental/log-based database ETL/replication/migration jobs across a diverse array of databases, data warehouses and data lakes.
 
 ```SyncLite QReader``` enables IoT developers integrate vast amounts of data published to message queue brokers, into a diverse array of databases, data warehouses and data lakes, enabling real-time analytics and AI use cases at all three levels: edge, fog and cloud.
 
 ```SyncLite Consolidator``` is the centralized application to all the reader/producer tools mentioned above, which receives and consolidates the incoming data and loig files in real-time into one or more databases, data warehouses and data lakes of user’s choice.
 
-```SyncLite JobMonitor``` enables managing, scheduling and monitoring all the SyncLite jobs created on a given host.
+```SyncLite JobMonitor``` enables managing, scheduling and monitoring all SyncLite jobs created on a given host.
 
 ```SyncLite Client``` is a command line tool to operate SyncLite devices, to execute SQL queries and workloads.
 
@@ -85,13 +85,13 @@ Learn More: https://www.synclite.io/solutions/iot-data-connector
 	mvn -Drevision=oss clean install
 	
 	```
-5. Release is created under SyncLite/target 
+5. Release is created under SyncLite/target
 
 ## Release Structure:
 
 The build process creates following release structure under SyncLite\target: 
 ```
-synclite-platform-dev
+synclite-platform-<version>
 |
 |
 --------lib
@@ -103,7 +103,7 @@ synclite-platform-dev
 |       |        --------java
 |       |        |        |
 |       |        |        |    
-|       |        |        --------synclite-logger-<version>.jar   ==> SyncLite Logger driver, to add as depependency in your apps
+|       |        |        --------synclite-logger-<version>.jar   ==> SyncLite Logger JDBC driver, to be added as a depependency in your edge apps
 |       |        |
 |       |        |
 |       |        --------synclite_logger.conf  ==> A sample configuration file for SyncLite logger.
@@ -149,7 +149,7 @@ synclite-platform-dev
 |        --------python
 |                |
 |                |
-|                --------*.py    => Python source files  demonstrating SyncLite logger usage.
+|                --------*.py    => Python source files demonstrating SyncLite logger usage.
 |                |
 |                |
 |                --------README
@@ -166,7 +166,7 @@ synclite-platform-dev
 |        --------deploy.bat/deploy.sh    ==> Deployment script for deploying SyncLite consolidator and sample application from the lib directory
 |        |                    
 |        |                        
-|        --------start.bat/start.sh    ==> Launch script to start Apache Tomcat and the deployed SyncLite applications.
+|        --------start.bat/start.sh    ==> Launch script to start tomcat and the deployed SyncLite applications.
 |        |             
 |        |           
 |        --------docker-deploy.sh/docker-start.sh   ==> Deployment and launch scripts for running SyncLite Consolidator inside a docker container. 
@@ -204,7 +204,7 @@ synclite-platform-dev
 	--------synclite-qreader     ==> Rapid IoT data connector tool
 	|
 	|
-	--------synclite-job-monitor     ==> Job Monitor tool to manage, monitor and schedule SyncLite jobs.
+	--------synclite-job-monitor   ==> Job Monitor tool to manage, monitor and schedule SyncLite jobs.
  
 
 
@@ -218,21 +218,21 @@ on your Windows/Ubuntu host.
 
 1. Enter bin directory.
 
-2. (One time) Run deploy.bat(WINDOWS) / deploy.sh (UBUNTU) to deploy the SyncLite consolidator and a SyncLite sample application.
+2. (One time) Run ```deploy.bat```(WINDOWS) / ```deploy.sh``` (UBUNTU) to deploy the SyncLite consolidator and a SyncLite sample application.
    
-   OR Run docker-deploy.sh (UBUNTU) to deploy a docker container for SyncLite platform.
+   OR Run ```docker-deploy.sh``` (UBUNTU) to deploy a docker container for SyncLite platform.
 
    OR Manually deploy below war files on your tomcat server:
-   - SyncLite\target\synclite-platform-dev\lib\consolidator\synclite-consolidator-oss.war,
-   - SyncLite\target\synclite-platform-dev\sample-apps\jsp-servlet\web\target\synclite-sample-app-oss.war
-   - SyncLite\target\synclite-platform-dev\tools\synclite-dbreader\synclite-dbreader-oss.war
-   - SyncLite\target\synclite-platform-dev\tools\synclite-dbreader\synclite-qreader-oss.war
-   - SyncLite\target\synclite-platform-dev\tools\synclite-dbreader\synclite-job-monitor-oss.war
+   - ```SyncLite\target\synclite-platform-dev\lib\consolidator\synclite-consolidator-oss.war```,
+   - ```SyncLite\target\synclite-platform-dev\sample-apps\jsp-servlet\web\target\synclite-sample-app-oss.war```
+   - ```SyncLite\target\synclite-platform-dev\tools\synclite-dbreader\synclite-dbreader-oss.war```
+   - ```SyncLite\target\synclite-platform-dev\tools\synclite-dbreader\synclite-qreader-oss.war```
+   - ```SyncLite\target\synclite-platform-dev\tools\synclite-dbreader\synclite-jobmonitor-oss.war```
      
    
-4. Run start.bat(WINDOWS) / start.sh(UBUNTU) to start tomcat and the deployed SyncLite applications. (Please note the username/password for tomcat manager web console is synclite/synclite)
+4. Run ```start.bat```(WINDOWS) / ```start.sh```(UBUNTU) to start tomcat and the deployed SyncLite applications. (Please note the username/password for tomcat manager web console is synclite/synclite)
 
-   OR Run docker-start.sh to run the docker container (Please check options passed to docker run command e.g. the home directory of the current user is mapped to /root inside docker to persist all the
+   OR Run ```docker-start.sh``` to run the docker container (Please check options passed to docker run command e.g. the home directory of the current user is mapped to ```/root``` inside docker to persist all the
    SyncLite storage in the native host).
 
    OR manually start applications from your tomcat manager console.
@@ -250,17 +250,16 @@ on your Windows/Ubuntu host.
    - Usage 2 : ```synclite.bat/synclite.sh <path/to/db/file> --device-type <SQLITE|DUCKDB|DERBY|H2|HYPERSQL|STREAMING|SQLITE_APPENDER|DUCKDB_APPENDER|DERBY_APPENDER|H2_APPENDER|HYPERSQL_APPENDER> --config <path/to/synclite/logger/config>```
 
 
-10. Use stop.bat (Windows) / stop.sh(LINUX) to stop SyncLite consolidator job (if running) and tomcat.
+10. Use ```stop.bat``` (Windows) / ```stop.sh```(LINUX) to stop SyncLite consolidator job (if running) and tomcat.
    OR RUN docker-stop.sh to stop the docker container.
 
 11. Refer sample_apps and use any of them as a starting point to build your own application.
 
-12. You can install/use a database of your choice and  perform data consolidation to it (instead of the default SQLite destination)
-Note : Supported destination databases with this OSS version : PostgreSQL, MySQL, MongoDB, SQLite, DuckDB.
+12. You can install/use a database of your choice and  perform data consolidation to it (instead of the default SQLite destination): PostgreSQL, MySQL, MongoDB, SQLite, DuckDB.
 
 13. This release also packages docker scripts to setup PostgreSQL and MySQL to serve as SyncLite destinations.
-    - bin/dst/postgresql contains docker-deploy.sh, docker-start.sh and docker-stop.sh
-    - bin/dst/mysql contains docker-deploy.sh, docker-start.sh and docker.stop.sh
+    - ```bin/dst/postgresql``` contains ```docker-deploy.sh```, ```docker-start.sh``` and ```docker-stop.sh```
+    - ```bin/dst/mysql``` contains ```docker-deploy.sh```, ```docker-start.sh``` and ```docker.stop.sh```
 
 14. You can deploy your applications on remote hosts/devices and share the local-stage-directory of your respective SyncLite applications with SyncLite Consolidator host via one of the following file staging storages: 
     - SFTP
@@ -275,8 +274,8 @@ Note : Supported destination databases with this OSS version : PostgreSQL, MySQL
 Please check documentation for setting up these staging storages for SyncLite : https://www.synclite.io/resources/documentation
  
 13. This release also packages docker scripts to setup SFTP and MinIO servers to serve as SyncLite stage.
-    - bin/stage/sftp  contains docker-deploy.sh, docker-start.sh and docker-stop.sh
-    - bin/stage/minio contains docker-deploy.sh, docker-start.sh and docker-stop.sh
+    - ```bin/stage/sftp```  contains ```docker-deploy.sh```, ```docker-start.sh``` and ```docker-stop.sh```
+    - ```bin/stage/minio``` contains ```docker-deploy.sh```, ```docker-start.sh``` and ```docker-stop.sh```
       NOTE: These scripts contain default configurations. You must change usernames, passwords and setup any additional security mechanisms on top of these basic setups. 
 
 14. The SyncLite docker scripts bin/docker-deploy.sh, bin/docker-start.sh, bin/docker-stop.sh contain two variables at the top to choose a stage and destination:
@@ -286,7 +285,7 @@ Please check documentation for setting up these staging storages for SyncLite : 
 Once you set the STAGE and DST to appropriate values e.g. SFTP and POSTGRESQL, the docker-deploy.sh and docker-start.sh scripts will bring up docker containers for SyncLite consolidator, SFTP server and 
 PostgreSQL server and you will be all set to configure and start a SyncLite consoldiator job be able to consolidate data into PostgreSQL server received from remote SyncLite applications configured to connect to the SFTP stage. 
 
-15. After a successful trial, if you need to perform another trial, stop the docker containers, and delete contents under /home/synclite to start a fresh trial of a different scenario etc.
+15. After a successful trial, if you need to perform another trial, stop the docker containers, and delete contents under ```/home/synclite``` to start a fresh trial of a different scenario etc.
 
 16. Open http://localhost:8080/synclite-dbreader (and open http://localhost:8080/synclite-consolidator) to setup database ETL/Replication/Migration pipelines.
 
@@ -301,17 +300,17 @@ NOTE : For production usage, it is recommended to install OpenJDK11 and Tomcat a
 
 # Using SyncLite Logger
 
-Add synclite-logger-dev.jar file created as part of the above build as a dependency in your application.
+Add synclite-logger-<version>.jar file created as part of the above build as a dependency in your application.
 
 ## Configuration File
 
-Refer src/main/resources/synclite_logger.conf file for all available configuration options for SyncLite Logger. Refer "SyncLite Logger Configuration" section in the documentation at https://www.synclite.io/resources/documentation for more details about all configuration options. 
+Refer ```src/main/resources/synclite_logger.conf``` file for all available configuration options for SyncLite Logger. Refer "SyncLite Logger Configuration" section in the documentation at https://www.synclite.io/resources/documentation for more details about all configuration options. 
 
 ## Application Code Samples (SQL API)
 
 ### Transactional Devices : 
 
-Transactional devices (SQLite, DuckDB, Apache Derby, H2, HyperSQL) support all database operations and performs transactional logging of all the DDL and DML operations performed by the application. These empower developers to build use cases such as building data-intensive sync-ready applications, Edge + Cloud GenAI search and RAG applications, native SQL (hot) hot data stores, SQL application caches, edge enablement of cloud databases etc.
+Transactional devices (SQLite, DuckDB, Apache Derby, H2, HyperSQL) support all database operations and performs transactional logging of all the DDL and DML operations performed by the application. These empower developers to build use cases such as building data-intensive sync-ready applications, Edge + Cloud GenAI search and RAG applications, native SQL (hot) hot data stores, SQL application caches, edge enablement of cloud databases and more.
 
 #### Java
 ```
@@ -478,7 +477,7 @@ curs.execute("close database c:\\synclite\\python\\data\\test_sqlite.db");
 
 ### Appender Devices :
 
-Appender devices (SQLiteAppender, DuckDBAppender, DerbyAppender, H2Appender, HyperSQLAppender) supports all DDL operations and Prepared Statement based INSERT operations and are highly optimized for high speed concurrent batched data ingestion, performing logging of the ingested data. Unlike transactional devices, appender devices only allow INSERT DML operations (UPDATE and DELETE are not allowed). Appender devices empower developers to build high volume streaming applications enabled with last mile data integration from thousands of edge points into centralized database destinations as well as in-app analytics by enabling fast read access to ingested data from the underlying local embedded databases storing the ingested/streamed data.
+Appender devices (SQLiteAppender, DuckDBAppender, DerbyAppender, H2Appender, HyperSQLAppender) support all DDL operations and Prepared Statement based INSERT operations, are highly optimized for high speed concurrent batched data ingestion, performing logging of the ingested data. Unlike transactional devices, appender devices only allow INSERT DML operations (UPDATE and DELETE are not allowed). Appender devices empower developers to build high volume streaming applications enabled with last mile data integration from thousands of edge points into centralized database destinations as well as in-app analytics by enabling fast read access to ingested data from the underlying local embedded databases storing the ingested/streamed data.
 
 #### Java
 
@@ -612,7 +611,7 @@ curs.execute("close database c:\\synclite\\python\\data\\test_appender.db");
 ```
 
 ### 2. Streaming Device : 
-Streaming device allows all DDL operations as supported by SQLite and Prepared Statement based INSERT operations (UPDATE and DELETE not allowed) to allow high speed concurrent batched data ingestion, performing logging and streaming of the ingested data. Streaming device empowers developers to build high volume data streaming applications enabled with last mile data integration from thousands of edge applications into centralized database destinations.
+Streaming device allows all DDL operations (as supported by SQLite) and Prepared Statement based INSERT operations (UPDATE and DELETE not allowed) to allow high speed concurrent batched data ingestion, performing logging and streaming of the ingested data. Streaming device empowers developers to build high volume data streaming applications enabled with last mile data integration from thousands of edge applications into centralized database destinations.
 
 #### Java
 
@@ -751,7 +750,7 @@ public class TestKafkaProducer {
 	    <version>2024.08.08</version>
 	</dependency>
    ```
-2. OR You can directly download the latest published synclite-logger jar from : https://github.com/syncliteio/SyncLiteLoggerJava/blob/main/src/main/resources/ and add it as a dependency in your applications.
+2. OR You can directly download the latest published synclite-logger-<version>.jar from : https://github.com/syncliteio/SyncLiteLoggerJava/blob/main/src/main/resources/ and add it as a dependency in your applications.
    
 ## SyncLite Consolidator
 
