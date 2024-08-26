@@ -790,4 +790,5 @@ SyncLite is backed by patented technlogy, more info : https://www.synclite.io/re
 
 # Support
 We encourage use of GitHub Discussions for support and feedback.
-Contact: supprt@synclite.io
+
+Contact: support@synclite.io
