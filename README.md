@@ -279,12 +279,11 @@ Please check documentation for setting up these staging storages for SyncLite : 
     - ```bin/stage/minio``` contains ```docker-deploy.sh```, ```docker-start.sh``` and ```docker-stop.sh```
       NOTE: These scripts contain default configurations. You must change usernames, passwords and setup any additional security mechanisms on top of these basic setups. 
 
-14. The SyncLite docker scripts bin/docker-deploy.sh, bin/docker-start.sh, bin/docker-stop.sh contain two variables at the top to choose a stage and destination:
+14. The SyncLite docker scripts ```bin/docker-deploy.sh```, ```bin/docker-start.sh```, ```bin/docker-stop.sh``` contain two variables at the top to choose a stage and destination:
     - STAGE : Set it to SFTP or MINIO.
     - DST : Set it to POSTGRESQL or MYSQL.
 
-Once you set the STAGE and DST to appropriate values e.g. SFTP and POSTGRESQL, the docker-deploy.sh and docker-start.sh scripts will bring up docker containers for SyncLite consolidator, SFTP server and 
-PostgreSQL server and you will be all set to configure and start a SyncLite consoldiator job be able to consolidate data into PostgreSQL server received from remote SyncLite applications configured to connect to the SFTP stage. 
+      Once you set the STAGE and DST to appropriate values e.g. SFTP and POSTGRESQL, the ```docker-deploy.sh``` and ```docker-start.sh``` scripts will bring up docker containers for SyncLite consolidator, SFTP server and PostgreSQL server and you will be all set to configure and start a SyncLite consoldiator job be able to consolidate data into PostgreSQL server received from remote SyncLite applications configured to connect to the SFTP stage. 
 
 15. After a successful trial, if you need to perform another trial, stop the docker containers, and delete contents under ```/home/synclite``` to start a fresh trial of a different scenario etc.
 
@@ -301,7 +300,7 @@ NOTE : For production usage, it is recommended to install OpenJDK11 and Tomcat a
 
 # Using SyncLite Logger
 
-Add synclite-logger-<version>.jar file created as part of the above build as a dependency in your application.
+Add ```synclite-logger-<version>.jar``` file created as part of the above build as a dependency in your application.
 
 ## Configuration File
 
