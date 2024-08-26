@@ -14,6 +14,7 @@ SyncLite's novel CDC replication framework for embedded databases, is designed t
 ```
 {Edge/Desktop Apps} + {SyncLite Logger + Embedded Databases} ---> {Staging Storage} ---> {SyncLite Consolidator} ---> {Destination DB/DW/DataLakes}
 ```
+
 Learn more: 
 
 https://www.synclite.io/synclite/sync-ready-apps
@@ -253,7 +254,7 @@ on your Windows/Ubuntu host.
 10. Use ```stop.bat``` (Windows) / ```stop.sh```(LINUX) to stop SyncLite consolidator job (if running) and tomcat.
    OR RUN docker-stop.sh to stop the docker container.
 
-11. Refer sample_apps and use any of them as a starting point to build your own application.
+11. Refer ```sample_apps/java``` and ```samples_apps/python``` and use any of them as a starting point to build your own application.
 
 12. You can install/use a database of your choice and  perform data consolidation to it (instead of the default SQLite destination): PostgreSQL, MySQL, MongoDB, SQLite, DuckDB.
 
@@ -307,6 +308,8 @@ Add synclite-logger-<version>.jar file created as part of the above build as a d
 Refer ```src/main/resources/synclite_logger.conf``` file for all available configuration options for SyncLite Logger. Refer "SyncLite Logger Configuration" section in the documentation at https://www.synclite.io/resources/documentation for more details about all configuration options. 
 
 ## Application Code Samples (SQL API)
+
+Refer below code samples to build applications using SyncLite Logger. 
 
 ### Transactional Devices : 
 
