@@ -8,8 +8,8 @@
 	path = synclite-sample-web-app
 	url = https://github.com/syncliteio/synclite-sample-web-app
 [submodule "synclite-cli"]
-	path = synclite-cli
-	url = https://github.com/syncliteio/synclite-cli
+	path = synclite-client
+	url = https://github.com/syncliteio/synclite-client
 [submodule "synclite-dbreader"]
 	path = synclite-dbreader
 	url = https://github.com/syncliteio/synclite-dbreader
