@@ -7,7 +7,7 @@
 [submodule "synclite-sample-web-app"]
 	path = synclite-sample-web-app
 	url = https://github.com/syncliteio/synclite-sample-web-app
-[submodule "synclite-cli"]
+[submodule "synclite-client"]
 	path = synclite-client
 	url = https://github.com/syncliteio/synclite-client
 [submodule "synclite-dbreader"]
