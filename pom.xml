@@ -9,7 +9,8 @@
 	<modules>
 		<module>synclite-consolidator\root</module>
 		<module>synclite-logger-java\logger</module>
-		<module>synclite-cli\client</module>
+		<module>synclite-client\client</module>
+		<module>synclite-db\db</module>
 		<module>synclite-sample-web-app\web</module>
 		<module>synclite-dbreader\root</module>
 		<module>synclite-qreader\root</module>

@@ -19,3 +19,6 @@
 [submodule "synclite-job-monitor"]
 	path = synclite-job-monitor
 	url = https://github.com/syncliteio/synclite-job-monitor
+[submodule "synclite-db"]
+	path = synclite-db
+	url = https://github.com/syncliteio/synclite-db

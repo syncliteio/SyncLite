@@ -50,7 +50,7 @@
 			<outputDirectory>/sample-apps/</outputDirectory>
 		</fileSet>
 		<fileSet>
-			<directory>${project.basedir}/synclite-cli/client/target
+			<directory>${project.basedir}/synclite-client/client/target
 			</directory>
 			<includes>
 				<include>*.jar</include>
@@ -59,7 +59,19 @@
 			</includes>
 			<fileMode>755</fileMode>
 			<directoryMode>755</directoryMode>			
-			<outputDirectory>tools/synclite-cli</outputDirectory>
+			<outputDirectory>tools/synclite-client</outputDirectory>
+		</fileSet>
+		<fileSet>
+			<directory>${project.basedir}/synclite-db/db/target
+			</directory>
+			<includes>
+				<include>*.jar</include>
+				<include>synclite.*</include>
+				<include>synclite_logger.conf</include>
+			</includes>
+			<fileMode>755</fileMode>
+			<directoryMode>755</directoryMode>			
+			<outputDirectory>tools/synclite-db</outputDirectory>
 		</fileSet>
 		<fileSet>
 			<directory>${project.basedir}/synclite-dbreader/root/web/target
