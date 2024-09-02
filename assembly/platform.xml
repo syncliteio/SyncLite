@@ -54,7 +54,7 @@
 			</directory>
 			<includes>
 				<include>*.jar</include>
-				<include>synclite.*</include>
+				<include>synclite-client.*</include>
 				<include>synclite_logger.conf</include>
 			</includes>
 			<fileMode>755</fileMode>
@@ -66,8 +66,9 @@
 			</directory>
 			<includes>
 				<include>*.jar</include>
-				<include>synclite.*</include>
+				<include>synclite-db.*</include>
 				<include>synclite_logger.conf</include>
+				<include>synclite_db.conf</include>
 			</includes>
 			<fileMode>755</fileMode>
 			<directoryMode>755</directoryMode>			
