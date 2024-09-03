@@ -1,7 +1,6 @@
 # SyncLite - Build Anything Sync Anywhere
 
-SyncLite (https://www.synclite.io) is an open-source, no-code, no-limits relational data consolidation platform empowering developers to rapidly build data intensive applications for edge, desktop and mobile environments.
-SyncLite excels at performing real-time, transactional data replication and consolidation from a myriad of sources including edge/desktop applications using popular embedded databases (SQLite, DuckDB, Apache Derby, H2, HyperSQL), data streaming applications, IoT message brokers, traditional database systems(ETL) and more into a diverse array of databases, data warehouses, and data lakes, enabling AI and ML use-cases at all three levels: Edge, Fog and Cloud.
+SyncLite (https://www.synclite.io) is an open-source, low-code, comprehensive relational data consolidation platform empowering developers to rapidly build data intensive applications for edge, desktop and mobile environments. SyncLite enables performing real-time, transactional data replication and consolidation from a myriad of sources including edge/desktop applications using popular embedded databases (SQLite, DuckDB, Apache Derby, H2, HyperSQL), data streaming applications, IoT message brokers, traditional database systems(ETL) and more into a diverse array of databases, data warehouses, and data lakes, enabling AI and ML use-cases at all three levels: Edge, Fog and Cloud.
 
 ```
 {Edge/Desktop Apps} + {SyncLite Logger} ---> {Staging Storage} ---> {SyncLite Consolidator} ---> {Destination DB/DW/DataLakes}
@@ -201,7 +200,7 @@ synclite-platform-<version>
 --------tools
         |
         |
-        --------synclite-client   ==> CLI tool to execute SQL operations on SyncLite databases/devices.
+        --------synclite-client   ==> Client tool to execute SQL operations on SyncLite databases/devices.
 	|
 	|
         --------synclite-db    ==> A standalone database server offering sync-enabled embedded databases for edge/desktop applications. 
@@ -256,23 +255,27 @@ on your Windows/Ubuntu host.
 
 8. Configure and start SyncLite consolidator job in the SyncLite Consolidator application. You can follow through the "Configure Job" wizard reviewing all the default configuration values. Create databases/devices of any type from the deployed sample web application and execute SQL workloads on several devices at once specifying the device index range. Observe data consolidator in the SyncLite Cosolidator dashboard. You can check device specific data consolidation progress on individual device pages (from "List Devices" page), query destination database on the "Analyze Data" page. 
 
-9. This release also comes with a CLI client for SyncLite under tools/synclite-cli. You can run synclite.bat(WINDOWS)/synclite.sh(UBUNTU) to start the CLI tool and execute SQL operations which are not only executed/persisted on the native database but also consolidated by the SyncLite consolidator into destination DB.
-   - Usage 1 : ```synclite.bat/synclite.sh ==> Will start with DB = <USER.HOME>/synclite/job1/db/test.db, DEVICE_TYPE = SQLITE, CONFIG = <USER.HOME>/synclite/db/synclite_logger.conf```
-   - Usage 2 : ```synclite.bat/synclite.sh <path/to/db/file> --device-type <SQLITE|DUCKDB|DERBY|H2|HYPERSQL|STREAMING|SQLITE_APPENDER|DUCKDB_APPENDER|DERBY_APPENDER|H2_APPENDER|HYPERSQL_APPENDER> --config <path/to/synclite/logger/config>```
-
-
-10. Use ```stop.bat``` (Windows) / ```stop.sh```(LINUX) to stop SyncLite consolidator job (if running) and tomcat.
+9. This release also comes with a CLI client for SyncLite under tools/synclite-client. You can run synclite-client.bat(WINDOWS)/synclite-client.sh (UBUNTU) to start the client tool and execute SQL operations which are not only executed/persisted on the native database but also consolidated by the SyncLite consolidator into destination DB.
+   - Usage 1 : ```synclite-client.bat/synclite-client.sh ==> Will start with DB = <USER.HOME>/synclite/job1/db/test.db, DEVICE_TYPE = SQLITE, CONFIG = <USER.HOME>/synclite/db/synclite_logger.conf```
+   - Usage 2 : ```synclite-client.bat/synclite-client.sh <path/to/db/file> --device-type <SQLITE|DUCKDB|DERBY|H2|HYPERSQL|STREAMING|SQLITE_APPENDER|DUCKDB_APPENDER|DERBY_APPENDER|H2_APPENDER|HYPERSQL_APPENDER> --synclite-logger-config <path/to/synclite/logger/config> --server <SyncLite DB Address>```
+   - Note: If --sever switch is specified then the client connects to SyncLite DB to  execute SQL statements, else it usages embedded ```SyncLite Logger``` library to directly operate on the devices.
+     
+10. This release also comes with SyncLite DB server under tools/synclite-db. You can run synclite-db.bat(WINDOWS)/synclite-db.sh(UBUNTU) to start SyncLite DB server and connect to it using synclite-client to execute SQL operations which are not only executed/persisted on the specified embedded database but also consolidated by the SyncLite Consolidator onto the destination databases.
+   - Usage 1 : ```synclite-db.bat/synclite-db.sh ==> Will start SyncLite DB with default configurations
+   - Usage 2 : ```synclite-db.bat/synclite-db.sh --config <path/to/synclite-db/config>
+          
+11. Use ```stop.bat``` (Windows) / ```stop.sh```(LINUX) to stop SyncLite consolidator job (if running) and tomcat.
    OR RUN docker-stop.sh to stop the docker container.
 
-11. Refer ```sample_apps/java``` and ```samples_apps/python``` and use any of them as a starting point to build your own application.
+12. Refer ```sample_apps/java``` and ```samples_apps/python``` and use any of them as a starting point to build your own application.
 
-12. You can install/use a database of your choice and  perform data consolidation to it (instead of the default SQLite destination): PostgreSQL, MySQL, MongoDB, SQLite, DuckDB.
+13. You can install/use a database of your choice and  perform data consolidation to it (instead of the default SQLite destination): PostgreSQL, MySQL, MongoDB, SQLite, DuckDB.
 
-13. This release also packages docker scripts to setup PostgreSQL and MySQL to serve as SyncLite destinations.
+14. This release also packages docker scripts to setup PostgreSQL and MySQL to serve as SyncLite destinations.
     - ```bin/dst/postgresql``` contains ```docker-deploy.sh```, ```docker-start.sh``` and ```docker-stop.sh```
     - ```bin/dst/mysql``` contains ```docker-deploy.sh```, ```docker-start.sh``` and ```docker.stop.sh```
 
-14. You can deploy your applications on remote hosts/devices and share the local-stage-directory of your respective SyncLite applications with SyncLite Consolidator host via one of the following file staging storages: 
+15. You can deploy your applications on remote hosts/devices and share the local-stage-directory of your respective SyncLite applications with SyncLite Consolidator host via one of the following file staging storages: 
     - SFTP
     - Amazon S3
     - MinIO Object Storage Server
@@ -284,16 +287,18 @@ on your Windows/Ubuntu host.
       
 Please check documentation for setting up these staging storages for SyncLite : https://www.synclite.io/resources/documentation
  
-13. This release also packages docker scripts to setup SFTP and MinIO servers to serve as SyncLite stage.
+16. This release also packages docker scripts to setup SFTP and MinIO servers to serve as SyncLite stage.
     - ```bin/stage/sftp```  contains ```docker-deploy.sh```, ```docker-start.sh``` and ```docker-stop.sh```
     - ```bin/stage/minio``` contains ```docker-deploy.sh```, ```docker-start.sh``` and ```docker-stop.sh```
       NOTE: These scripts contain default configurations. You must change usernames, passwords and setup any additional security mechanisms on top of these basic setups. 
 
-14. The SyncLite docker scripts ```bin/docker-deploy.sh```, ```bin/docker-start.sh```, ```bin/docker-stop.sh``` contain two variables at the top to choose a stage and destination:
+17. The SyncLite docker scripts ```bin/docker-deploy.sh```, ```bin/docker-start.sh```, ```bin/docker-stop.sh``` contain two variables at the top to choose a stage and destination:
     - STAGE : Set it to SFTP or MINIO.
     - DST : Set it to POSTGRESQL or MYSQL.
 
-      Once you set the STAGE and DST to appropriate values e.g. SFTP and POSTGRESQL, the ```docker-deploy.sh``` and ```docker-start.sh``` scripts will bring up docker containers for SyncLite consolidator, SFTP server and PostgreSQL server and you will be all set to configure and start a SyncLite consoldiator job be able to consolidate data into PostgreSQL server received from remote SyncLite applications configured to connect to the SFTP stage. 
+      Once you set the STAGE and DST to appropriate values e.g. SFTP and POSTGRESQL, the ```docker-deploy.sh``` and ```docker-start.sh``` scripts will bring up docker containers for SyncLite consolidator, SFTP
+      server and PostgreSQL server and you will be all set to configure and start a SyncLite consoldiator job be able to consolidate data into PostgreSQL server received from remote SyncLite applications
+      configured to connect to the SFTP stage. 
 
 15. After a successful trial, if you need to perform another trial, stop the docker containers, and delete contents under ```/home/synclite``` to start a fresh trial of a different scenario etc.
 
@@ -748,7 +753,99 @@ public class TestKafkaProducer {
 	}
 ```
 
+# Launching and using SyncLite DB
 
+```SyncLite DB``` is a sync-enabled, single-node database server that wraps popular embedded databases like SQLite, DuckDB, Apache Derby, H2, and HyperSQL. Unlike the embeddable ```SyncLite Logger``` library for Java and Python applications, ```SyncLite DB``` acts as a standalone server, allowing your edge or desktop applications—regardless of the programming language—to connect and send SQL requests (wrapped in JSON format) over a network socket. This makes it an ideal solution for seamless, real-time data synchronization in diverse environments.
+
+1. Go to the directory ```synclite-platform-<version>\tools\synclite-db```
+2. Check the configurations in synclite-db.conf and adjust them as per your needs.
+3. Run ```synclite-db.sh --config synclite-db.conf. This starts the SyncLite DB server listening at the specified address
+4. An application in your favoirite programming language can establish a connection with the SyncLite DB server at the specified address and send requests in JSON format as below
+
+	- Connect and initialize a device
+
+   	Request
+	```
+ 	{
+ 		"db-type" : "SQLITE"
+ 		"db-path" : "C:\synclite\users\bob\synclite\job1\test.db"
+ 		"synclite-logger-config" : "C:\synclite\users\bob\synclite\job1\synclite_logger.conf"
+ 		"sql" : "initialize"
+ 	}
+  	```
+
+ 	Response from Server 
+ 	```
+  	{
+ 		"resultset" : "[]"
+ 		"message" : "Device initialized successfully"
+ 		"synclite-logger-config" : "C:\synclite\users\bob\synclite\job1\synclite_logger.conf"
+ 		"sql" : "initialize"
+ 	}
+  	```
+  
+	- Send a sql command to create a table
+
+   	Request
+	```
+ 	{
+ 		"db-path" : "C:\synclite\users\bob\synclite\job1\test.db"
+ 		"sql" : "CREATE TABLE IF NOT EXISTS(a INT, b INT)"
+ 	}
+ 	```
+
+ 	Response from Server 
+ 	```
+  	{
+ 		"message" : "Update executed successfully, rows affected: 0"
+   	}
+  	```
+  
+	- Send a request to perform a batched insert in the created table
+
+   	Request
+	```
+ 	{
+ 		"db-path" : "C:\synclite\users\bob\synclite\job1\test.db"
+ 		"sql" : "INSERT INTO t1(a) VALUES(?, ?)"
+ 		"arguments" : [{"1", "1"}, {"2", "2"}]
+   	}
+ 	```
+
+ 	Response from Server 
+ 	```
+  	{  		
+ 		"message" : "Batch executed successfully, rows affected: 2"
+   	}
+  	```
+
+	- Send a request to close database
+
+   	Request
+	```
+ 	{
+ 		"db-path" : "C:\synclite\users\bob\synclite\job1\test.db"
+ 		"sql" : "close database 'C:\synclite\users\bob\synclite\job1\test.db'"
+   	}
+ 	```
+	
+ 	Response from Server 
+ 	```
+  	{  		
+		"message" : "sql executed successfully"
+   	}
+  	```
+ 
+5. SyncLite DB (internally leveraging SyncLite Logger), creates a device stage directory at configured stage path with sqllogs created for each device. These device stage directories are continuously synchronized with SyncLite consolidator for consolidating them into final destination databases.
+   
+6. Several such hosts, each running SyncLite DB, each of them creating several SyncLite databases/devices, can sychornize the databases in real-time with a centralized SyncLite consolidator, which aggregates the incoming data and changes, in real-time, into configured destination databases.
+
+     
+# Running Integration Tests
+
+```SyncLite Validator``` is a GUI based tool with a war file deployed on app server, it can be launched at http://localhost:8080/synclite-validator. A test job can be configured and run to execute all the end to end integration tests which validate data consolidation functionality for various SyncLite device types.  
+    
+	
 # Pre-Built Releases:
 
 ## SyncLite Logger
