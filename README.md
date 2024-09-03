@@ -1,6 +1,6 @@
 # SyncLite - Build Anything Sync Anywhere
 
-SyncLite(https://www.synclite.io) is an open-source, no-code, no-limits relational data consolidation platform empowering developers to rapidly build data intensive applications for edge, desktop and mobile environments.
+SyncLite (https://www.synclite.io) is an open-source, no-code, no-limits relational data consolidation platform empowering developers to rapidly build data intensive applications for edge, desktop and mobile environments.
 SyncLite excels at performing real-time, transactional data replication and consolidation from a myriad of sources including edge/desktop applications using popular embedded databases (SQLite, DuckDB, Apache Derby, H2, HyperSQL), data streaming applications, IoT message brokers, traditional database systems(ETL) and more into a diverse array of databases, data warehouses, and data lakes, enabling AI and ML use-cases at all three levels: Edge, Fog and Cloud.
 
 ```
@@ -53,11 +53,15 @@ Learn More: https://www.synclite.io/solutions/iot-data-connector
 
 # SyncLite Components
 
-```SyncLite Logger``` enables developers to rapidly build 
+```SyncLite Logger``` is a JDBC driver, enables developers to rapidly build 
 	
--sync-ready, robust, responsive, high-performance, low-latency, transactional, data intensive applications for edge/mobile/desktop platforms using their favorite embedded databases (SQLite, DuckDB, Apache Derby, H2, HyperSQL)
+-sync-enabled, robust, responsive, high-performance, low-latency, transactional, data intensive applications for edge/mobile/desktop platforms using their favorite embedded databases (SQLite, DuckDB, Apache Derby, H2, HyperSQL)
   	
 -massive scale data streaming solutions for last mile data integrations into a wide range of industry leading databases, while offering ability to perform real-time analytics using the native embedded databases over streaming data, at the producer end of the pipelines.
+
+```SyncLite DB``` is a sync-enabled, single-node database server that wraps popular embedded databases like SQLite, DuckDB, Apache Derby, H2, and HyperSQL. Unlike the embeddable SyncLite Logger library for Java and Python applications, SyncLite DB acts as a standalone server, allowing your edge or desktop applications—regardless of the programming language—to connect and send SQL requests (wrapped in JSON format) over a network socket. 
+
+```SyncLite Client``` is a command line tool to operate SyncLite devices, to execute SQL queries and workloads.
 
 ```SyncLite DBReader``` enables data teams and data engineers to effortlessly configure and orchestrate many-to-many, highly scalable, incremental/log-based database ETL/replication/migration jobs across a diverse array of databases, data warehouses and data lakes.
 
@@ -67,7 +71,7 @@ Learn More: https://www.synclite.io/solutions/iot-data-connector
 
 ```SyncLite JobMonitor``` enables managing, scheduling and monitoring all SyncLite jobs created on a given host.
 
-```SyncLite Client``` is a command line tool to operate SyncLite devices, to execute SQL queries and workloads.
+```SyncLite Validator``` is an E2E integration testing tool for SyncLite.
 
 # Build and Deploy
 
@@ -197,7 +201,10 @@ synclite-platform-<version>
 --------tools
         |
         |
-        --------synclite-cli    ==> CLI tool to execute SQL operations on SyncLite databases/devices.
+        --------synclite-client   ==> CLI tool to execute SQL operations on SyncLite databases/devices.
+	|
+	|
+        --------synclite-db    ==> A standalone database server offering sync-enabled embedded databases for edge/desktop applications. 
 	|
 	|
         --------synclite-dbreader    ==> Smart database ETL/Replication/Migration tool
@@ -207,8 +214,10 @@ synclite-platform-<version>
 	|
 	|
 	--------synclite-job-monitor   ==> Job Monitor tool to manage, monitor and schedule SyncLite jobs.
+	|
+	|
+        --------synclite-validator    ==> An E2E integration testing tool for SyncLite
  
-
 
 ```
 
