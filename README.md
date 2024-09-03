@@ -759,7 +759,7 @@ public class TestKafkaProducer {
 
 1. Go to the directory ```synclite-platform-<version>\tools\synclite-db```
 2. Check the configurations in synclite-db.conf and adjust them as per your needs.
-3. Run ```synclite-db.sh --config synclite-db.conf. This starts the SyncLite DB server listening at the specified address
+3. Run ```synclite-db.sh --config synclite-db.conf```. This starts the SyncLite DB server listening at the specified address.
 4. An application in your favoirite programming language can establish a connection with the SyncLite DB server at the specified address and send requests in JSON format as below
 
 	- Connect and initialize a device
