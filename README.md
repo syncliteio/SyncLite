@@ -869,10 +869,11 @@ public class TestKafkaProducer {
 # Supported Systems
 
 ## Source Systems
-1. Edge Applications(Java/Python) +  Embedded Databases (SQLite, DuckDB, Apache Derby, H2, HyperSQL)
-2. Databases : PostgreSQL, MySQL, MongoDB, SQLite
-3. Message Brokers : Eclipse Mosquitto MQTT broker
-4. Data Files : CSV ( stored on FS/S3/MinIO)
+1. Edge Applications(Java/Python) +  SyncLite Logger (wrapping embedded databases :SQLite, DuckDB, Apache Derby, H2, HyperSQL)
+2. Edge Applications (Any Programming language) + SyncLite DB (wrapping embedded databases :SQLite, DuckDB, Apache Derby, H2, HyperSQL)
+3. Databases : PostgreSQL, MySQL, MongoDB, SQLite
+4. Message Brokers : Eclipse Mosquitto MQTT broker
+5. Data Files : CSV ( stored on FS/S3/MinIO)
 
 ## Staging Storages
 1. Local FS
