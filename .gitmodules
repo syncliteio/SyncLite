@@ -22,3 +22,6 @@
 [submodule "synclite-db"]
 	path = synclite-db
 	url = https://github.com/syncliteio/synclite-db
+[submodule "synclite-validator"]
+	path = synclite-validator
+	url = https://github.com/syncliteio/synclite-validator

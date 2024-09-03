@@ -6,7 +6,7 @@
 	<includeBaseDirectory>false</includeBaseDirectory>
 	<formats>
 		<format>
-			dir
+			zip
 		</format>
 	</formats>
 	<fileSets>
@@ -103,16 +103,6 @@
 			<fileMode>755</fileMode>
 			<directoryMode>755</directoryMode>		
 			<outputDirectory>tools/synclite-jobmonitor</outputDirectory>
-		</fileSet>
-		<fileSet>
-			<directory>${project.basedir}/synclite-validator/root/web/target
-			</directory>
-			<includes>
-				<include>*.war</include>
-			</includes>
-			<fileMode>755</fileMode>
-			<directoryMode>755</directoryMode>
-			<outputDirectory>tools/synclite-validator</outputDirectory>
 		</fileSet>
 		<fileSet>
 			<directory>${project.basedir}/synclite-consolidator/root/core/target/generated-resources</directory>

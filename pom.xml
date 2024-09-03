@@ -9,12 +9,13 @@
 	<modules>
 		<module>synclite-consolidator\root</module>
 		<module>synclite-logger-java\logger</module>
-		<module>synclite-client\client</module>
 		<module>synclite-db\db</module>
+		<module>synclite-client\client</module>
 		<module>synclite-sample-web-app\web</module>
 		<module>synclite-dbreader\root</module>
 		<module>synclite-qreader\root</module>
 		<module>synclite-job-monitor\root</module>
+		<module>synclite-validator\root</module>
 	</modules>
 	
 	<build>
@@ -37,6 +38,20 @@
 							</descriptors>
 						</configuration>
 					</execution>
+					<execution>
+						<id>create-zip</id>
+						<phase>package</phase>
+						<goals>
+							<goal>single</goal>
+						</goals>
+						<configuration>
+							<appendAssemblyId>false</appendAssemblyId>						
+							<finalName>synclite-platform-${revision}</finalName>
+							<descriptors>
+								<descriptor>assembly/platform_zip.xml</descriptor>
+							</descriptors>
+						</configuration>
+					</execution>					
 				</executions>
 			</plugin>
 		</plugins>
