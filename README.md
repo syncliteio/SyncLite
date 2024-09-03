@@ -777,7 +777,6 @@ public class TestKafkaProducer {
  	Response from Server 
  	```
   	{
- 		"resultset" : "[]"
  		"message" : "Device initialized successfully"
  		"synclite-logger-config" : "C:\synclite\users\bob\synclite\job1\synclite_logger.conf"
  		"sql" : "initialize"
