@@ -855,7 +855,7 @@ public class TestKafkaProducer {
 	<dependency>
 	    <groupId>io.synclite</groupId>
 	    <artifactId>synclite-logger</artifactId>
-	    <version>2024.08.08</version>
+	    <version>#LatestVersion#</version>
 	</dependency>
    ```
 2. OR You can directly download the latest published synclite-logger-<version>.jar from : https://github.com/syncliteio/SyncLiteLoggerJava/blob/main/src/main/resources/ and add it as a dependency in your applications.
@@ -864,7 +864,7 @@ public class TestKafkaProducer {
 
 1. A docker image of SyncLite Consolidator is available on docker hub : https://hub.docker.com/r/syncliteio/synclite-consolidator
 
-2. OR A release zip file can be downloaded from : https://www.synclite.io/resources/download
+2. OR A release zip file can be downloaded from this GitHub Repo : https://github.com/syncliteio/SyncLite/releases
 
 # Supported Systems
 
