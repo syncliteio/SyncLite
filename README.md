@@ -1,6 +1,6 @@
 # SyncLite - Build Anything Sync Anywhere
 
-SyncLite (https://www.synclite.io) is an open-source, low-code, comprehensive relational data consolidation platform empowering developers to rapidly build data intensive applications for edge, desktop and mobile environments. SyncLite enables performing real-time, transactional data replication and consolidation from a myriad of sources including edge/desktop applications using popular embedded databases (SQLite, DuckDB, Apache Derby, H2, HyperSQL), data streaming applications, IoT message brokers, traditional database systems(ETL) and more into a diverse array of databases, data warehouses, and data lakes, enabling AI and ML use-cases at all three levels: Edge, Fog and Cloud.
+SyncLite (https://www.synclite.io) is an open-source, low-code, comprehensive relational data consolidation platform enabling developers to rapidly build data intensive applications for edge, desktop and mobile environments. SyncLite enables performing real-time, transactional data replication and consolidation from a myriad of sources including edge/desktop applications using popular embedded databases (SQLite, DuckDB, Apache Derby, H2, HyperSQL), data streaming applications, IoT message brokers, traditional database systems(ETL) and more into a diverse array of databases, data warehouses, and data lakes, enabling AI and ML use-cases at all three levels: Edge, Fog and Cloud.
 
 ```
 {Edge/Desktop Apps} + {SyncLite Logger} ---> {Staging Storage} ---> {SyncLite Consolidator} ---> {Destination DB/DW/DataLakes}
@@ -42,7 +42,7 @@ Set up many-to-many, scalable database replication/migration/incremental ETL pip
 Learn More: https://www.synclite.io/solutions/smart-database-etl
 
 ## Setup Rapid IoT Data Connectors:
-Effortlessly connect numerous MQTT brokers (IoT gateways) to one or more final data destinations.
+Connect numerous MQTT brokers (IoT gateways) to one or more destination databases.
 
 ```
 {IoT Message Brokers} ---> {SyncLite QReader} ---> {Staging Storage} ---> {SyncLite Consolidator} ---> {Destination DB/DW/DataLakes}
@@ -72,16 +72,17 @@ Learn More: https://www.synclite.io/solutions/iot-data-connector
 
 ```SyncLite Validator``` is an E2E integration testing tool for SyncLite.
 
-# Build and Deploy
+# Build SyncLite
 
-1. Install/Download Apache Maven(3.8.6 or above): https://maven.apache.org/download.cgi
-2. If you opt to not use the deploy scripts generated in the release which download the prerequisite software : Apache Tomcat and OpenJDK, then manually install them
+1. If you are using a pre-built release then ignore this section. 
+2. Install/Download Apache Maven(3.8.6 or above): https://maven.apache.org/download.cgi
+3. If you opt to not use the deploy scripts generated in the release which download the prerequisite software : Apache Tomcat and OpenJDK, then manually install them
 	
  	a. OpenJDK 11 : https://jdk.java.net/java-se-ri/11
 	
  	b. Apache Tomcat 9.0.93 : https://tomcat.apache.org/download-90.cgi
 
-4. Run following: 
+5. Run following: 
 	```
 	git clone --recurse-submodules git@github.com:syncliteio/SyncLite.git SyncLite
 	
@@ -90,7 +91,7 @@ Learn More: https://www.synclite.io/solutions/iot-data-connector
 	mvn -Drevision=oss clean install
 	
 	```
-5. Release is created under SyncLite/target
+6. Release is created under SyncLite/target
 
 ## Release Structure:
 
@@ -165,9 +166,6 @@ synclite-platform-<version>
 --------bin
 |        |
 |        |
-|        --------apache-tomcat-9.0.75    ==> Apache Tomcat to launch Web GUI for SyncLite Consolidator
-|        |        
-|        |        
 |        --------deploy.bat/deploy.sh    ==> Deployment script for deploying SyncLite consolidator and sample application from the lib directory
 |        |                    
 |        |                        
@@ -327,7 +325,7 @@ Refer below code samples to build applications using SyncLite Logger.
 
 ### Transactional Devices : 
 
-Transactional devices (SQLite, DuckDB, Apache Derby, H2, HyperSQL) support all database operations and performs transactional logging of all the DDL and DML operations performed by the application. These empower developers to build use cases such as building data-intensive sync-ready applications, Edge + Cloud GenAI search and RAG applications, native SQL (hot) hot data stores, SQL application caches, edge enablement of cloud databases and more.
+Transactional devices (SQLite, DuckDB, Apache Derby, H2, HyperSQL) support all database operations and perform transactional logging of all the DDL and DML operations performed by the application. These enable  developers to build use cases such as building data-intensive sync-ready applications for edge, edge + cloud GenAI search and RAG applications, native SQL (hot) hot data stores, SQL application caches, edge enablement of cloud databases and more.
 
 #### Java
 ```
@@ -494,7 +492,7 @@ curs.execute("close database c:\\synclite\\python\\data\\test_sqlite.db");
 
 ### Appender Devices :
 
-Appender devices (SQLiteAppender, DuckDBAppender, DerbyAppender, H2Appender, HyperSQLAppender) support all DDL operations and Prepared Statement based INSERT operations, are highly optimized for high speed concurrent batched data ingestion, performing logging of the ingested data. Unlike transactional devices, appender devices only allow INSERT DML operations (UPDATE and DELETE are not allowed). Appender devices empower developers to build high volume streaming applications enabled with last mile data integration from thousands of edge points into centralized database destinations as well as in-app analytics by enabling fast read access to ingested data from the underlying local embedded databases storing the ingested/streamed data.
+Appender devices (SQLiteAppender, DuckDBAppender, DerbyAppender, H2Appender, HyperSQLAppender) support all DDL operations and Prepared Statement based INSERT operations, are highly optimized for high speed concurrent batched data ingestion, performing logging of ingested data. Unlike transactional devices, appender devices only allow INSERT DML operations (UPDATE and DELETE are not allowed). Appender devices enable developers to build high volume streaming applications enabled with last mile data integration from thousands of edge points into centralized database destinations as well as in-app analytics by enabling fast read access to ingested data from the underlying local embedded databases storing the ingested/streamed data.
 
 #### Java
 
@@ -628,7 +626,7 @@ curs.execute("close database c:\\synclite\\python\\data\\test_appender.db");
 ```
 
 ### 2. Streaming Device : 
-Streaming device allows all DDL operations (as supported by SQLite) and Prepared Statement based INSERT operations (UPDATE and DELETE not allowed) to allow high speed concurrent batched data ingestion, performing logging and streaming of the ingested data. Streaming device empowers developers to build high volume data streaming applications enabled with last mile data integration from thousands of edge applications into centralized database destinations.
+Streaming device allows all DDL operations (as supported by SQLite) and Prepared Statement based INSERT operations (UPDATE and DELETE are not allowed) to allow high speed concurrent batched data ingestion, performing logging and streaming of the ingested data. Streaming device enable developers to build high volume data streaming applications enabled with last mile data integration from thousands of edge applications into one or more centralized databases/data warehouses/data lakes.
 
 #### Java
 
@@ -837,7 +835,7 @@ public class TestKafkaProducer {
  
 5. SyncLite DB (internally leveraging SyncLite Logger), creates a device stage directory at configured stage path with sqllogs created for each device. These device stage directories are continuously synchronized with SyncLite consolidator for consolidating them into final destination databases.
    
-6. Several such hosts, each running SyncLite DB, each of them creating several SyncLite databases/devices, can sychornize the databases in real-time with a centralized SyncLite consolidator, which aggregates the incoming data and changes, in real-time, into configured destination databases.
+6. Several such hosts, each running SyncLite DB, each of them creating several SyncLite databases/devices (i.e. embedded databases), can synchornize these embedded databases in real-time with a centralized SyncLite consolidator that aggregates the incoming data and changes, in real-time, into configured destination databases.
 
      
 # Running Integration Tests
@@ -870,7 +868,7 @@ public class TestKafkaProducer {
 
 ## Source Systems
 1. Edge Applications(Java/Python) +  SyncLite Logger (wrapping embedded databases :SQLite, DuckDB, Apache Derby, H2, HyperSQL)
-2. Edge Applications (Any Programming language) + SyncLite DB (wrapping embedded databases :SQLite, DuckDB, Apache Derby, H2, HyperSQL)
+2. Edge Applications (any programming language) + SyncLite DB (wrapping embedded databases :SQLite, DuckDB, Apache Derby, H2, HyperSQL)
 3. Databases : PostgreSQL, MySQL, MongoDB, SQLite
 4. Message Brokers : Eclipse Mosquitto MQTT broker
 5. Data Files : CSV ( stored on FS/S3/MinIO)
