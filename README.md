@@ -1,6 +1,6 @@
 
 <p align="center">
-  <a href="https://github.com/mem0ai/mem0">
+  <a href="https://www.synclite.io">
   <img src="docs/images/SyncLite_logo.png" alt="SyncLite - Build Anything Sync Anywhere">
   </a>
   <p align="center">
