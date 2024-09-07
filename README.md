@@ -1,3 +1,15 @@
+
+<p align="center">
+  <a href="https://github.com/mem0ai/mem0">
+  <img src="docs/images/SyncLite_logo.png" alt="SyncLite - Build Anything Sync Anywhere">
+  </a>
+  <p align="center">
+    <a href="https://www.synclite.io">Learn more</a>
+    ·
+    <a href="https://join.slack.com/t/syncliteworkspace/shared_invite/zt-2pz945vva-uuKapsubC9Mu~uYDRKo6Jw">Chat on Slack</a>
+  </p>
+</p>
+
 # SyncLite - Build Anything Sync Anywhere
 
 <a href=https://www.synclite.io>SyncLite</a> is an open-source, low-code, comprehensive relational data consolidation platform enabling developers to rapidly build data intensive applications for edge, desktop and mobile environments. SyncLite enables performing real-time, transactional data replication and consolidation from a myriad of sources including edge/desktop applications using popular embedded databases (SQLite, DuckDB, Apache Derby, H2, HyperSQL), data streaming applications, IoT message brokers, traditional database systems(ETL) and more into a diverse array of databases, data warehouses, and data lakes, enabling AI and ML use-cases at all three levels: Edge, Fog and Cloud.
