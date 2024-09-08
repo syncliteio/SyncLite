@@ -12,7 +12,7 @@
 
 # SyncLite - Build Anything Sync Anywhere
 
-<a href=https://www.synclite.io>SyncLite</a> is an open-source, low-code, comprehensive relational data consolidation platform enabling developers to rapidly build data intensive applications for edge, desktop and mobile environments. SyncLite enables performing real-time, transactional data replication and consolidation from a myriad of sources including edge/desktop applications using popular embedded databases (SQLite, DuckDB, Apache Derby, H2, HyperSQL), data streaming applications, IoT message brokers, traditional database systems(ETL) and more into a diverse array of databases, data warehouses, and data lakes, enabling AI and ML use-cases at all three levels: Edge, Fog and Cloud.
+<a href=https://www.synclite.io>SyncLite</a> is an open-source, low-code, comprehensive relational data consolidation platform enabling developers to rapidly build data intensive applications for edge, desktop and mobile environments. SyncLite enables real-time, transactional data replication and consolidation from various of sources including edge/desktop applications using popular embedded databases (SQLite, DuckDB, Apache Derby, H2, HyperSQL), data streaming applications, IoT message brokers, traditional database systems(ETL) and more into a diverse array of databases, data warehouses, and data lakes, enabling AI and ML use-cases at all three levels: Edge, Fog and Cloud.
 
 ```
 {Edge/Desktop Apps} + {SyncLite Logger} ---> {Staging Storage} ---> {SyncLite Consolidator} ---> {Destination DB/DW/DataLakes}
@@ -78,7 +78,7 @@ Learn More: https://www.synclite.io/solutions/iot-data-connector
 
 ```SyncLite QReader``` enables developers to integrate IoT data published to message queue brokers, into a diverse array of databases, data warehouses and data lakes, enabling real-time analytics and AI use cases at all three levels: edge, fog and cloud.
 
-```SyncLite Consolidator``` is the centralized application to all the reader/producer tools mentioned above, which receives and consolidates the incoming data and loig files in real-time into one or more databases, data warehouses and data lakes of user’s choice.
+```SyncLite Consolidator``` is the centralized application to all the reader/producer tools mentioned above, which receives and consolidates the incoming data and log files in real-time into one or more databases, data warehouses and data lakes of user’s choice. SyncLite Consolidator also offers additional features: table/column/value filtering and mapping, data type mapping, database trigger installation, fine-tunable writes, support for multiple destinations and more.
 
 ```SyncLite JobMonitor``` enables managing, scheduling and monitoring all SyncLite jobs created on a given host.
 
