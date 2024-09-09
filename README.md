@@ -18,6 +18,12 @@
 {Edge/Desktop Apps} + {SyncLite Logger} ---> {Staging Storage} ---> {SyncLite Consolidator} ---> {Destination DB/DW/DataLakes}
 ```
 
+<p align="center">
+  <a href="https://www.synclite.io">
+  <img src="docs/images/SyncLite_HighLevel_Overview.png" width="50%" height="50%" alt="SyncLite - Build Anything Sync Anywhere">
+  </a>
+</p>
+
 SyncLite enables following scenarios for industry leading databases, data warehouse and data lakes.
 
 ## Build Sync-Ready Applications: 
