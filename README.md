@@ -20,7 +20,7 @@
 
 <p align="center">
   <a href="https://www.synclite.io">
-  <img src="docs/images/SyncLite_HighLevel_Overview.png" width="50%" height="50%" alt="SyncLite - Build Anything Sync Anywhere">
+  <img src="docs/images/SyncLite_HighLevel_Overview.png" width="70%" height="70%" alt="SyncLite - Build Anything Sync Anywhere">
   </a>
 </p>
 
