@@ -793,7 +793,7 @@ public class TestKafkaProducer {
  	Response from Server 
  	```
   	{
- 		"message" : "Device initialized successfully"
+ 		"message" : "Database initialized successfully"
  		"synclite-logger-config" : "C:\synclite\users\bob\synclite\job1\synclite_logger.conf"
  	}
   	```
@@ -811,6 +811,7 @@ public class TestKafkaProducer {
  	Response from Server 
  	```
   	{
+  		"result" : "true"
  		"message" : "Update executed successfully, rows affected: 0"
    	}
   	```
@@ -828,25 +829,78 @@ public class TestKafkaProducer {
 
  	Response from Server 
  	```
-  	{  		
+  	{
+  		"result" : "true"
  		"message" : "Batch executed successfully, rows affected: 2"
    	}
   	```
 
-	- Send a request to close database
+	- Send a request to begin a transaction database
+	```
+ 	{
+ 		"db-path" : "C:\synclite\users\bob\synclite\job1\test.db"
+ 		"sql" : "begin"
+   	}
+ 	```
 
+ 	Response from Server 
+ 	```
+  	{
+  		"result" : "true"
+ 		"message" : "Transaction started successfully"
+  		"txn-handle": "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+   	}
+  	```
+	
+	- Send a request to execute a sql inside started transaction
    	Request
 	```
  	{
  		"db-path" : "C:\synclite\users\bob\synclite\job1\test.db"
- 		"sql" : "close database 'C:\synclite\users\bob\synclite\job1\test.db'"
+ 		"sql" : "INSERT INTO t1(a) VALUES(?, ?)"
+		"txn-handle": "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+ 		"arguments" : [{"3", "3"}, {"4", "4"}]
+   	}
+ 	```
+
+ 	Response from Server 
+ 	```
+  	{
+  		"result" : "true"
+ 		"message" : "Batch executed successfully, rows affected: 2"
+   	}
+  	```
+
+	- Send a request to commit a transaction
+	```
+ 	{
+ 		"db-path" : "C:\synclite\users\bob\synclite\job1\test.db"
+  		"txn-handle": "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+ 		"sql" : "commit"
+ 	}
+ 	```
+
+ 	Response from Server 
+ 	```
+  	{
+  		"result" : "true"
+ 		"message" : "Transaction committed successfully"
+   	}
+  	```
+
+	- Send a request to close database   	
+	```
+ 	{
+ 		"db-path" : "C:\synclite\users\bob\synclite\job1\test.db"
+ 		"sql" : "close"
    	}
  	```
 	
  	Response from Server 
  	```
-  	{  		
-		"message" : "sql executed successfully"
+  	{
+  		"result" : "true"
+		"message" : "Database closed successfully"
    	}
   	```
  
