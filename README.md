@@ -771,7 +771,7 @@ public class TestKafkaProducer {
 
 # Launching and using SyncLite DB
 
-```SyncLite DB``` is a sync-enabled, single-node database server that wraps popular embedded databases like SQLite, DuckDB, Apache Derby, H2, and HyperSQL. Unlike the embeddable ```SyncLite Logger``` library for Java and Python applications, ```SyncLite DB``` acts as a standalone server, allowing your edge or desktop applications—regardless of the programming language—to connect and send SQL requests (wrapped in JSON format) over a network socket. This makes it an ideal solution for seamless, real-time data synchronization in diverse environments.
+```SyncLite DB``` is a sync-enabled, single-node database server that wraps popular embedded databases like SQLite, DuckDB, Apache Derby, H2, and HyperSQL. Unlike the embeddable ```SyncLite Logger``` library for Java and Python applications, ```SyncLite DB``` acts as a standalone server, allowing your edge or desktop applications—regardless of the programming language—to connect and send/post SQL requests (wrapped in JSON format) via a REST API. This makes it an ideal solution for seamless, real-time data synchronization in diverse environments.
 
 1. Go to the directory ```synclite-platform-<version>\tools\synclite-db```
 2. Check the configurations in synclite-db.conf and adjust them as per your needs.
@@ -837,6 +837,7 @@ public class TestKafkaProducer {
 
 	- Send a request to begin a transaction database
 	```
+ 	Request
  	{
  		"db-path" : "C:\synclite\users\bob\synclite\job1\test.db"
  		"sql" : "begin"
@@ -872,6 +873,7 @@ public class TestKafkaProducer {
   	```
 
 	- Send a request to commit a transaction
+	Request	
 	```
  	{
  		"db-path" : "C:\synclite\users\bob\synclite\job1\test.db"
@@ -890,6 +892,7 @@ public class TestKafkaProducer {
 
 	- Send a request to close database   	
 	```
+ 	Request
  	{
  		"db-path" : "C:\synclite\users\bob\synclite\job1\test.db"
  		"sql" : "close"
