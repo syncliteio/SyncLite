@@ -835,9 +835,10 @@ public class TestKafkaProducer {
    	}
   	```
 
-	- Send a request to begin a transaction database
-	```
+	- Send a request to begin a transaction on database
+
  	Request
+	 ```
  	{
  		"db-path" : "C:\synclite\users\bob\synclite\job1\test.db"
  		"sql" : "begin"
@@ -854,6 +855,7 @@ public class TestKafkaProducer {
   	```
 	
 	- Send a request to execute a sql inside started transaction
+
    	Request
 	```
  	{
@@ -873,6 +875,7 @@ public class TestKafkaProducer {
   	```
 
 	- Send a request to commit a transaction
+
 	Request	
 	```
  	{
@@ -891,8 +894,9 @@ public class TestKafkaProducer {
   	```
 
 	- Send a request to close database   	
-	```
  	Request
+
+	 ```
  	{
  		"db-path" : "C:\synclite\users\bob\synclite\job1\test.db"
  		"sql" : "close"
