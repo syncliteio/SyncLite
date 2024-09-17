@@ -278,7 +278,7 @@ on your Windows/Ubuntu host.
      
 9. This release also comes with SyncLite DB server under tools/synclite-db. You can run synclite-db.bat(WINDOWS)/synclite-db.sh(UBUNTU) to start SyncLite DB server and connect to it using synclite-client to execute SQL operations which are not only executed/persisted on the specified embedded database but also consolidated by the SyncLite Consolidator onto the destination databases.
    - Usage 1 : ```synclite-db.bat/synclite-db.sh``` ==> Will start SyncLite DB with default configurations
-   - Usage 2 : ```synclite-db.bat/synclite-db.sh``` --config <path/to/synclite-db/config>
+   - Usage 2 : ```synclite-db.bat/synclite-db.sh --config <path/to/synclite-db/config>```
           
 10. Use ```stop.bat``` (Windows) / ```stop.sh```(LINUX) to stop SyncLite consolidator job (if running) and tomcat.
    OR RUN docker-stop.sh to stop the docker container.
