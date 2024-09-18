@@ -40,7 +40,7 @@ https://www.synclite.io/synclite/sync-ready-apps
 https://www.synclite.io/solutions/gen-ai-search-rag
 
 
-## Build Streaming Applications For Last Mile Data Integration: 
+## Build Streaming Applications For Last Mile Delivery: 
 SyncLite facilitates development of large-scale data streaming applications through SyncLite Logger, which offers both a Kafka Producer API and SQL API. This allows for the ingestion of massive amounts of data and provides the capability to query the ingested data using the SQL API within applications. Together, SyncLite Logger and SyncLite Consolidator enable seamless last-mile data integration from thousands of streaming application instances into a diverse array of final data destinations.
 
 ```
@@ -50,7 +50,7 @@ SyncLite facilitates development of large-scale data streaming applications thro
 Learn more: https://www.synclite.io/synclite/last-mile-streaming
 
 
-## Deploy Smart Database ETL/Replication/Migration Pipelines:
+## Deploy Database ETL/Replication/Migration Pipelines:
 Set up many-to-many, scalable database replication/migration/incremental ETL pipelines from a diverse range of source databases and raw data files into a diverse range of destinations.
 
 ```
@@ -643,7 +643,7 @@ curs.execute("close database c:\\synclite\\python\\data\\test_appender.db");
 #You can also close all open databases in a single SQL : CLOSE ALL DATABASES
 ```
 
-### 2. Streaming Device : 
+### Streaming Device : 
 Streaming device allows all DDL operations (as supported by SQLite) and Prepared Statement based INSERT operations (UPDATE and DELETE are not allowed) to allow high speed concurrent batched data ingestion, performing logging and streaming of the ingested data. Streaming device enable developers to build high volume data streaming applications enabled with last mile data integration from thousands of edge applications into one or more centralized databases/data warehouses/data lakes.
 
 #### Java
