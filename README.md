@@ -822,8 +822,8 @@ public class TestKafkaProducer {
 	```
  	{
  		"db-path" : "C:\synclite\users\bob\synclite\job1\test.db"
- 		"sql" : "INSERT INTO t1(a) VALUES(?, ?)"
- 		"arguments" : [{"1", "1"}, {"2", "2"}]
+ 		"sql" : "INSERT INTO t1(a,b) VALUES(?, ?)"
+ 		"arguments" : [[1, "one"], [2, "two"]]
    	}
  	```
 
@@ -860,9 +860,9 @@ public class TestKafkaProducer {
 	```
  	{
  		"db-path" : "C:\synclite\users\bob\synclite\job1\test.db"
- 		"sql" : "INSERT INTO t1(a) VALUES(?, ?)"
+ 		"sql" : "INSERT INTO t1(a,b) VALUES(?, ?)"
 		"txn-handle": "f47ac10b-58cc-4372-a567-0e02b2c3d479"
- 		"arguments" : [{"3", "3"}, {"4", "4"}]
+ 		"arguments" : [[3, "three"], [4, "four"]]
    	}
  	```
 
