@@ -12,7 +12,7 @@
 
 # SyncLite - Build Anything Sync Anywhere
 
-<a href=https://www.synclite.io>SyncLite</a> is an open-source, low-code, comprehensive relational data consolidation platform enabling developers to rapidly build data intensive applications for edge, desktop and mobile environments. SyncLite enables real-time, transactional data replication and consolidation from various sources including edge/desktop applications using popular embedded databases (SQLite, DuckDB, Apache Derby, H2, HyperSQL), data streaming applications, IoT message brokers, traditional database systems(ETL) and more into a diverse array of databases, data warehouses, and data lakes, enabling AI and ML use-cases at all three levels: Edge, Fog and Cloud.
+<a href=https://www.synclite.io>SyncLite</a> is an open-source, low-code, comprehensive relational data consolidation platform enabling developers to rapidly build data intensive applications for edge, desktop and mobile environments. SyncLite enables real-time, transactional data replication and consolidation from various sources including edge/desktop applications using popular embedded databases (SQLite, DuckDB, Apache Derby, H2, HyperSQL), data streaming applications, IoT message brokers, traditional database systems(ETL) and more into a diverse array of databases, data warehouses, and data lakes, enabling AI and ML use-cases at edge and cloud.
 
 ```
 {Edge/Desktop Apps} + {SyncLite Logger} ---> {Staging Storage} ---> {SyncLite Consolidator} ---> {Destination DB/DW/DataLakes}
@@ -27,10 +27,18 @@
 SyncLite enables following scenarios for industry leading databases, data warehouse and data lakes.
 
 ## Build Sync-Ready Applications: 
-SyncLite's novel CDC replication framework for embedded databases, is designed to assist developers to rapidly build general purpose data-intensive applications, Gen AI Search/RAG applications for edge, desktop, and mobile environments. It seamlessly integrates with embedded databases like SQLite, DuckDB, Apache Derby, H2, HyperSQL(HSQLDB), enabling Change Data Capture + transactional, real-time data replication and consolidation from them into a diverse range of industry leading databases, data warehouses, and data lakes, enabling global analytics, AI Search and RAG applications.
+SyncLite provides a novel CDC replication framework for embedded databases, helping developers quickly build data-intensive applications, including Gen AI Search and RAG applications, for edge, desktop, and mobile environments. It integrates seamlessly with popular embedded databases like SQLite, DuckDB, Apache Derby, H2, and HyperSQL (HSQLDB), enabling Change Data Capture (CDC), transactional, real-time data replication, and consolidation into industry-leading databases, data warehouses, and data lakes. 
+
+```SyncLite Logger```, an embeddable Java library (JDBC driver), captures all SQL transactions in log files that can be consumed by Java and Python applications for efficient data syncing.
+
+```SyncLite DB```, a standalone sync-enabled database, accepts SQL requests in JSON format over HTTP, making it compatible with any programming language and ideal for flexible, real-time data integration and consolidation, right from edge/desktop applications into final data destinations.
+```
+
+{Edge/Desktop Apps} + {SyncLite Logger + Embedded Databases} ---> {Staging Storage} ---> {SyncLite Consolidator} ---> {Destination DB/DW/DataLakes}
+```
 
 ```
-{Edge/Desktop Apps} + {SyncLite Logger + Embedded Databases} ---> {Staging Storage} ---> {SyncLite Consolidator} ---> {Destination DB/DW/DataLakes}
+{Edge/Desktop Apps} ---> {SyncLite DB + Embedded Databases} ---> {Staging Storage} ---> {SyncLite Consolidator} ---> {Destination DB/DW/DataLakes}
 ```
 
 Learn more: 
