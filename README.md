@@ -31,7 +31,7 @@ SyncLite provides a novel CDC replication framework for embedded databases, help
 
 ```SyncLite Logger```, an embeddable Java library (JDBC driver), captures all SQL transactions in log files that can be consumed by Java and Python applications for efficient data syncing.
 
-```SyncLite DB```, a standalone sync-enabled database, accepts SQL requests in JSON format over HTTP, making it compatible with any programming language and ideal for flexible, real-time data integration and consolidation, right from edge/desktop applications into final data destinations.
+```SyncLite DB```, a standalone sync-enabled database, accepts SQL requests in JSON format over HTTP, making it compatible with any programming language (Java, Python, C++, C#, Go, Rust, Ruby, Node.js etc.) and ideal for flexible, real-time data integration and consolidation, right from edge/desktop applications into final data destinations.
 ```
 
 {Edge/Desktop Apps} + {SyncLite Logger + Embedded Databases} ---> {Staging Storage} ---> {SyncLite Consolidator} ---> {Destination DB/DW/DataLakes}
