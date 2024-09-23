@@ -55,6 +55,10 @@ SyncLite facilitates development of large-scale data streaming applications thro
 {Data Streaming Apps} + {SyncLite Logger} ---> {Staging Storage} ---> {SyncLite Consolidator} ---> {Destination DB/DW/DataLakes}
 ```
 
+```
+{Data Streaming Apps} ---> {SyncLite DB} ---> {Staging Storage} ---> {SyncLite Consolidator} ---> {Destination DB/DW/DataLakes}
+```
+
 Learn more: https://www.synclite.io/synclite/last-mile-streaming
 
 
