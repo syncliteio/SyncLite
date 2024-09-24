@@ -6,6 +6,8 @@
 #include <nlohmann/json.hpp>
 #include <filesystem>
 #include <stdexcept>
+#include <cstdlib>
+#include <iostream>
 
 using json = nlohmann::json;
 namespace fs = std::filesystem;
@@ -273,8 +275,6 @@ SyncLiteDBResult closeDB(const fs::path& dbPath) {
     return dbResult;
 }
 
-#include <cstdlib>
-#include <iostream>
 std::string getHomeDirectory() {
     char* homeDir = nullptr;
     size_t len = 0;
@@ -302,7 +302,7 @@ void createDBDirs() {
 int main() {
     try {
         createDBDirs();
-        fs::path dbPath = dbDir / "testCpp";
+        fs::path dbPath = dbDir / "testCpp.db";
 
         // Initialize DB
         std::cout << "========================================================\n";

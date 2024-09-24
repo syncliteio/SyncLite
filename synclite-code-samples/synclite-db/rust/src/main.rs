@@ -212,7 +212,7 @@ fn create_db_dirs() -> std::io::Result<()> {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     create_db_dirs()?;
 
-    let db_path = unsafe { DB_DIR.as_ref().unwrap().join("testRust") };
+    let db_path = unsafe { DB_DIR.as_ref().unwrap().join("testRust.db") };
 
     println!("========================================================");
     println!("Executing initialize DB");

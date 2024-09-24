@@ -211,7 +211,7 @@ func main() {
 		log.Fatalf("Failed to create directory: %v", err)
 	}
 
-	dbPath := filepath.Join(dbDir, "testGo")
+	dbPath := filepath.Join(dbDir, "testGo.db")
 
 	// Initialize DB
 	fmt.Println("========================================================")

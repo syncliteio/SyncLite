@@ -81,7 +81,7 @@ class SyncLiteDBResult
   end
 end
 
-class SampleApp
+class SyncLiteDBClient
   SYNC_LITE_DB_ADDRESS = 'http://localhost:5555'
   DB_DIR = File.join(Dir.home, 'synclite', 'job1', 'db')
 
@@ -201,7 +201,7 @@ class SampleApp
 
   def self.run
     create_db_dirs
-    db_path = File.join(DB_DIR, 'testRuby')
+    db_path = File.join(DB_DIR, 'testRuby.db')
 
     puts "========================================================"
     puts "Executing initialize DB"
@@ -270,4 +270,4 @@ class SampleApp
   end
 end
 
-SampleApp.run
+SyncLiteDBClient.run

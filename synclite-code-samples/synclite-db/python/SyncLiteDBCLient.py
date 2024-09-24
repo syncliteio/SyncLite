@@ -227,7 +227,7 @@ def execute_sql(db_path, txn_handle, sql, arguments):
 db_dir = os.path.join(os.path.expanduser("~"), "synclite", "job1", "db")
 os.makedirs(db_dir, exist_ok=True)
 
-db_path = os.path.join(db_dir, "testPython")
+db_path = os.path.join(db_dir, "testPython.db")
 
 # Initialize DB
 print("=" * 56)

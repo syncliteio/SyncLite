@@ -93,7 +93,7 @@ sql: drop table t1
 */
 
 
-public class TestSyncLiteDB {
+public class SyncLiteDBClient {
 
 	public static class SyncLiteDBResult {
 		public boolean result;
@@ -291,7 +291,7 @@ public class TestSyncLiteDB {
 		//Initialize db directory
 		createDBDirs();
 
-		Path dbPath = dbDir.resolve("testJava");
+		Path dbPath = dbDir.resolve("testJava.db");
 
 		//Initialize DB
 		System.out.println("========================================================");
