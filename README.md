@@ -807,7 +807,6 @@ public class TestKafkaProducer {
   	{
   		"result"  : true	
  		"message" : "Database initialized successfully"
- 		"synclite-logger-config" : "C:\synclite\users\bob\synclite\job1\synclite_logger.conf"
  	}
   	```
   
