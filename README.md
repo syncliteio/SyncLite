@@ -31,7 +31,7 @@ SyncLite provides a novel CDC replication framework for embedded databases, help
 
 ```SyncLite Logger```, an embeddable Java library (JDBC driver), captures all SQL transactions in log files that can be consumed by Java and Python applications for efficient data syncing.
 
-```SyncLite DB```, a standalone sync-enabled database, accepts SQL requests in JSON format over HTTP, making it compatible with any programming language (Java, Python, C++, C#, Go, Rust, Ruby, Node.js etc.) and ideal for flexible, real-time data integration and consolidation, right from edge/desktop applications into final data destinations.
+```SyncLite DB```, a standalone sync-enabled database, accepting SQL requests in JSON format over HTTP, making it compatible with any programming language (Java, Python, C++, C#, Go, Rust, Ruby, Node.js etc.) and ideal for flexible, real-time data integration and consolidation, right from edge/desktop applications into final data destinations.
 ```
 
 {Edge/Desktop Apps} + {SyncLite Logger + Embedded Databases} ---> {Staging Storage} ---> {SyncLite Consolidator} ---> {Destination DB/DW/DataLakes}
@@ -88,7 +88,7 @@ Learn More: https://www.synclite.io/solutions/iot-data-connector
   	
 -large scale data streaming solutions for last mile data integrations into a wide range of industry leading databases, while offering ability to perform real-time analytics using the native embedded databases over streaming data, at the producer end of the pipelines.
 
-```SyncLite DB``` is a sync-enabled, single-node database server that wraps popular embedded databases like SQLite, DuckDB, Apache Derby, H2, and HyperSQL. Unlike the embeddable SyncLite Logger library for Java and Python applications, SyncLite DB acts as a standalone server, allowing your edge or desktop applications—regardless of the programming language—to connect and send SQL requests (wrapped in JSON format) over a network socket. 
+```SyncLite DB``` is a sync-enabled, single-node database server that wraps popular embedded databases like SQLite, DuckDB, Apache Derby, H2, and HyperSQL. Unlike the embeddable SyncLite Logger library for Java and Python applications, SyncLite DB acts as a standalone server, allowing your edge or desktop applications—regardless of the programming language—to connect and send SQL requests (wrapped in JSON format) over HTTP. 
 
 ```SyncLite Client``` is a command line tool to operate SyncLite devices, to execute SQL queries and workloads.
 
