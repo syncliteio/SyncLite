@@ -77,7 +77,7 @@ sql: drop table t1
 
 */
 
-namespace SampleApp
+namespace SyncLite
 {
     public class SyncLiteDBResult
     {
@@ -87,7 +87,7 @@ namespace SampleApp
         public string TxnHandle { get; set; }
     }
 
-    public class MainClass
+    public class SyncLiteDBClient
     {
         private static string syncLiteDBAddress = "http://localhost:5555";
         private static string dbDir;
@@ -266,7 +266,7 @@ namespace SampleApp
             // Initialize db directory
             CreateDBDirs();
 
-            string dbPath = Path.Combine(dbDir, "testCSharp");
+            string dbPath = Path.Combine(dbDir, "testCSharp.db");
 
             // Initialize DB
             Console.WriteLine("========================================================");

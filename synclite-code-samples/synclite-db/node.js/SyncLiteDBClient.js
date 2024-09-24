@@ -257,7 +257,7 @@ async function createDBDirs() {
 (async () => {
   try {
     await createDBDirs();
-    const dbPath = path.join(dbDir, 'testJava');
+    const dbPath = path.join(dbDir, 'testNodeJS.db');
 
     // Initialize DB
     console.log('========================================================');
