@@ -13,6 +13,7 @@ This starts the SyncLite DB server listening at the specified address.
 - Connect and initialize a device
 
 	Request
+
 ```
 	{
 		"db-type" : "SQLITE"
@@ -35,6 +36,7 @@ This starts the SyncLite DB server listening at the specified address.
 - Send a sql command (without any arguments) to create a table
 
 	Request
+
 ```
 	{
 		"result" : true
@@ -55,6 +57,7 @@ This starts the SyncLite DB server listening at the specified address.
 - Send a request to perform a batched insert on the created table, passing a JSON array as a batch/arguments.  
 
 	Request
+
 ```
 	{
 		"db-path" : "C:\synclite\users\bob\synclite\job1\test.db"
@@ -75,10 +78,11 @@ This starts the SyncLite DB server listening at the specified address.
 -Send a request to begin a transaction on database
 
 	Request
+
 ```
 	{
-	   "db-path" : "C:\synclite\users\bob\synclite\job1\test.db"
-	   "sql" : "begin"
+		"db-path" : "C:\synclite\users\bob\synclite\job1\test.db"
+	   	"sql" : "begin"
 	}
 ```
 
@@ -93,7 +97,9 @@ This starts the SyncLite DB server listening at the specified address.
 ```
 
 - Send a request to execute a sql inside a started transaction
+
 	Request
+
 ```
 	{
 		"db-path" : "C:\synclite\users\bob\synclite\job1\test.db"
@@ -113,7 +119,9 @@ This starts the SyncLite DB server listening at the specified address.
 ```
 
 - Send a request to commit a transaction
-	Request
+
+ 	Request
+
 ```
 	{
 		"db-path" : "C:\synclite\users\bob\synclite\job1\test.db"
@@ -132,10 +140,13 @@ This starts the SyncLite DB server listening at the specified address.
 ```
 
 - Send a request to close database Request
+
+	Request
+
 ```
 	{
-	   "db-path" : "C:\synclite\users\bob\synclite\job1\test.db"
-	   "sql" : "close"
+	   	"db-path" : "C:\synclite\users\bob\synclite\job1\test.db"
+	   	"sql" : "close"
 	}
 ```
 
@@ -148,7 +159,7 @@ This starts the SyncLite DB server listening at the specified address.
 	}
 ```	
 	
-5. Refer code samples in various programming languages : Java, Python, C#, C++, Go, Rust, Ruby, Node.js, implementing BELOW 6 APIS which you can copy and readily use to connect to SyncLiteDB
+5. Refer code samples in various programming languages : Java, Python, C#, C++, Go, Rust, Ruby, Node.js, implementing BELOW 6 APIS which you can copy and readily use to connect to SyncLiteDB in your applications.
 
 - initializeDB
 - beginTransaction
