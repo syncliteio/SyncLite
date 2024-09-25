@@ -8,7 +8,7 @@
 
 This starts the SyncLite DB server listening at the specified address.
 
-4. An application in your favourite programming language can establish a connection with the SyncLite DB server at the specified address and send requests in JSON format as below
+4. An application in your favourite programming language can establish a connection with the SyncLite DB server at the specified address and send requests in JSON format as below. Following request response workflow demonstrates usage of SyncLiteDB.
 
 - Connect and initialize a device
 
@@ -21,7 +21,9 @@ This starts the SyncLite DB server listening at the specified address.
 		"sql" : "initialize"
 	}
 ```
-	Response from Server
+
+ 	Response from Server
+
 ```
 	{
 		"result" : true
@@ -40,7 +42,9 @@ This starts the SyncLite DB server listening at the specified address.
 		"sql" : "CREATE TABLE IF NOT EXISTS(a INT, b INT)"
 	}
 ```
-	Response from Server
+
+ 	Response from Server
+  
 ```
 	{
 		"result" : "true"
@@ -58,7 +62,9 @@ This starts the SyncLite DB server listening at the specified address.
 		"arguments" : [[1, "one"], [2, "two"]]
 	}
 ```
+
 	Response from Server
+
 ```
 	{
 		"result" : "true"
@@ -75,7 +81,9 @@ This starts the SyncLite DB server listening at the specified address.
 	   "sql" : "begin"
 	}
 ```
-	Response from Server
+
+ 	Response from Server
+
 ```
 	{
 		"result" : "true"
@@ -94,7 +102,9 @@ This starts the SyncLite DB server listening at the specified address.
 		"arguments" : [[3, "three"], [4, "four"]]
 	}
 ```
-	Response from Server
+
+ 	Response from Server
+
 ```
 	{
 		"result" : "true"
@@ -111,7 +121,9 @@ This starts the SyncLite DB server listening at the specified address.
 		"sql" : "commit"
 	}
 ```
-	Response from Server
+
+ 	Response from Server
+
 ```
 	{
 		"result" : "true"
@@ -126,7 +138,9 @@ This starts the SyncLite DB server listening at the specified address.
 	   "sql" : "close"
 	}
 ```
-	Response from Server
+
+ 	Response from Server
+
 ```	
 	{
 		"result" : "true"
