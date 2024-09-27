@@ -110,7 +110,7 @@ Learn More: https://www.synclite.io/solutions/iot-data-connector
 	
  	a. OpenJDK 11 : https://jdk.java.net/java-se-ri/11
 	
- 	b. Apache Tomcat 9.0.93 : https://tomcat.apache.org/download-90.cgi
+ 	b. Apache Tomcat 9.0.95 : https://tomcat.apache.org/download-90.cgi
 
 5. Run following: 
 	```
