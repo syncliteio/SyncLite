@@ -783,6 +783,8 @@ public class TestKafkaProducer {
 
 # Launching and using SyncLite DB
 
+[NOT READY FOR PRODUCTION USAGE]
+
 ```SyncLite DB``` is a sync-enabled, single-node database server that wraps popular embedded databases like SQLite, DuckDB, Apache Derby, H2, and HyperSQL. Unlike the embeddable ```SyncLite Logger``` library for Java and Python applications, ```SyncLite DB``` acts as a standalone server, allowing your edge or desktop applications—regardless of the programming language—to connect and send/post SQL requests (wrapped in JSON format) via a REST API. This makes it an ideal solution for seamless, real-time data synchronization in diverse environments.
 
 1. Go to the directory ```synclite-platform-<version>\tools\synclite-db```
