@@ -160,6 +160,23 @@ fn commit_transaction(db_path: &Path, txn_handle: &str) -> Result<SyncLiteDBResu
     })
 }
 
+fn rollback_transaction(db_path: &Path, txn_handle: &str) -> Result<SyncLiteDBResult, String> {
+    let json_request = json!({
+        "db-path": db_path.to_str().unwrap(),
+        "txn-handle": txn_handle,
+        "sql": "rollback",
+    });
+
+    let json_response = process_request(&json_request)?;
+
+    Ok(SyncLiteDBResult {
+        result: json_response["result"].as_bool().unwrap(),
+        message: json_response["message"].as_str().unwrap().to_string(),
+        result_set: None,
+        txn_handle: None,
+    })
+}
+
 fn execute_sql(db_path: &Path, txn_handle: Option<&str>, sql: &str, arguments: Option<&Value>) -> Result<SyncLiteDBResult, String> {
     let mut json_request = json!({
         "db-path": db_path.to_str().unwrap(),

@@ -222,11 +222,12 @@ public class SyncLiteDBClient {
 		return dbResult;
 	}
 
-	public static SyncLiteDBResult rollbackTransaction(Path dbPath) throws SQLException {
+	public static SyncLiteDBResult rollbackTransaction(Path dbPath, String txnHandle) throws SQLException {
 		SyncLiteDBResult dbResult;
 		try {
 			JSONObject jsonRequest = new JSONObject();
 			jsonRequest.put("db-path", dbPath);
+			jsonRequest.put("txn-handle", txnHandle);
 			jsonRequest.put("sql", "rollback");
 
 			JSONObject jsonRespose = processRequest(jsonRequest);

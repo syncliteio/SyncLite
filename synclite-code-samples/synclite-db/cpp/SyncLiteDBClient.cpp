@@ -212,11 +212,12 @@ SyncLiteDBResult commitTransaction(const fs::path& dbPath, const std::string& tx
     return dbResult;
 }
 
-SyncLiteDBResult rollbackTransaction(const fs::path& dbPath) {
+SyncLiteDBResult rollbackTransaction(const fs::path& dbPath, const std::string& txnHandle) {
     SyncLiteDBResult dbResult;
     try {
         json jsonRequest;
         jsonRequest["db-path"] = dbPath.string();
+        jsonRequest["txn-handle"] = txnHandle;
         jsonRequest["sql"] = "rollback";
 
         json jsonResponse = processRequest(jsonRequest);
