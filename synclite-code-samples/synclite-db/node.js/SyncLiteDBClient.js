@@ -178,10 +178,11 @@ async function commitTransaction(dbPath, txnHandle) {
   }
 }
 
-async function rollbackTransaction(dbPath) {
+async function rollbackTransaction(dbPath, txnHandle) {
   try {
     const jsonRequest = {
       'db-path': dbPath,
+      'txn-handle': txnHandle,
       'sql': 'rollback',
     };
 

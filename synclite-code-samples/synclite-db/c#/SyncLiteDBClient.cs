@@ -222,6 +222,33 @@ namespace SyncLite
             return dbResult;
         }
 
+	public static SyncLiteDBResult RollbackTransaction(string dbPath, string txnHandle)
+        {
+            SyncLiteDBResult dbResult = new SyncLiteDBResult();
+
+            try
+            {
+                JObject jsonRequest = new JObject
+                {
+                    { "db-path", dbPath },
+                    { "txn-handle", txnHandle },
+                    { "sql", "rollback" }
+                };
+
+                JObject jsonResponse = ProcessRequest(jsonRequest);
+
+                dbResult.Result = jsonResponse["result"].ToObject<bool>();
+                dbResult.Message = jsonResponse["message"].ToString();
+            }
+            catch (Exception e)
+            {
+                throw new Exception("Failed to commit transaction on DB: " + dbPath + " : " + e.Message, e);
+            }
+
+            return dbResult;
+        }
+
+
         public static SyncLiteDBResult ExecuteSQL(string dbPath, string txnHandle, string sql, JArray arguments = null)
         {
             SyncLiteDBResult dbResult = new SyncLiteDBResult();

@@ -152,9 +152,10 @@ class SyncLiteDBClient
     result
   end
 
-  def self.rollback_transaction(db_path)
+  def self.rollback_transaction(db_path, txn_handle)
     json_request = {
       'db-path' => db_path.to_s,
+      'txn-handle' => txn_handle,
       'sql' => 'rollback'
     }
 
