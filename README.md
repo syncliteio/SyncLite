@@ -976,10 +976,12 @@ public class TestKafkaProducer {
 1. PostgreSQL
 2. MySQL
 3. MongoDB
-4. SQLite
-5. DuckDB
-6. ClickHouse
-7. FerretDB
+4. Microsoft SQL Server
+5. Apache Iceberg
+8. ClickHouse
+9. FerretDB
+6. SQLite
+7. DuckDB
 
 # Patent
 SyncLite is backed by patented technlogy, more info : https://www.synclite.io/resources/patent  
