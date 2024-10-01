@@ -26,8 +26,10 @@ WORKDIR /synclite/bin
 
 RUN ./deploy.sh && \
      rm -rf /synclite/lib && \
-     rm -rf /synclite/sample-apps && \
-     rm -rf /synclite/tools && \
+     rm -rf /synclite/tools/synclite-dbreader && \
+     rm -rf /synclite/tools/synclite-qreader && \
+     rm -rf /synclite/tools/synclite-jobmonitor && \
+     rm -rf /synclite/tools/synclite-validator && \
      rm -rf /synclite/synclite-platform.tar.gz
 	 
 FROM ubuntu:20.04

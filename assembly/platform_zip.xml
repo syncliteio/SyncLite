@@ -39,15 +39,15 @@
 			<outputDirectory>lib/logger/java</outputDirectory>
 		</fileSet>
 		<fileSet>
+			<directory>${project.basedir}/synclite-code-samples</directory>
+			<outputDirectory>/sample-apps/</outputDirectory>
+		</fileSet>
+		<fileSet>
 			<directory>${project.basedir}/synclite-sample-web-app/web
 			</directory>
 			<fileMode>755</fileMode>
 			<directoryMode>755</directoryMode>
-			<outputDirectory>/sample-apps/jsp-servlet/web</outputDirectory>
-		</fileSet>
-		<fileSet>
-			<directory>${project.basedir}/synclite-code-samples</directory>
-			<outputDirectory>/sample-apps/</outputDirectory>
+			<outputDirectory>/sample-apps/synclite-logger/jsp-servlet/web</outputDirectory>
 		</fileSet>
 		<fileSet>
 			<directory>${project.basedir}/synclite-client/client/target
@@ -103,6 +103,13 @@
 			<fileMode>755</fileMode>
 			<directoryMode>755</directoryMode>		
 			<outputDirectory>tools/synclite-jobmonitor</outputDirectory>
+		</fileSet>
+		<fileSet>
+			<directory>${project.basedir}</directory>
+			<includes>
+				<include>LICENSE</include>
+			</includes>	
+			<outputDirectory>license</outputDirectory>
 		</fileSet>
 		<fileSet>
 			<directory>${project.basedir}/synclite-consolidator/root/core/target/generated-resources</directory>

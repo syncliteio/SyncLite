@@ -39,15 +39,15 @@
 			<outputDirectory>lib/logger/java</outputDirectory>
 		</fileSet>
 		<fileSet>
+			<directory>${project.basedir}/synclite-code-samples</directory>
+			<outputDirectory>/sample-apps/</outputDirectory>
+		</fileSet>
+		<fileSet>
 			<directory>${project.basedir}/synclite-sample-web-app/web
 			</directory>
 			<fileMode>755</fileMode>
 			<directoryMode>755</directoryMode>
-			<outputDirectory>/sample-apps/jsp-servlet/web</outputDirectory>
-		</fileSet>
-		<fileSet>
-			<directory>${project.basedir}/synclite-code-samples</directory>
-			<outputDirectory>/sample-apps/</outputDirectory>
+			<outputDirectory>/sample-apps/synclite-logger/jsp-servlet/web</outputDirectory>
 		</fileSet>
 		<fileSet>
 			<directory>${project.basedir}/synclite-client/client/target
@@ -119,6 +119,13 @@
 			<outputDirectory>license/third-party-software</outputDirectory>
 		</fileSet>
 		<fileSet>
+			<directory>${project.basedir}</directory>
+			<includes>
+				<include>LICENSE</include>
+			</includes>
+			<outputDirectory>license</outputDirectory>
+		</fileSet>
+		<fileSet>
 			<directory>${project.basedir}/bin</directory>
 			<includes>
 				<include>**/*</include>
@@ -131,6 +138,7 @@
 			<directory>${project.basedir}</directory>
 			<includes>
 				<include>README.md</include>
+				<include>LICENSE</include>
 				<include>synclite_platform_version.txt</include>
 			</includes>
 			<fileMode>644</fileMode>
