@@ -5,6 +5,6 @@ PARENT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 export JAVA_HOME="$PARENT_DIR/jdk-11"
 
-cd apache-tomcat-9.0.93/bin
+cd apache-tomcat-9.0.95/bin
 ./startup.sh
 
