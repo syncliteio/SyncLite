@@ -14,13 +14,9 @@
 
 <a href=https://www.synclite.io>SyncLite</a> is an open-source, low-code, comprehensive relational data consolidation platform enabling developers to rapidly build data intensive applications for edge, desktop and mobile environments. SyncLite enables real-time, transactional data replication and consolidation from various sources including edge/desktop applications using popular embedded databases (SQLite, DuckDB, Apache Derby, H2, HyperSQL), data streaming applications, IoT message brokers, traditional database systems(ETL) and more into a diverse array of databases, data warehouses, and data lakes, enabling AI and ML use-cases at edge and cloud.
 
-```
-{Edge/Desktop Apps} + {SyncLite Logger} ---> {Staging Storage} ---> {SyncLite Consolidator} ---> {Destination DB/DW/DataLakes}
-```
-
 <p align="center">
   <a href="https://www.synclite.io">
-  <img src="docs/images/SyncLite_HighLevel_Overview.png" width="70%" height="70%" alt="SyncLite - Build Anything Sync Anywhere">
+  <img src="docs/images/SyncLite_Data_Stack.png" width="80%" height="80%" alt="SyncLite - Build Anything Sync Anywhere">
   </a>
 </p>
 
