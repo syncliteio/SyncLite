@@ -2,7 +2,7 @@
 
 Thank you for considering contributing to SyncLite! We welcome all kinds of contributions, including:
 
-- Building Open Source Data Integration projects on toof of SyncLite platform demonstrating interesting usecases
+- Building open-source data integration projects on top of SyncLite platform demonstrating interesting usecases
 - Reporting issues and bugs
 - Adding new integration tests
 - Fixing issues and bugs
@@ -37,7 +37,9 @@ Thank you for considering contributing to SyncLite! We welcome all kinds of cont
 
 ## Issues
 
-When opening issues, please prefix the title with `SyncLite:`. For example:
+When opening issues, please prefix the title with `<project-name>:`
+
+e.g. synclite-validator: Add new integration test for SyncLite QReader
 
 Be as descriptive as possible, including steps to reproduce the issue if applicable.
 
