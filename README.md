@@ -25,7 +25,7 @@ SyncLite enables following scenarios for industry leading databases, data wareho
 ## Build Sync-Ready Applications: 
 SyncLite provides a novel CDC replication framework for embedded databases, helping developers quickly build data-intensive applications, including Gen AI Search and RAG applications, for edge, desktop, and mobile environments. It integrates seamlessly with popular embedded databases like SQLite, DuckDB, Apache Derby, H2, and HyperSQL (HSQLDB), enabling Change Data Capture (CDC), transactional, real-time data replication, and consolidation into industry-leading databases, data warehouses, and data lakes. 
 
-```SyncLite Logger```, an embeddable Java library (JDBC driver), captures all SQL transactions in log files that can be consumed by Java and Python applications for efficient data syncing.
+```SyncLite Logger```, an embeddable Java library (JDBC driver), that can be consumed by Java and Python applications for efficient data syncing by capturing all SQL transactions in log files and shipping these log files to configured staging storages.
 
 ```SyncLite DB```, a standalone sync-enabled database, accepting SQL requests in JSON format over HTTP, making it compatible with any programming language (Java, Python, C++, C#, Go, Rust, Ruby, Node.js etc.) and ideal for flexible, real-time data integration and consolidation, right from edge/desktop applications into final data destinations.
 ```
