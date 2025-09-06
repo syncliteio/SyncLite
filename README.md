@@ -5,8 +5,6 @@
   </a>
   <p align="center">
     <a href="https://www.synclite.io">Learn more</a>
-    ·
-    <a href="https://join.slack.com/t/syncliteworkspace/shared_invite/zt-2pz945vva-uuKapsubC9Mu~uYDRKo6Jw">Chat on Slack</a>
   </p>
 </p>
 
