@@ -979,8 +979,3 @@ public class TestKafkaProducer {
 
 # Patent
 SyncLite is backed by patented technlogy, more info : https://www.synclite.io/resources/patent  
-
-# Support
-Join <a href=https://join.slack.com/t/syncliteworkspace/shared_invite/zt-2pz945vva-uuKapsubC9Mu~uYDRKo6Jw>Slack Channel</a> for support and discussions.
-
-Contact: support@synclite.io
