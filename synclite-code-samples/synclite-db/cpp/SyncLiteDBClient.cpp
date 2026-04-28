@@ -2,12 +2,18 @@
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <iomanip>
+#include <chrono>
+#include <random>
+#include <array>
 #include <curl/curl.h>
 #include <nlohmann/json.hpp>
+#include <openssl/evp.h>
+#include <openssl/hmac.h>
+#include <openssl/sha.h>
 #include <filesystem>
 #include <stdexcept>
 #include <cstdlib>
-#include <iostream>
 
 using json = nlohmann::json;
 namespace fs = std::filesystem;
@@ -24,6 +30,7 @@ cd vcpkg
 .\vcpkg integrate install
 .\vcpkg install curl
 .\vcpkg install nlohmann-json
+.\vcpkg install openssl
 
 
 This source file implements following APIs to connect to SyncLiteDB:
@@ -96,7 +103,32 @@ struct SyncLiteDBResult {
     std::string message;
     json resultSet;
     std::string txnHandle;
+    std::string resultsetHandle;
+    bool hasMore = false;
+    json columnMetadata;
 };
+
+static SyncLiteDBResult toDBResult(const json& jsonResponse) {
+    SyncLiteDBResult dbResult{};
+    dbResult.result = jsonResponse.value("result", false);
+    dbResult.message = jsonResponse.value("message", "");
+    if (jsonResponse.contains("resultset")) {
+        dbResult.resultSet = jsonResponse["resultset"];
+    }
+    if (jsonResponse.contains("txn-handle")) {
+        dbResult.txnHandle = jsonResponse["txn-handle"].get<std::string>();
+    }
+    if (jsonResponse.contains("resultset-handle")) {
+        dbResult.resultsetHandle = jsonResponse["resultset-handle"].get<std::string>();
+    }
+    if (jsonResponse.contains("has-more")) {
+        dbResult.hasMore = jsonResponse["has-more"].get<bool>();
+    }
+    if (jsonResponse.contains("resultset-metadata")) {
+        dbResult.columnMetadata = jsonResponse["resultset-metadata"];
+    }
+    return dbResult;
+}
 
 // Global variables
 std::string syncLiteDBAddress = "http://localhost:5555";
@@ -106,6 +138,67 @@ fs::path dbDir;
 size_t WriteCallback(void* contents, size_t size, size_t nmemb, void* userp) {
     ((std::string*)userp)->append((char*)contents, size * nmemb);
     return size * nmemb;
+}
+
+static bool hasValue(const char* value) {
+    return value != nullptr && std::string(value).size() > 0;
+}
+
+static std::string sha256Hex(const std::string& value) {
+    unsigned char hash[SHA256_DIGEST_LENGTH];
+    SHA256(reinterpret_cast<const unsigned char*>(value.data()), value.size(), hash);
+
+    std::ostringstream out;
+    out << std::hex << std::setfill('0');
+    for (unsigned char b : hash) {
+        out << std::setw(2) << static_cast<int>(b);
+    }
+    return out.str();
+}
+
+static std::string hmacSha256Base64(const std::string& secret, const std::string& payload) {
+    unsigned int macLen = 0;
+    unsigned char* mac = HMAC(
+        EVP_sha256(),
+        secret.data(),
+        static_cast<int>(secret.size()),
+        reinterpret_cast<const unsigned char*>(payload.data()),
+        payload.size(),
+        nullptr,
+        &macLen);
+
+    if (mac == nullptr || macLen == 0) {
+        throw std::runtime_error("Failed to compute HMAC-SHA256 signature");
+    }
+
+    std::string encoded;
+    encoded.resize(4 * ((macLen + 2) / 3));
+    int encodedLen = EVP_EncodeBlock(
+        reinterpret_cast<unsigned char*>(&encoded[0]),
+        mac,
+        macLen);
+
+    if (encodedLen < 0) {
+        throw std::runtime_error("Failed to base64-encode signature");
+    }
+
+    encoded.resize(static_cast<size_t>(encodedLen));
+    return encoded;
+}
+
+static std::string generateNonce() {
+    std::array<unsigned char, 16> bytes{};
+    std::random_device rd;
+    for (auto& b : bytes) {
+        b = static_cast<unsigned char>(rd());
+    }
+
+    std::ostringstream out;
+    out << std::hex << std::setfill('0');
+    for (unsigned char b : bytes) {
+        out << std::setw(2) << static_cast<int>(b);
+    }
+    return out.str();
 }
 
 json processRequest(const json& jsonRequest) {
@@ -129,16 +222,50 @@ json processRequest(const json& jsonRequest) {
 
         struct curl_slist* headers = nullptr;
         headers = curl_slist_append(headers, "Content-Type: application/json");
+
+        const char* token = std::getenv("SYNCLITE_DB_AUTH_TOKEN");
+        if (hasValue(token)) {
+            headers = curl_slist_append(headers, (std::string("X-SyncLite-Token: ") + token).c_str());
+        }
+
+        const char* appId = std::getenv("SYNCLITE_DB_APP_ID");
+        const char* appSecret = std::getenv("SYNCLITE_DB_APP_SECRET");
+        if (hasValue(appId) && hasValue(appSecret)) {
+            long long nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::system_clock::now().time_since_epoch()).count();
+            std::string appTimestamp = std::to_string(nowMs);
+            std::string appNonce = generateNonce();
+            std::string canonical = "POST\n/\n" + appTimestamp + "\n" + appNonce + "\n" + sha256Hex(jsonStr);
+            std::string appSignature = hmacSha256Base64(appSecret, canonical);
+
+            headers = curl_slist_append(headers, (std::string("X-SyncLite-App-Id: ") + appId).c_str());
+            headers = curl_slist_append(headers, (std::string("X-SyncLite-Timestamp: ") + appTimestamp).c_str());
+            headers = curl_slist_append(headers, (std::string("X-SyncLite-Nonce: ") + appNonce).c_str());
+            headers = curl_slist_append(headers, (std::string("X-SyncLite-Signature: ") + appSignature).c_str());
+        } else {
+            const char* appTimestamp = std::getenv("SYNCLITE_DB_APP_TIMESTAMP");
+            const char* appNonce = std::getenv("SYNCLITE_DB_APP_NONCE");
+            const char* appSignature = std::getenv("SYNCLITE_DB_APP_SIGNATURE");
+            if (hasValue(appId) && hasValue(appTimestamp) && hasValue(appNonce) && hasValue(appSignature)) {
+                headers = curl_slist_append(headers, (std::string("X-SyncLite-App-Id: ") + appId).c_str());
+                headers = curl_slist_append(headers, (std::string("X-SyncLite-Timestamp: ") + appTimestamp).c_str());
+                headers = curl_slist_append(headers, (std::string("X-SyncLite-Nonce: ") + appNonce).c_str());
+                headers = curl_slist_append(headers, (std::string("X-SyncLite-Signature: ") + appSignature).c_str());
+            }
+        }
+
         curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
 
         res = curl_easy_perform(curl);
         if (res != CURLE_OK) {
-            throw std::runtime_error("Failed to process request: " + std::string(curl_easy_strerror(res)));
+            std::string err = "Failed to process request: " + std::string(curl_easy_strerror(res));
+            curl_slist_free_all(headers);
+            curl_easy_cleanup(curl);
+            throw std::runtime_error(err);
         }
 
+        curl_slist_free_all(headers);
         curl_easy_cleanup(curl);
-
-        json::parse(readBuffer);
 
         json jsonResponse = json::parse(readBuffer);
 
@@ -152,7 +279,6 @@ json processRequest(const json& jsonRequest) {
 }
 
 SyncLiteDBResult initializeDB(const fs::path& dbPath, const std::string& dbType, const std::string& dbName, const std::string& syncLiteLoggerConfigPath) {
-    SyncLiteDBResult dbResult;
     try {
         json jsonRequest;
         jsonRequest["db-path"] = dbPath.string();
@@ -165,17 +291,14 @@ SyncLiteDBResult initializeDB(const fs::path& dbPath, const std::string& dbType,
 
         json jsonResponse = processRequest(jsonRequest);
 
-        dbResult.result = jsonResponse["result"];
-        dbResult.message = jsonResponse["message"];
+        return toDBResult(jsonResponse);
     }
     catch (const std::exception& e) {
         throw std::runtime_error("Failed to initialize DB: " + dbPath.string() + " : " + e.what());
     }
-    return dbResult;
 }
 
 SyncLiteDBResult beginTransaction(const fs::path& dbPath) {
-    SyncLiteDBResult dbResult;
     try {
         json jsonRequest;
         jsonRequest["db-path"] = dbPath.string();
@@ -183,18 +306,14 @@ SyncLiteDBResult beginTransaction(const fs::path& dbPath) {
 
         json jsonResponse = processRequest(jsonRequest);
 
-        dbResult.result = jsonResponse["result"];
-        dbResult.message = jsonResponse["message"];
-        dbResult.txnHandle = jsonResponse["txn-handle"];
+        return toDBResult(jsonResponse);
     }
     catch (const std::exception& e) {
         throw std::runtime_error("Failed to begin transaction on DB: " + dbPath.string() + " : " + e.what());
     }
-    return dbResult;
 }
 
 SyncLiteDBResult commitTransaction(const fs::path& dbPath, const std::string& txnHandle) {
-    SyncLiteDBResult dbResult;
     try {
         json jsonRequest;
         jsonRequest["db-path"] = dbPath.string();
@@ -203,17 +322,14 @@ SyncLiteDBResult commitTransaction(const fs::path& dbPath, const std::string& tx
 
         json jsonResponse = processRequest(jsonRequest);
 
-        dbResult.result = jsonResponse["result"];
-        dbResult.message = jsonResponse["message"];
+        return toDBResult(jsonResponse);
     }
     catch (const std::exception& e) {
         throw std::runtime_error("Failed to commit transaction on DB: " + dbPath.string() + " : " + e.what());
     }
-    return dbResult;
 }
 
 SyncLiteDBResult rollbackTransaction(const fs::path& dbPath, const std::string& txnHandle) {
-    SyncLiteDBResult dbResult;
     try {
         json jsonRequest;
         jsonRequest["db-path"] = dbPath.string();
@@ -222,17 +338,14 @@ SyncLiteDBResult rollbackTransaction(const fs::path& dbPath, const std::string& 
 
         json jsonResponse = processRequest(jsonRequest);
 
-        dbResult.result = jsonResponse["result"];
-        dbResult.message = jsonResponse["message"];
+        return toDBResult(jsonResponse);
     }
     catch (const std::exception& e) {
         throw std::runtime_error("Failed to rollback transaction on DB: " + dbPath.string() + " : " + e.what());
     }
-    return dbResult;
 }
 
-SyncLiteDBResult executeSQL(const fs::path& dbPath, const std::string& txnHandle, const std::string& sql, const json& arguments) {
-    SyncLiteDBResult dbResult;
+SyncLiteDBResult executeSQL(const fs::path& dbPath, const std::string& txnHandle, const std::string& sql, const json& arguments, const std::string& dataFormat, bool includeMetadata) {
     try {
         json jsonRequest;
         jsonRequest["db-path"] = dbPath.string();
@@ -243,23 +356,50 @@ SyncLiteDBResult executeSQL(const fs::path& dbPath, const std::string& txnHandle
         if (!arguments.empty()) {
             jsonRequest["arguments"] = arguments;
         }
+        if (!dataFormat.empty()) {
+            jsonRequest["resultset-data-format"] = dataFormat;
+        }
+        jsonRequest["resultset-include-metadata"] = includeMetadata ? "ON" : "OFF";
 
         json jsonResponse = processRequest(jsonRequest);
 
-        dbResult.result = jsonResponse["result"];
-        dbResult.message = jsonResponse["message"];
-        if (jsonResponse.contains("resultset")) {
-            dbResult.resultSet = jsonResponse["resultset"];
-        }
+        return toDBResult(jsonResponse);
     }
     catch (const std::exception& e) {
         throw std::runtime_error("Failed to execute SQL on DB: " + dbPath.string() + " : " + e.what());
     }
-    return dbResult;
+}
+
+SyncLiteDBResult executeSQL(const fs::path& dbPath, const std::string& txnHandle, const std::string& sql, const json& arguments) {
+    return executeSQL(dbPath, txnHandle, sql, arguments, "", true);
+}
+
+SyncLiteDBResult next(const std::string& resultsetHandle, int resultsetPaginationSize, const std::string& dataFormat, bool includeMetadata) {
+    try {
+        json jsonRequest;
+        jsonRequest["request-type"] = "next";
+        jsonRequest["resultset-handle"] = resultsetHandle;
+        if (resultsetPaginationSize > 0) {
+            jsonRequest["resultset-pagination-size"] = resultsetPaginationSize;
+        }
+        if (!dataFormat.empty()) {
+            jsonRequest["resultset-data-format"] = dataFormat;
+        }
+        jsonRequest["resultset-include-metadata"] = includeMetadata ? "ON" : "OFF";
+
+        json jsonResponse = processRequest(jsonRequest);
+        return toDBResult(jsonResponse);
+    }
+    catch (const std::exception& e) {
+        throw std::runtime_error("Failed to fetch next page for resultset-handle: " + resultsetHandle + " : " + e.what());
+    }
+}
+
+SyncLiteDBResult next(const std::string& resultsetHandle, int resultsetPaginationSize) {
+    return next(resultsetHandle, resultsetPaginationSize, "", true);
 }
 
 SyncLiteDBResult closeDB(const fs::path& dbPath) {
-    SyncLiteDBResult dbResult;
     try {
         json jsonRequest;
         jsonRequest["db-path"] = dbPath.string();
@@ -267,13 +407,11 @@ SyncLiteDBResult closeDB(const fs::path& dbPath) {
 
         json jsonResponse = processRequest(jsonRequest);
 
-        dbResult.result = jsonResponse["result"];
-        dbResult.message = jsonResponse["message"];
+        return toDBResult(jsonResponse);
     }
     catch (const std::exception& e) {
         throw std::runtime_error("Failed to close DB: " + dbPath.string() + " : " + e.what());
     }
-    return dbResult;
 }
 
 std::string getHomeDirectory() {
@@ -363,16 +501,85 @@ int main() {
             return 1;
         }
 
-        // Execute select
+        // Execute select (JSON format - default, records as {colName: colValue} objects)
         std::cout << "========================================================\n";
-        std::cout << "Executing select from table\n";
+        std::cout << "Executing select from table (JSON format)\n";
         std::cout << "========================================================\n";
         r = executeSQL(dbPath, "", "select * from t1", {});
         std::cout << "result: " << r.result << "\n";
         std::cout << "message: " << r.message << "\n";
-        std::cout << "resultSet: " << r.resultSet.dump(4) << "\n";
         if (!r.result) {
             return 1;
+        }
+        if (!r.columnMetadata.is_null() && r.columnMetadata.is_array()) {
+            bool first = true;
+            for (const auto& col : r.columnMetadata) {
+                if (!first) std::cout << "\t";
+                std::cout << col.value("label", "");
+                first = false;
+            }
+            std::cout << "\n";
+        }
+        {
+            SyncLiteDBResult current = r;
+            while (true) {
+                if (!current.resultSet.is_null()) {
+                    for (const auto& rec : current.resultSet) {
+                        std::cout << "a = " << rec.value("a", json(nullptr)) << ", b = " << rec.value("b", json(nullptr)) << "\n";
+                    }
+                }
+
+                if (!current.hasMore || current.resultsetHandle.empty()) {
+                    break;
+                }
+
+                current = next(current.resultsetHandle, 0);
+                if (!current.result) {
+                    throw std::runtime_error("Next page call failed: " + current.message);
+                }
+            }
+        }
+
+        // Execute select (DB format - records as value arrays, column order matches columnMetadata)
+        std::cout << "========================================================\n";
+        std::cout << "Executing select from table (DB format)\n";
+        std::cout << "========================================================\n";
+        r = executeSQL(dbPath, "", "select * from t1", {}, "DB", true);
+        std::cout << "result: " << r.result << "\n";
+        std::cout << "message: " << r.message << "\n";
+        if (!r.columnMetadata.is_null() && r.columnMetadata.is_array()) {
+            bool first = true;
+            for (const auto& col : r.columnMetadata) {
+                if (!first) std::cout << "\t";
+                std::cout << col.value("label", "");
+                first = false;
+            }
+            std::cout << "\n";
+        }
+        {
+            SyncLiteDBResult current = r;
+            while (true) {
+                if (!current.resultSet.is_null()) {
+                    for (const auto& row : current.resultSet) {
+                        bool first = true;
+                        for (const auto& val : row) {
+                            if (!first) std::cout << "\t";
+                            std::cout << val;
+                            first = false;
+                        }
+                        std::cout << "\n";
+                    }
+                }
+
+                if (!current.hasMore || current.resultsetHandle.empty()) {
+                    break;
+                }
+
+                current = next(current.resultsetHandle, 0, "DB", true);
+                if (!current.result) {
+                    throw std::runtime_error("Next page call failed: " + current.message);
+                }
+            }
         }
 
         // Close DB

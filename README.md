@@ -4,13 +4,28 @@
   <img src="docs/images/SyncLite_logo.png" alt="SyncLite - Build Anything Sync Anywhere">
   </a>
   <p align="center">
+<<<<<<< Updated upstream
     <a href="https://www.synclite.io">Learn more</a>
+=======
+    <a href="https://www.synclite.io">Website</a>
+    ·
+    <a href="https://www.synclite.io/resources/documentation">Documentation</a>
+    ·
+    <a href="https://join.slack.com/t/syncliteworkspace/shared_invite/zt-2pz945vva-uuKapsubC9Mu~uYDRKo6Jw">Slack Community</a>
+>>>>>>> Stashed changes
   </p>
 </p>
 
-# SyncLite - Build Anything Sync Anywhere
+# SyncLite — Build Anything, Sync Anywhere
 
-<a href=https://www.synclite.io>SyncLite</a> is an open-source, low-code, comprehensive relational data consolidation platform enabling developers to rapidly build data intensive applications for edge, desktop and mobile environments. SyncLite enables real-time, transactional data replication and consolidation from various sources including edge/desktop applications using popular embedded databases (SQLite, DuckDB, Apache Derby, H2, HyperSQL), data streaming applications, IoT message brokers, traditional database systems(ETL) and more into a diverse array of databases, data warehouses, and data lakes, enabling AI and ML use-cases at edge and cloud.
+**SyncLite** is an open-source, low-code relational data synchronization and consolidation platform. It gives developers a single, coherent toolkit to:
+
+- Build **offline-first, sync-ready edge and desktop applications** using embedded databases (SQLite, DuckDB, Apache Derby, H2, HyperSQL) that automatically replicate their data to any cloud destination.
+- Stand up **last-mile data streaming pipelines** that ingest at massive scale and deliver into any database, data warehouse, or data lake.
+- Configure **database ETL, replication, and migration** pipelines across heterogeneous systems with minimal code.
+- Connect **IoT message brokers** to analytical databases in minutes.
+
+All of this flows through a unified pipeline architecture: sources produce compact binary log files → files are shipped to staging storage → SyncLite Consolidator delivers them to one or more destinations in real time.
 
 <p align="center">
   <a href="https://www.synclite.io">
@@ -18,870 +33,368 @@
   </a>
 </p>
 
-SyncLite enables following scenarios for industry leading databases, data warehouse and data lakes.
+---
 
-## Build Sync-Ready Applications: 
-SyncLite provides a novel CDC replication framework for embedded databases, helping developers quickly build data-intensive applications, including Gen AI Search and RAG applications, for edge, desktop, and mobile environments. It integrates seamlessly with popular embedded databases like SQLite, DuckDB, Apache Derby, H2, and HyperSQL (HSQLDB), enabling Change Data Capture (CDC), transactional, real-time data replication, and consolidation into industry-leading databases, data warehouses, and data lakes. 
+## Why SyncLite?
 
-```SyncLite Logger```, an embeddable Java library (JDBC driver), that can be consumed by Java and Python applications for efficient data syncing by capturing all SQL transactions in log files and shipping these log files to configured staging storages.
+Most data integration problems at the edge are solved today by one of two approaches: ship everything to the cloud and query there (high latency, no offline resilience), or write custom replication code (brittle, expensive, operationally painful). SyncLite is a third way.
 
-```SyncLite DB```, a standalone sync-enabled database, accepting SQL requests in JSON format over HTTP, making it compatible with any programming language (Java, Python, C++, C#, Go, Rust, Ruby, Node.js etc.) and ideal for flexible, real-time data integration and consolidation, right from edge/desktop applications into final data destinations.
-```
+| | Traditional approach | SyncLite |
+|---|---|---|
+| **Offline resilience** | Build it yourself | Built in — embedded DB works without network |
+| **Real-time sync** | Custom CDC or polling | Automatic, transactional, sub-second |
+| **Language support** | Driver-specific | Any language via HTTP/JSON (SyncLite DB) |
+| **Destination flexibility** | One pipeline per destination | Fan-out to many destinations from one source |
+| **IoT integration** | Custom MQTT consumers | SyncLite QReader — configure in minutes |
+| **ETL/migration** | Heavy ETL tools | SyncLite DBReader — lightweight, incremental |
+| **Operational overhead** | High | Low — web UI, Docker, one-command deploy |
 
-{Edge/Desktop Apps} + {SyncLite Logger + Embedded Databases} ---> {Staging Storage} ---> {SyncLite Consolidator} ---> {Destination DB/DW/DataLakes}
-```
+---
 
-```
-{Edge/Desktop Apps} ---> {SyncLite DB + Embedded Databases} ---> {Staging Storage} ---> {SyncLite Consolidator} ---> {Destination DB/DW/DataLakes}
-```
+## Use Cases
 
-Learn more: 
-
-https://www.synclite.io/synclite/sync-ready-apps
-
-https://www.synclite.io/solutions/gen-ai-search-rag
-
-
-## Build Streaming Applications For Last Mile Delivery: 
-SyncLite facilitates development of large-scale data streaming applications through SyncLite Logger, which offers both a Kafka Producer API and SQL API. This allows for the ingestion of massive amounts of data and provides the capability to query the ingested data using the SQL API within applications. Together, SyncLite Logger and SyncLite Consolidator enable seamless last-mile data integration from thousands of streaming application instances into a diverse array of final data destinations.
+### 🔵 Sync-Ready Edge & Desktop Applications
+Embed SyncLite Logger (a JDBC driver) directly into your Java/Python app. Every SQL transaction on the local embedded database is transparently captured and shipped to the cloud — **zero replication code required**. For CRUD-first workloads, use the typed **SyncLiteStore API** (no raw SQL) with `SQLITE_STORE`, `DUCKDB_STORE`, `DERBY_STORE`, `H2_STORE`, or `HYPERSQL_STORE` device types.
 
 ```
-{Data Streaming Apps} + {SyncLite Logger} ---> {Staging Storage} ---> {SyncLite Consolidator} ---> {Destination DB/DW/DataLakes}
+Edge/Desktop App  +  SyncLite Logger  +  SQLite/DuckDB/Derby/H2/HyperSQL (JDBC or SyncLiteStore API)
+    └──► Staging Storage ──► SyncLite Consolidator ──► Destination DB / DW / Data Lake
 ```
 
-```
-{Data Streaming Apps} ---> {SyncLite DB} ---> {Staging Storage} ---> {SyncLite Consolidator} ---> {Destination DB/DW/DataLakes}
-```
+→ [synclite-logger-java](synclite-logger-java/) · [Learn more](https://www.synclite.io/synclite/sync-ready-apps)
 
-Learn more: https://www.synclite.io/synclite/last-mile-streaming
-
-
-## Deploy Database ETL/Replication/Migration Pipelines:
-Set up many-to-many, scalable database replication/migration/incremental ETL pipelines from a diverse range of source databases and raw data files into a diverse range of destinations.
+### 🟢 Language-Agnostic Edge Apps (Any Language)
+Can't use Java? Use **SyncLite DB** — an HTTP/JSON database server wrapping the same embedded databases, compatible with Python, C++, C#, Go, Rust, Ruby, Node.js, and any other language.
 
 ```
-{Source Databases} ---> {SyncLite DBReader} ---> {Staging Storage} ---> {SyncLite Consolidator} ---> {Destination DB/DW/DataLakes}
+Any-Language App ──HTTP/JSON──► SyncLite DB ──► Staging Storage ──► SyncLite Consolidator ──► Destination
 ```
 
-Learn More: https://www.synclite.io/solutions/smart-database-etl
+→ [synclite-db](synclite-db/) · [SDK samples (8 languages)](synclite-db/sdk-source/)
 
-## Setup Rapid IoT Data Connectors:
-Connect numerous MQTT brokers (IoT gateways) to one or more destination databases.
-
-```
-{IoT Message Brokers} ---> {SyncLite QReader} ---> {Staging Storage} ---> {SyncLite Consolidator} ---> {Destination DB/DW/DataLakes}
-```
-
-Learn More: https://www.synclite.io/solutions/iot-data-connector
-
-# SyncLite Components
-
-```SyncLite Logger``` is a JDBC driver, enables developers to rapidly build 
-	
--sync-enabled, robust, responsive, high-performance, low-latency, transactional, data intensive applications for edge/mobile/desktop platforms using their favorite embedded databases (SQLite, DuckDB, Apache Derby, H2, HyperSQL)
-  	
--large scale data streaming solutions for last mile data integrations into a wide range of industry leading databases, while offering ability to perform real-time analytics using the native embedded databases over streaming data, at the producer end of the pipelines.
-
-```SyncLite DB``` is a sync-enabled, single-node database server that wraps popular embedded databases like SQLite, DuckDB, Apache Derby, H2, and HyperSQL. Unlike the embeddable SyncLite Logger library for Java and Python applications, SyncLite DB acts as a standalone server, allowing your edge or desktop applications—regardless of the programming language—to connect and send SQL requests (wrapped in JSON format) over HTTP. 
-
-```SyncLite Client``` is a command line tool to operate SyncLite devices, to execute SQL queries and workloads.
-
-```SyncLite DBReader``` enables data teams and data engineers to configure and orchestrate many-to-many, highly scalable, incremental/log-based database ETL/replication/migration jobs across a diverse array of databases, data warehouses and data lakes.
-
-```SyncLite QReader``` enables developers to integrate IoT data published to message queue brokers, into a diverse array of databases, data warehouses and data lakes, enabling real-time analytics and AI use cases at all three levels: edge, fog and cloud.
-
-```SyncLite Consolidator``` is the centralized application to all the reader/producer tools mentioned above, which receives and consolidates the incoming data and log files in real-time into one or more databases, data warehouses and data lakes of user’s choice. SyncLite Consolidator also offers additional features: table/column/value filtering and mapping, data type mapping, database trigger installation, fine-tunable writes, support for multiple destinations and more.
-
-```SyncLite JobMonitor``` enables managing, scheduling and monitoring all SyncLite jobs created on a given host.
-
-```SyncLite Validator``` is an E2E integration testing tool for SyncLite.
-
-# Build SyncLite
-
-1. If you are using a pre-built release then ignore this section. 
-2. Install/Download Apache Maven(3.8.6 or above): https://maven.apache.org/download.cgi
-3. If you opt to not use the deploy scripts generated in the release which download the prerequisite software : Apache Tomcat and OpenJDK, then manually install them
-	
- 	a. OpenJDK 11 : https://jdk.java.net/java-se-ri/11
-	
- 	b. Apache Tomcat 9.0.95 : https://tomcat.apache.org/download-90.cgi
-
-5. Run following: 
-	```
-	git clone --recurse-submodules git@github.com:syncliteio/SyncLite.git SyncLite
-	
-	cd SyncLite
-	
-	mvn -Drevision=oss clean install
-	
-	```
-6. Release is created under SyncLite/target
-
-## Release Structure:
-
-The build process creates following release structure under SyncLite\target: 
-```
-synclite-platform-<version>
-|
-|
---------lib
-|       |
-|       |
-|        --------logger
-|       |        |
-|       |        |
-|       |        --------java
-|       |        |        |
-|       |        |        |    
-|       |        |        --------synclite-logger-<version>.jar   ==> SyncLite Logger JDBC driver, to be added as a depependency in your edge apps
-|       |        |
-|       |        |
-|       |        --------synclite_logger.conf  ==> A sample configuration file for SyncLite logger.
-|       |
-|       |
-|       --------consolidator
-|       |        |
-|       |        |
-|       |        --------synclite-consolidator-<version>.war   ==> SyncLite Consolidator application, to be deployed on an application server such as Tomcat on a centralized host
-|
-|
-|
-|
---------sample-apps
-|        |
-|        |
-|        --------jsp-servlet
-|        |        |
-|        |        |
-|        |        --------web
-|        |        |
-|        |        |
-|        |        --------src          ==> Source code of a sample Jsp Servlet app that demonstrates usage of synclite-logger
-|        |        |
-|        |        |
-|        |        --------target        
-|        |        |
-|        |        |
-|        |        --------synclite-sample-app-<version>.war
-|        |        
-|        |
-|        --------java
-|        |        |
-|        |        |
-|        |        --------*.java    => Java source files demonstrating SyncLite logger usage.
-|        |        |
-|        |        |
-|        |        --------README
-|        |
-|        |
-|        |
-|        |
-|        --------python
-|                |
-|                |
-|                --------*.py    => Python source files demonstrating SyncLite logger usage.
-|                |
-|                |
-|                --------README
-|
-|
-|
-|
---------bin
-|        |
-|        |
-|        --------deploy.bat/deploy.sh    ==> Deployment script for deploying SyncLite consolidator and sample application from the lib directory
-|        |                    
-|        |                        
-|        --------start.bat/start.sh    ==> Launch script to start tomcat and the deployed SyncLite applications.
-|        |             
-|        |           
-|        --------docker-deploy.sh/docker-start.sh   ==> Deployment and launch scripts for running SyncLite Consolidator inside a docker container. 
-|        |             
-|        |           
-|        --------stage
-|        |        |         
-|        |        |         
-|        |        --------sftp    ==> Contains docker-deploy.sh,docker-start.sh, docker-stop.sh scripts to launch SFTP server as SyncLite stage
-|        |        |         
-|        |        |                                   
-|        |        --------minio   ==> Contains docker-deploy.sh, docker-start.sh, docker-stop.sh scripts to launch MinIO server as SyncLite stage
-|        |       
-|        |       
-|        |       
-|        --------dst
-|                |
-|                |                
-|                --------postgresql  ==> Contains docker-deploy.sh,docker-start.sh scripts to launch PostgrSQL server as SyncLite destination DB
-|                |         
-|                |                                  
-|                --------mysql   ==> Contains docker-deploy.sh, docker-start.shscripts to launch MySQL server as SyncLite destination DB
-| 
-|
-|
---------tools
-        |
-        |
-        --------synclite-client   ==> Client tool to execute SQL operations on SyncLite databases/devices.
-	|
-	|
-        --------synclite-db    ==> A standalone database server offering sync-enabled embedded databases for edge/desktop applications. 
-	|
-	|
-        --------synclite-dbreader    ==> Smart database ETL/Replication/Migration tool
-	|
-	|
-	--------synclite-qreader     ==> Rapid IoT data connector tool
-	|
-	|
-	--------synclite-job-monitor   ==> Job Monitor tool to manage, monitor and schedule SyncLite jobs.
-	|
-	|
-        --------synclite-validator    ==> An E2E integration testing tool for SyncLite
- 
+### 🟡 Large-Scale Data Streaming & Last-Mile Delivery
+Use SyncLite Logger's **Kafka Producer API** (JDBC) or the fluent **SyncLiteStream API** (`insert` / `insertBatch` with auto schema-evolution) to ingest append-only events at massive throughput from thousands of concurrent streaming producer instances.
 
 ```
-
-### Quick Start - Native/Docker based
-
-NOTE: Below instructions enable a quick start and trial of SyncLite platform. 
-For production usage, it is recommended to go through installation process to install OpenJDK11 and Tomcat9 (as a service) 
-on your Windows/Ubuntu host.
-
-1. Enter bin directory.
-
-2. (One time) Run ```deploy.bat```(WINDOWS) / ```deploy.sh``` (UBUNTU) to deploy the SyncLite consolidator and a SyncLite sample application.
-   
-   OR Run ```docker-deploy.sh``` (UBUNTU) to deploy a docker container for SyncLite platform.
-
-   OR Manually deploy below war files on your tomcat server:
-   - ```SyncLite\target\synclite-platform-dev\lib\consolidator\synclite-consolidator-oss.war```,
-   - ```SyncLite\target\synclite-platform-dev\sample-apps\jsp-servlet\web\target\synclite-sample-app-oss.war```
-   - ```SyncLite\target\synclite-platform-dev\tools\synclite-dbreader\synclite-dbreader-oss.war```
-   - ```SyncLite\target\synclite-platform-dev\tools\synclite-dbreader\synclite-qreader-oss.war```
-   - ```SyncLite\target\synclite-platform-dev\tools\synclite-dbreader\synclite-jobmonitor-oss.war```
-     
-   
-3. Run ```start.bat```(WINDOWS) / ```start.sh```(UBUNTU) to start tomcat and the deployed SyncLite applications. (Please note the username/password for tomcat manager web console is synclite/synclite)
-
-   OR Run ```docker-start.sh``` to run the docker container (Please check options passed to docker run command e.g. the home directory of the current user is mapped to ```/root``` inside docker to persist all the
-   SyncLite storage in the native host).
-
-   OR manually start applications from your tomcat manager console.
-
-4. Open tomcat manager console http://localhost:8080/manager (Use synclite/synclite as the default user/password when prompted as set by the deploy script). The manager web console will show all the SyncLite applications deployed. 
-
-5. Open http://localhost:8080/synclite-consolidator to launch SyncLite Consolidator application
-
-6. Open http://localhost:8080/synclite-sample-app to launch SyncLite sample web application 
-
-7. Configure and start SyncLite consolidator job in the SyncLite Consolidator application. You can follow through the "Configure Job" wizard reviewing all the default configuration values. Create databases/devices of any type from the deployed sample web application and execute SQL workloads on several devices at once specifying the device index range. Observe data consolidator in the SyncLite Cosolidator dashboard. You can check device specific data consolidation progress on individual device pages (from "List Devices" page), query destination database on the "Analyze Data" page. 
-
-8. This release also comes with a CLI client for SyncLite under tools/synclite-client. You can run synclite-client.bat(WINDOWS)/synclite-client.sh (UBUNTU) to start the client tool and execute SQL operations which are not only executed/persisted on the native database but also consolidated by the SyncLite consolidator into destination DB.
-   - Usage 1 : ```synclite-client.bat/synclite-client.sh ==> Will start with DB = <USER.HOME>/synclite/job1/db/test.db, DEVICE_TYPE = SQLITE, CONFIG = <USER.HOME>/synclite/db/synclite_logger.conf```
-   - Usage 2 : ```synclite-client.bat/synclite-client.sh <path/to/db/file> --device-type <SQLITE|DUCKDB|DERBY|H2|HYPERSQL|STREAMING|SQLITE_APPENDER|DUCKDB_APPENDER|DERBY_APPENDER|H2_APPENDER|HYPERSQL_APPENDER> --synclite-logger-config <path/to/synclite/logger/config> --server <SyncLite DB Address>```
-   - Note: If --sever switch is specified then the client connects to SyncLite DB to  execute SQL statements, else it usages embedded ```SyncLite Logger``` library to directly operate on the devices.
-     
-9. This release also comes with SyncLite DB server under tools/synclite-db. You can run synclite-db.bat(WINDOWS)/synclite-db.sh(UBUNTU) to start SyncLite DB server and connect to it using synclite-client to execute SQL operations which are not only executed/persisted on the specified embedded database but also consolidated by the SyncLite Consolidator onto the destination databases.
-   - Usage 1 : ```synclite-db.bat/synclite-db.sh``` ==> Will start SyncLite DB with default configurations
-   - Usage 2 : ```synclite-db.bat/synclite-db.sh --config <path/to/synclite-db/config>```
-          
-10. Use ```stop.bat``` (Windows) / ```stop.sh```(LINUX) to stop SyncLite consolidator job (if running) and tomcat.
-   OR RUN docker-stop.sh to stop the docker container.
-
-11. Refer ```sample_apps/java``` and ```samples_apps/python``` and use any of them as a starting point to build your own application.
-
-12. You can install/use a database of your choice and  perform data consolidation to it (instead of the default SQLite destination): PostgreSQL, MySQL, MongoDB, SQLite, DuckDB.
-
-13. This release also packages docker scripts to setup PostgreSQL and MySQL to serve as SyncLite destinations.
-    - ```bin/dst/postgresql``` contains ```docker-deploy.sh```, ```docker-start.sh``` and ```docker-stop.sh```
-    - ```bin/dst/mysql``` contains ```docker-deploy.sh```, ```docker-start.sh``` and ```docker.stop.sh```
-
-14. You can deploy your applications on remote hosts/devices and share the local-stage-directory of your respective SyncLite applications with SyncLite Consolidator host via one of the following file staging storages: 
-    - SFTP
-    - Amazon S3
-    - MinIO Object Storage Server
-    - Apache Kafka
-    - Microsoft OneDrive
-    - Google Drive
-    - NFS Sharing
-    - Local Network Sharing
-      
-Please check documentation for setting up these staging storages for SyncLite : https://www.synclite.io/resources/documentation
- 
-15. This release also packages docker scripts to setup SFTP and MinIO servers to serve as SyncLite stage.
-    - ```bin/stage/sftp```  contains ```docker-deploy.sh```, ```docker-start.sh``` and ```docker-stop.sh```
-    - ```bin/stage/minio``` contains ```docker-deploy.sh```, ```docker-start.sh``` and ```docker-stop.sh```
-      NOTE: These scripts contain default configurations. You must change usernames, passwords and setup any additional security mechanisms on top of these basic setups. 
-
-16. The SyncLite docker scripts ```bin/docker-deploy.sh```, ```bin/docker-start.sh```, ```bin/docker-stop.sh``` contain two variables at the top to choose a stage and destination:
-    - STAGE : Set it to SFTP or MINIO.
-    - DST : Set it to POSTGRESQL or MYSQL.
-
-      Once you set the STAGE and DST to appropriate values e.g. SFTP and POSTGRESQL, the ```docker-deploy.sh``` and ```docker-start.sh``` scripts will bring up docker containers for SyncLite consolidator, SFTP
-      server and PostgreSQL server and you will be all set to configure and start a SyncLite consoldiator job be able to consolidate data into PostgreSQL server received from remote SyncLite applications
-      configured to connect to the SFTP stage. 
-
-17. After a successful trial, if you need to perform another trial, stop the docker containers, and delete contents under ```/home/synclite``` to start a fresh trial of a different scenario etc.
-
-18. Open http://localhost:8080/synclite-dbreader (and open http://localhost:8080/synclite-consolidator) to setup database ETL/Replication/Migration pipelines.
-
-19. Open http://localhost:8080/synclite-qreader (and open http://localhost:8080/synclite-consolidator) to setup rapid IoT pipelines.
-
-20. Open http://localhost:8080/synclite-job-monitor to manage, monitor and schedule various SyncLite jobs.
-    
-Refer documentation at https://www.synclite.io/resources/documentation for more details.
-
-NOTE : For production usage, it is recommended to install OpenJDK11 and Tomcat as a service (or any other application server of your choice) and deploy SyncLite consolidator web archive release, Please refer our documentation at www.synclite.io for detailed installation steps for Windows and Ubuntu.
-
-
-# Using SyncLite Logger
-
-Add ```synclite-logger-<version>.jar``` file created as part of the above build as a dependency in your application.
-
-## Configuration File
-
-Refer ```src/main/resources/synclite_logger.conf``` file for all available configuration options for SyncLite Logger. Refer "SyncLite Logger Configuration" section in the documentation at https://www.synclite.io/resources/documentation for more details about all configuration options. 
-
-## Application Code Samples (SQL API)
-
-Refer below code samples to build applications using SyncLite Logger. 
-
-### Transactional Devices : 
-
-Transactional devices (SQLite, DuckDB, Apache Derby, H2, HyperSQL) support all database operations and perform transactional logging of all the DDL and DML operations performed by the application. These enable  developers to build use cases such as building data-intensive sync-ready applications for edge, edge + cloud GenAI search and RAG applications, native SQL (hot) hot data stores, SQL application caches, edge enablement of cloud databases and more.
-
-#### Java
+Streaming App  +  SyncLite Logger (Kafka API / SyncLiteStream API)  ──► Staging Storage ──► Consolidator ──► Destination
 ```
-package testApp;
 
+→ [synclite-logger-java](synclite-logger-java/) · [Learn more](https://www.synclite.io/synclite/last-mile-streaming)
+
+### 🟠 Database ETL / Replication / Migration
+Configure many-to-many, incremental or CDC-based replication and migration pipelines across heterogeneous databases — from PostgreSQL, MySQL, SQL Server, Oracle, and more.
+
+```
+Source DB(s) ──► SyncLite DBReader ──► Staging Storage ──► SyncLite Consolidator ──► Destination(s)
+```
+
+→ [synclite-dbreader](synclite-dbreader/) · [Learn more](https://www.synclite.io/solutions/smart-database-etl)
+
+### 🔴 IoT Data Integration
+Subscribe to MQTT brokers and stream IoT sensor data into any destination database or data warehouse for real-time analytics at edge, fog, and cloud.
+
+```
+IoT Devices ──MQTT──► MQTT Broker ──► SyncLite QReader ──► Staging Storage ──► Consolidator ──► Destination
+```
+
+→ [synclite-qreader](synclite-qreader/) · [Learn more](https://www.synclite.io/solutions/iot-data-connector)
+
+### � Redis-Compatible Cache with Durable Replication (Jedis API)
+Use `io.synclite.logger.Jedis` — a drop-in subclass of `redis.clients.jedis.Jedis` — to back your Redis cache with a `SQLITE_STORE` device. Every write (strings, hashes, lists, sets, sorted sets, expiry, delete) is durably committed to SyncLite before forwarding to Redis. The cache is automatically repopulated from the store on restart, and all mutations replicate downstream via SyncLite Consolidator.
+
+```
+App  +  SyncLite Jedis API  ──► SQLiteStore (local log)  ──► Staging Storage ──► Consolidator ──► Destination
+                             └──► Redis (live cache)
+```
+
+→ [synclite-logger-java](synclite-logger-java/)
+
+### �🟣 GenAI Search & RAG at the Edge
+SyncLite enables a compelling architecture for GenAI Search and Retrieval-Augmented Generation (RAG): build local vector/SQL indices with embedded databases on edge devices, then continuously replicate them to a centralized embedding store and LLM backend — with no custom sync code.
+
+→ [Learn more](https://www.synclite.io/solutions/gen-ai-search-rag)
+
+---
+
+## Destinations Supported
+
+| Category | Systems |
+|---|---|
+| Relational (OLTP) | PostgreSQL, MySQL, Microsoft SQL Server / Azure SQL DB, SQLite, DuckDB |
+| Data Lakes | Apache Iceberg |
+| NoSQL | MongoDB |
+
+## Staging Storages Supported
+
+SFTP · Amazon S3 · MinIO · Apache Kafka · Microsoft OneDrive · Google Drive · NFS · Local file system
+
+---
+
+## Platform Components
+
+| Component | Description | README |
+|---|---|---|
+| **SyncLite Logger** | Embeddable JDBC driver for Java/Python edge apps | [→](synclite-logger-java/README.md) |
+| **SyncLite DB** | Standalone HTTP/JSON database server for any language | [→](synclite-db/README.md) |
+| **SyncLite Client** | Interactive CLI for SyncLite devices | [→](synclite-client/README.md) |
+| **SyncLite Consolidator** | Central real-time consolidation engine | [→](synclite-consolidator/README.md) |
+| **SyncLite DBReader** | Database ETL / replication / migration tool | [→](synclite-dbreader/README.md) |
+| **SyncLite QReader** | IoT MQTT connector | [→](synclite-qreader/README.md) |
+| **SyncLite Job Monitor** | Unified job management and scheduling UI | [→](synclite-job-monitor/README.md) |
+| **SyncLite Validator** | End-to-end integration testing tool | [→](synclite-validator/README.md) |
+| **Sample Web App** | JSP/Servlet demo showing SyncLite Logger in action | [→](synclite-sample-web-app/README.md) |
+
+---
+
+## Build SyncLite
+
+**Prerequisites:** Java 25, Apache Maven 3.8.6+
+
+```bash
+git clone --recurse-submodules git@github.com:syncliteio/SyncLite.git SyncLite
+cd SyncLite
+mvn -Drevision=oss clean install
+```
+
+The release is assembled under `SyncLite/target/synclite-platform-oss/`.
+
+> The `bin/deploy.sh` / `bin/deploy.bat` scripts download Apache Tomcat 9.0.117 and OpenJDK 25 automatically. No manual installation needed for a quick start.
+
+## Release Structure
+
+```
+synclite-platform-oss/
+├── bin/
+│   ├── deploy.sh / deploy.bat        # One-command setup: downloads Tomcat + JDK, deploys WARs
+│   ├── start.sh / start.bat          # Start Tomcat + all SyncLite apps
+│   ├── stop.sh / stop.bat            # Graceful shutdown
+│   ├── docker-deploy.sh              # Docker image build + deploy
+│   ├── docker-start.sh / docker-stop.sh
+│   ├── stage/sftp/                   # Docker scripts for SFTP staging server
+│   ├── stage/minio/                  # Docker scripts for MinIO staging server
+│   ├── dst/postgresql/               # Docker scripts for PostgreSQL destination
+│   └── dst/mysql/                    # Docker scripts for MySQL destination
+│
+├── lib/
+│   ├── logger/java/synclite-logger-<version>.jar   # Add to your edge app classpath
+│   └── consolidator/synclite-consolidator-<version>.war
+│
+├── tools/
+│   ├── synclite-client/              # CLI client
+│   ├── synclite-db/                  # SyncLite DB server
+│   ├── synclite-dbreader/            # DBReader WAR + launcher
+│   ├── synclite-qreader/             # QReader WAR + launcher
+│   ├── synclite-job-monitor/         # Job Monitor WAR
+│   └── synclite-validator/           # Validator WAR
+│
+└── sample-apps/
+    ├── synclite-logger/java/         # Java sample apps
+    ├── synclite-logger/python/       # Python sample apps
+    └── synclite-logger/jsp-servlet/  # Sample web app WAR
+```
+
+---
+
+## Quick Start (5 minutes)
+
+### Native (Windows / Ubuntu)
+
+```bash
+cd bin/
+./deploy.sh      # or deploy.bat on Windows
+./start.sh       # or start.bat on Windows
+```
+
+| URL | App |
+|---|---|
+| http://localhost:8080/synclite-consolidator | Configure and monitor consolidation jobs |
+| http://localhost:8080/synclite-sample-app | Create devices, run SQL workloads, see live sync |
+| http://localhost:8080/synclite-dbreader | Set up database ETL/replication pipelines |
+| http://localhost:8080/synclite-qreader | Set up IoT MQTT connector pipelines |
+| http://localhost:8080/synclite-job-monitor | Manage and schedule all SyncLite jobs |
+| http://localhost:8080/manager | Tomcat manager (user: `synclite` / pwd: `synclite`) |
+
+### Docker (all-in-one)
+
+```bash
+# Edit STAGE and DST at the top of docker-deploy.sh, then:
+cd bin/
+./docker-deploy.sh     # Builds SyncLite container (+ optional SFTP/MinIO + PostgreSQL/MySQL)
+./docker-start.sh      # Starts everything
+./docker-stop.sh       # Stops everything
+```
+
+---
+
+## Using SyncLite Logger (Java)
+
+Add `synclite-logger-<version>.jar` to your project, then:
+
+```java
+import io.synclite.logger.*;
 import java.nio.file.Path;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
-import java.sql.Statement;
-import io.synclite.logger.*;
+import java.sql.*;
 
+Path dbDir  = Path.of(System.getProperty("user.home"), "synclite", "db");
+Path dbPath = dbDir.resolve("myapp.db");
+Path conf   = dbDir.resolve("synclite_logger.conf");
 
-public class TestTransactionalDevice {
-	
-	public static Path syncLiteDBPath;
-	public static void appStartup() throws SQLException, ClassNotFoundException {
-		syncLiteDBPath = Path.of(System.getProperty("user.home"), "synclite", "db");
-		Class.forName("io.synclite.logger.SQLite");
-		//
-		//////////////////////////////////////////////////////
-		//For other types of transactional devices : 
-		//DuckDB : Class.forName("io.synclite.logger.DuckDB");
-		//Apache Derby : Class.forName("io.synclite.logger.Derby");
-		//H2 : Class.forName("io.synclite.logger.H2");
-		//HyperSQL : Class.forName("io.synclite.logger.HyperSQL");
-		//////////////////////////////////////////////////////
-		//
+Class.forName("io.synclite.logger.SQLite");
+SQLite.initialize(dbPath, conf);
 
-		Path dbPath = syncLiteDBPath.resolve("test_tran.db");
-		SQLite.initialize(dbPath, syncLiteDBPath.resolve("synclite_logger.conf"));
-		//
-		//////////////////////////////////////////////////////
-		//For other types of transactional devices : 
-		//DuckDB : DuckDB.initialize(dbPath, syncLiteDBPath.resolve("synclite_logger.conf"));
-		//Apache Derby : Derby.initialize(dbPath, syncLiteDBPath.resolve("synclite_logger.conf"));
-		//H2 : H2.initialize(dbPath, syncLiteDBPath.resolve("synclite_logger.conf"));
-		//HyperSQL : HyperSQL.initialize(dbPath, syncLiteDBPath.resolve("synclite_logger.conf"));
-		//////////////////////////////////////////////////////
-		//
-	}	
-	
-	public void myAppBusinessLogic() throws SQLException {
-		//
-		//Some application business logic
-		//
-		//Perform some database operations		
-		try (Connection conn = DriverManager.getConnection("jdbc:synclite_sqlite:" + syncLiteDBPath.resolve("test_sqlite.db"))) {
-			//
-		        //////////////////////////////////////////////////////////////////
-			//For other types of transactional devices use following connection strings :
-			//For DuckDB : jdbc:synclite_duckdb:<db_path>
-			//For Apache Derby : jdbc:synclite_derby:<db_path>
-			//For H2 : jdbc:synclite_h2:<db_path>
-			//For HyperSQL : jdbc:synclite_hsqldb:<db_path>
-			///////////////////////////////////////////////////////////////////
-			//
-			try (Statement stmt = conn.createStatement()) { 
-				//Example of executing a DDL : CREATE TABLE. 
-				//You can execute other DDL operations : DROP TABLE, ALTER TABLE, RENAME TABLE.
-				stmt.execute("CREATE TABLE IF NOT EXISTS feedback(rating INT, comment TEXT)");
-				
-				//Example of performing INSERT
-				stmt.execute("INSERT INTO feedback VALUES(3, 'Good product')");				
-			}
-			
-			//Example of setting Auto commit OFF to implement transactional semantics
-			conn.setAutoCommit(false);
-			try (Statement stmt = conn.createStatement()) { 
-				//Example of performing basic DML operations INSERT/UPDATE/DELETE
-				stmt.execute("UPDATE feedback SET comment = 'Better product' WHERE rating = 3");
-				stmt.execute("INSERT INTO feedback VALUES (1, 'Poor product')");
-				stmt.execute("DELETE FROM feedback WHERE rating = 1");
-			}
-			conn.commit();
-			conn.setAutoCommit(true);
-			
-			//Example of Prepared Statement functionality for bulk insert.			
-			try(PreparedStatement pstmt = conn.prepareStatement("INSERT INTO feedback VALUES(?, ?)")) {
-				pstmt.setInt(1, 4);
-				pstmt.setString(2, "Excellent Product");
-				pstmt.addBatch();
-				
-				pstmt.setInt(1, 5);
-				pstmt.setString(2, "Outstanding Product");
-				pstmt.addBatch();
-				
-				pstmt.executeBatch();			
-			}
-		}
-		//Close SyncLite database/device cleanly.
-		SQLite.closeDevice(Path.of("test_sqlite.db"));
-		//
-		///////////////////////////////////////////////////////
-		//For other types of transactional devices :
-		//DuckDB : DuckDB.closeDevice
-		//Apache Derby : Derby.closeDevice
-		//H2 : H2.closeDevice
-		//HyperSQL : HyperSQL.closeDevice
-		//////////////////////////////////////////////////////
-		//
-		//You can also close all open databases in a single SQL : CLOSE ALL DATABASES
-	}	
-	
-	public static void main(String[] args) throws ClassNotFoundException, SQLException {
-		appStartup();
-		TestTransactionalDevice testApp = new TestTransactionalDevice();
-		testApp.myAppBusinessLogic();
-	}
+try (Connection c = DriverManager.getConnection("jdbc:synclite_sqlite:" + dbPath);
+     Statement  s = c.createStatement()) {
+    s.execute("CREATE TABLE IF NOT EXISTS orders(id INT, item TEXT, qty INT)");
+    s.execute("INSERT INTO orders VALUES(1, 'widget', 100)");
+    // ↑ captured in a log file and shipped to staging storage automatically
 }
-
+SQLite.closeAll();
 ```
-#### Python   
 
-```
-import jaydebeapi
+For other embedded databases replace `SQLite` / `synclite_sqlite` with `DuckDB` / `synclite_duckdb`, `Derby` / `synclite_derby`, `H2` / `synclite_h2`, or `HyperSQL` / `synclite_hsqldb`.
 
-props = {
-  "config": "synclite_logger.conf",
-  "device-name" : "tran1"
+Full configuration reference: `lib/logger/synclite_logger.conf` · [Documentation](https://www.synclite.io/resources/documentation)
+
+### SyncLiteStore API — CRUD without raw SQL
+
+**STORE device types** (`SQLITE_STORE`, `DUCKDB_STORE`, `DERBY_STORE`, `H2_STORE`, `HYPERSQL_STORE`) expose the `SyncLiteStore` API: typed `insert` / `update` / `delete` / `selectAll` methods that handle schema evolution automatically and log every operation to the replication pipeline.
+
+```java
+import io.synclite.logger.SQLiteStore;
+import io.synclite.logger.SyncLiteStore;
+
+Class.forName("io.synclite.logger.SQLiteStore");
+SQLiteStore.initialize(dbPath, conf);
+
+try (SyncLiteStore store = SQLiteStore.open(dbPath)) {
+    store.createTable("orders", new LinkedHashMap<>(Map.of(
+        "id",  "INTEGER PRIMARY KEY",
+        "item", "TEXT",
+        "qty",  "INTEGER"
+    )));
+    store.insert("orders", Map.of("id", 1, "item", "widget", "qty", 100));
+    store.update("orders", Map.of("qty", 150), Map.of("id", 1));
+    store.delete("orders", Map.of("id", 1));
+    List<Map<String, Object>> rows = store.selectAll("orders");
 }
-conn = jaydebeapi.connect("io.synclite.logger.SQLite",
-                           "jdbc:synclite_duckdb:c:\\synclite\\python\\data\\test_sqlite.db",
-                           props,
-                           "synclite-logger-<version>.jar",)
-#//
-#////////////////////////////////////////////////////////////////
-#For other types of transactional devices use following are the class names and connection strings :
-#For DuckDB - Class : io.synclite.logger.DuckDB, Connection String : jdbc:synclite_duckdb:<db_path>
-#For Apache Derby - Class : io.synclite.logger.Derby, Connection String : jdbc:synclite_derby:<db_path>
-#For H2 - Class : io.synclite.logger.H2, Connection String : jdbc:synclite_h2:<db_path>
-#For HyperSQL - Class : io.synclite.logger.HyperSQL, Connection String : jdbc:synclite_hsqldb:<db_path>
-#/////////////////////////////////////////////////////////////////
-#//
-
-curs = conn.cursor()
-
-#Example of executing a DDL : CEATE TABLE.
-#You can execute other DDL operations : DROP TABLE, ALTER TABLE, RENAME TABLE.
-curs.execute('CREATE TABLE IF NOT EXISTS feedback(rating INT, comment TEXT)')
-
-#Example of performing basic DML operations INSERT/UPDATE/DELETE
-curs.execute("insert into feedback values (3, 'Good product')")
-
-#Example of setting Auto commit OFF to implement transactional semantics
-conn.jconn.setAutoCommit(False)
-curs.execute("update feedback set comment = 'Better product' where rating = 3")
-curs.execute("insert into feedback values (1, 'Poor product')")
-curs.execute("delete from feedback where rating = 1")
-conn.commit()
-conn.jconn.setAutoCommit(True)
-
-
-#Example of Prepared Statement functionality for bulk insert.
-args = [[4, 'Excellent product'],[5, 'Outstanding product']]
-curs.executemany("insert into feedback values (?, ?)", args)
-
-#Close SyncLite database/device cleanly.
-curs.execute("close database c:\\synclite\\python\\data\\test_sqlite.db");
-
-#You can also close all open databases in a single SQL : CLOSE ALL DATABASES
+SQLiteStore.closeDevice(dbPath);
 ```
 
-### Appender Devices :
+### SyncLiteStream API — Fluent Append-Only Ingestion
 
-Appender devices (SQLiteAppender, DuckDBAppender, DerbyAppender, H2Appender, HyperSQLAppender) support all DDL operations and Prepared Statement based INSERT operations, are highly optimized for high speed concurrent batched data ingestion, performing logging of ingested data. Unlike transactional devices, appender devices only allow INSERT DML operations (UPDATE and DELETE are not allowed). Appender devices enable developers to build high volume streaming applications enabled with last mile data integration from thousands of edge points into centralized database destinations as well as in-app analytics by enabling fast read access to ingested data from the underlying local embedded databases storing the ingested/streamed data.
+`SyncLiteStream` wraps the `STREAMING` device with a fluent `insert` / `insertBatch` API. UPDATE and DELETE are intentionally absent — this API models event flow, not mutable records.
 
-#### Java
+```java
+import io.synclite.logger.Streaming;
+import io.synclite.logger.SyncLiteStream;
 
-```
-package testApp;
+Class.forName("io.synclite.logger.Streaming");
+Streaming.initialize(dbPath, conf);
 
-import java.nio.file.Path;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
-import java.sql.Statement;
-import io.synclite.logger.*;
-
-public class TestAppenderDevice {
-	public static Path syncLiteDBPath;
-
-	public static void appStartup() throws SQLException, ClassNotFoundException {
-		syncLiteDBPath = Path.of(System.getProperty("user.home"), "synclite", "db");
-		Class.forName("io.synclite.logger.SQLiteAppender");
-		//
-		//////////////////////////////////////////////////////
-		//For other types of appender devices : 
-		//DuckDB : Class.forName("io.synclite.logger.DuckDBAppender");
-		//Apache Derby : Class.forName("io.synclite.logger.DerbyAppender");
-		//H2 : Class.forName("io.synclite.logger.H2Appender");
-		//HyperSQL : Class.forName("io.synclite.logger.HyperSQLAppender");
-		//////////////////////////////////////////////////////
-		//
-		Path dbPath = syncLiteDBPath.resolve("test_appender.db");
-		SQLiteAppender.initialize(dbPath, syncLiteDBPath.resolve("synclite_logger.conf"));
-	}
-
-	public void myAppBusinessLogic() throws SQLException {
-		//
-		// Some application business logic
-		//
-		// Perform some database operations
-		try (Connection conn = DriverManager.getConnection("jdbc:synclite_sqlite_appender:" + syncLiteDBPath.resolve("test_appender.db"))) {
-			//
-		        //////////////////////////////////////////////////////////////////
-			//For other types of appender devices use following connection strings :
-			//For DuckDBAppender : jdbc:synclite_duckdb_appender:<db_path>
-			//For DerbyAppender : jdbc:synclite_derby_appender:<db_path>
-			//For H2Appender : jdbc:synclite_h2_appender:<db_path>
-			//For HyperSQLAppender : jdbc:synclite_hsqldb_appender:<db_path>
-			///////////////////////////////////////////////////////////////////
-			//
-			try (Statement stmt = conn.createStatement()) {
-				// Example of executing a DDL : CREATE TABLE.
-				// You can execute other DDL operations : DROP TABLE, ALTER TABLE, RENAME TABLE.
-				stmt.execute("CREATE TABLE IF NOT EXISTS feedback(rating INT, comment TEXT)");
-			}
-
-			//
-			// Example of Prepared Statement functionality for bulk insert.
-			// Note that Appender Devices allows all DDL operations, INSERT INTO DML operations (UPDATES and DELETES are not allowed) and SELECT queries.
-			//
-			try (PreparedStatement pstmt = conn.prepareStatement("INSERT INTO feedback VALUES(?, ?)")) {
-				pstmt.setInt(1, 4);
-				pstmt.setString(2, "Excellent Product");
-				pstmt.addBatch();
-
-				pstmt.setInt(1, 5);
-				pstmt.setString(2, "Outstanding Product");
-				pstmt.addBatch();
-
-				pstmt.executeBatch();
-			}
-		}
-		// Close SyncLite database/device cleanly.
-		SQLiteAppender.closeDevice(Path.of("test_appender.db"));
-		//
-		///////////////////////////////////////////////////////
-		//For other types of appender devices :
-		//DuckDBAppender : DuckDBAppender.closeDevice
-		//DerbyAppender : DerbyAppender.closeDevice
-		//H2Appender : H2Appender.closeDevice
-		//HyperSQLAppender : HyperSQLAppender.closeDevice
-		//////////////////////////////////////////////////////
-		//
-		// You can also close all open databases/devices in a single SQL : CLOSE ALL
-		// DATABASES
-	}
-
-	public static void main(String[] args) throws ClassNotFoundException, SQLException {
-		appStartup();
-		TestAppenderDevice testApp = new TestAppenderDevice();
-		testApp.myAppBusinessLogic();
-	}
-
+try (SyncLiteStream stream = SyncLiteStream.open(dbPath)) {
+    stream.createTable("events", new LinkedHashMap<>(Map.of(
+        "ts",         "BIGINT",
+        "event_type", "TEXT",
+        "user_id",    "TEXT"
+    )));
+    stream.insert("events", Map.of("ts", System.currentTimeMillis(), "event_type", "SIGNUP", "user_id", "u1"));
+    stream.insertBatch("events", List.of(
+        Map.of("ts", System.currentTimeMillis(), "event_type", "VIEW",     "user_id", "u2", "source", "web"),
+        Map.of("ts", System.currentTimeMillis(), "event_type", "PURCHASE", "user_id", "u3", "source", "app")
+    ));
 }
 ```
 
-#### Python
+### Jedis (Redis-Compatible) API
 
-```
-import jaydebeapi
-props = {
-  "config": "synclite_logger.conf",
-  "device-name" : "appender1"
-}
-conn = jaydebeapi.connect("io.synclite.logger.SQLiteAppender",
-                           "jdbc:synclite_sqlite_appender:c:\\synclite\\python\\data\\test_appender.db",
-                           props,
-                           "synclite-logger-<version>.jar",)
-#//
-#////////////////////////////////////////////////////////////////
-#For other types of appender devices use following are the class names and connection strings :
-#For DuckDBAppender - Class : io.synclite.logger.DuckDBAppender, Connection String : jdbc:synclite_duckdb_appender:<db_path>
-#For DerbyAppender - Class : io.synclite.logger.DerbyAppender, Connection String : jdbc:synclite_derby_appender:<db_path>
-#For H2Appender - Class : io.synclite.logger.H2Appender, Connection String : jdbc:synclite_h2_appender:<db_path>
-#For HyperSQLAppender - Class : io.synclite.logger.HyperSQLAppender, Connection String : jdbc:synclite_hsqldb_appender:<db_path>
-#/////////////////////////////////////////////////////////////////
-#//
+`io.synclite.logger.Jedis` is a drop-in subclass of `redis.clients.jedis.Jedis`. Every write is durably committed to a `SQLITE_STORE` device before being forwarded to Redis, and the cache is repopulated from the store on restart.
 
-curs = conn.cursor()
+```java
+import io.synclite.logger.Jedis;
 
-#Example of executing a DDL : CREATE TABLE.
-#You can execute other DDL operations : DROP TABLE, ALTER TABLE, RENAME TABLE.
-curs.execute('CREATE TABLE IF NOT EXISTS feedback(rating INT, comment TEXT)')
-
-#Example of Prepared Statement functionality for bulk insert.
-args = [[4, 'Excellent product'],[5, 'Outstanding product']]
-curs.executemany("insert into feedback values (?, ?)", args)
-
-#Close SyncLite database/device cleanly.
-curs.execute("close database c:\\synclite\\python\\data\\test_appender.db");
-
-#You can also close all open databases in a single SQL : CLOSE ALL DATABASES
-```
-
-### Streaming Device : 
-Streaming device allows all DDL operations (as supported by SQLite) and Prepared Statement based INSERT operations (UPDATE and DELETE are not allowed) to allow high speed concurrent batched data ingestion, performing logging and streaming of the ingested data. Streaming device enable developers to build high volume data streaming applications enabled with last mile data integration from thousands of edge applications into one or more centralized databases/data warehouses/data lakes.
-
-#### Java
-
-```
-package testApp;
-
-import java.nio.file.Path;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
-import java.sql.Statement;
-import io.synclite.logger.*;
-
-public class TestStreamingDevice {
-	public static Path syncLiteDBPath;
-
-	public static void appStartup() throws SQLException, ClassNotFoundException {
-		syncLiteDBPath = Path.of(System.getProperty("user.home"), "synclite", "db");
-		Class.forName("io.synclite.logger.Streaming");
-		Path dbPath = syncLiteDBPath.resolve("t_str.db");
-		Streaming.initialize(dbPath, syncLiteDBPath.resolve("synclite_logger.conf"));
-	}
-
-	public void myAppBusinessLogic() throws SQLException {
-		//
-		// Some application business logic
-		//
-		// Perform some database operations
-		try (Connection conn = DriverManager
-				.getConnection("jdbc:synclite_streaming:" + syncLiteDBPath.resolve("t_str.db"))) {
-			try (Statement stmt = conn.createStatement()) {
-				// Example of executing a DDL : CREATE TABLE.
-				// You can execute other DDL operations : DROP TABLE, ALTER TABLE, RENAME TABLE.
-				stmt.execute("CREATE TABLE IF NOT EXISTS feedback(rating INT, comment TEXT)");
-			}
-
-			// Example of Prepared Statement functionality for bulk insert.
-			try (PreparedStatement pstmt = conn.prepareStatement("INSERT INTO feedback VALUES(?, ?)")) {
-				pstmt.setInt(1, 4);
-				pstmt.setString(2, "Excellent Product");
-				pstmt.addBatch();
-
-				pstmt.setInt(1, 5);
-				pstmt.setString(2, "Outstanding Product");
-				pstmt.addBatch();
-
-				pstmt.executeBatch();
-			}
-		}
-		// Close SyncLite database/device cleanly.
-		Streaming.closeDevice(Path.of("t_str.db"));
-		// You can also close all open databases/devices in a single SQL : CLOSE ALL
-		// DATABASES
-	}
-
-	public static void main(String[] args) throws ClassNotFoundException, SQLException {
-		appStartup();
-		TestStreamingDevice testApp = new TestStreamingDevice();
-		testApp.myAppBusinessLogic();
-	}
+// Managed mode — Jedis handles SQLiteStore initialise / open / close
+try (Jedis jedis = Jedis.builder(dbPath, conf, "cache-device")
+        .host("localhost").port(6379).build()) {
+    jedis.set("user:1:name", "Alice");
+    jedis.hset("session:42", Map.of("token", "abc123", "status", "active"));
+    jedis.rpush("queue", "job-1", "job-2");
+    jedis.sadd("tags", "etl", "cdc");
+    jedis.zadd("leaderboard", Map.of("Alice", 100.0, "Bob", 200.0));
+    jedis.del("tmp");
 }
 ```
-#### Python
 
-```
-import jaydebeapi
-props = {
-  "config": "synclite_logger.conf",
-  "device-name" : "streaming1"
-}
-conn = jaydebeapi.connect("io.synclite.logger.Streaming",
-                           "jdbc:synclite_streaming:c:\\synclite\\python\\data\\t_str.db",
-                           props,
-                           "synclite-logger-<version>.jar",)
+Alternatively, supply a pre-opened `SyncLiteStore` via `Jedis.builder(store)` when managing the store lifecycle externally.
 
-curs = conn.cursor()
+---
 
-#Example of executing a DDL : CEATE TABLE.
-#You can execute other DDL operations : DROP TABLE, ALTER TABLE, RENAME TABLE.
-curs.execute('CREATE TABLE IF NOT EXISTS feedback(rating INT, comment TEXT)')
+## Using SyncLite DB (any language)
 
-#Example of Prepared Statement functionality for bulk insert.
-args = [[4, 'Excellent product'],[5, 'Outstanding product']]
-curs.executemany("insert into feedback values (?, ?)", args)
-
-#Close SyncLite database/device cleanly.
-curs.execute("close database c:\\synclite\\python\\data\\t_str.db");
-
-#You can also close all open databases in a single SQL : CLOSE ALL DATABASES
+```bash
+# Start the server
+cd tools/synclite-db/
+./synclite-db.sh --config synclite_db.conf
 ```
 
-## Application Code Samples (Kafka API)
+```python
+# Python client (plain HTTP — no SDK needed)
+import requests, json
 
-```
-package testApp;
+BASE = "http://localhost:5555/synclite"
 
-import io.synclite.logger.*;
+requests.post(BASE, json={"db-type": "SQLITE", "db-path": "/tmp/myapp.db",
+    "synclite-logger-config": "/tmp/synclite_logger.conf", "sql": "initialize"})
 
-public class TestKafkaProducer {
+requests.post(BASE, json={"db-path": "/tmp/myapp.db",
+    "sql": "CREATE TABLE IF NOT EXISTS t1(a INT, b TEXT)"})
 
-	public static void main(String[] args) throws Exception {
-
-		Properties props = new Properties();
-	    
-		//
-		//Set properties to use a staging storage of your choice e.g. S3, MinIO, SFTP etc. 
-		//where SyncLite logger will ship log files continuously for consumption by SyncLite consolidator
-		//
-		
-        	Producer<String, String> producer = new io.synclite.logger.KafkaProducer(props);
-
-		ProducerRecord<String, String> record = new ProducerRecord<>("test", "key", "value");
-        
-		//
-		//You can use same or different KafkaProducer objects to ingest data concurrently over multiple theads.
-		//
-        	producer.send(record);
-		
-		produer.close();
-
-	}
+requests.post(BASE, json={"db-path": "/tmp/myapp.db",
+    "sql": "INSERT INTO t1 VALUES(?, ?)", "arguments": [[1, "hello"], [2, "world"]]})
 ```
 
-# Launching and using SyncLite DB
+SDK samples for Java, Python, C#, C++, Go, Rust, Ruby, Node.js: [synclite-db/sdk-source/](synclite-db/sdk-source/)
 
-```SyncLite DB``` is a sync-enabled, single-node database server that wraps popular embedded databases like SQLite, DuckDB, Apache Derby, H2, and HyperSQL. Unlike the embeddable ```SyncLite Logger``` library for Java and Python applications, ```SyncLite DB``` acts as a standalone server, allowing your edge or desktop applications—regardless of the programming language—to connect and send/post SQL requests (wrapped in JSON format) via a REST API. This makes it an ideal solution for seamless, real-time data synchronization in diverse environments.
+---
 
-1. Go to the directory ```synclite-platform-<version>\tools\synclite-db```
-2. Check the configurations in synclite-db.conf and adjust them as per your needs.
-3. Run ```synclite-db.bat --config synclite-db.conf``` ( OR ```synclite-db.sh --config synclite-db.conf``` on linux). This starts the SyncLite DB server listening at the specified address.
-4. An application in your favoirite programming language can establish a connection with the SyncLite DB server at the specified address and send requests in JSON format as below
+## Staging Storage Setup
 
-	- Connect and initialize a device
+Configure `local-data-stage-directory` in `synclite_logger.conf` for local/NFS staging. For remote staging (SFTP, S3, MinIO, Kafka, OneDrive, Google Drive) configure the appropriate properties and use the matching Docker helper scripts in `bin/stage/`.
 
-   	Request
-	```
- 	{
- 		"db-type" : "SQLITE"
- 		"db-path" : "C:\synclite\users\bob\synclite\job1\test.db"
- 		"synclite-logger-config" : "C:\synclite\users\bob\synclite\job1\synclite_logger.conf"
- 		"sql" : "initialize"
- 	}
-  	```
+Docker staging helpers:
 
- 	Response from Server 
- 	```
-  	{
-  		"result"  : true	
- 		"message" : "Database initialized successfully"
- 	}
-  	```
-  
-	- Send a sql command to create a table
+```bash
+bin/stage/sftp/docker-deploy.sh    # SFTP server
+bin/stage/minio/docker-deploy.sh   # MinIO object storage
+```
 
-   	Request
-	```
- 	{
- 		"db-path" : "C:\synclite\users\bob\synclite\job1\test.db"
- 		"sql" : "CREATE TABLE IF NOT EXISTS(a INT, b INT)"
- 	}
- 	```
+> ⚠️ The stage Docker scripts use default credentials. Always change usernames, passwords, and add TLS before production use.
 
- 	Response from Server 
- 	```
-  	{
-  		"result" : "true"
- 		"message" : "Update executed successfully, rows affected: 0"
-   	}
-  	```
-  
-	- Send a request to perform a batched insert in the created table
+---
 
-   	Request
-	```
- 	{
- 		"db-path" : "C:\synclite\users\bob\synclite\job1\test.db"
- 		"sql" : "INSERT INTO t1(a,b) VALUES(?, ?)"
- 		"arguments" : [[1, "one"], [2, "two"]]
-   	}
- 	```
+## Documentation & Community
 
- 	Response from Server 
- 	```
-  	{
-  		"result" : "true"
- 		"message" : "Batch executed successfully, rows affected: 2"
-   	}
-  	```
+| Resource | Link |
+|---|---|
+| Full Documentation | https://www.synclite.io/resources/documentation |
+| Website | https://www.synclite.io |
+| Slack Community | https://join.slack.com/t/syncliteworkspace/shared_invite/zt-2pz945vva-uuKapsubC9Mu~uYDRKo6Jw |
+| GenAI / RAG solution | https://www.synclite.io/solutions/gen-ai-search-rag |
+| Database ETL solution | https://www.synclite.io/solutions/smart-database-etl |
+| IoT Connector solution | https://www.synclite.io/solutions/iot-data-connector |
+| Streaming solution | https://www.synclite.io/synclite/last-mile-streaming |
 
-	- Send a request to begin a transaction on database
+---
 
- 	Request
-	 ```
- 	{
- 		"db-path" : "C:\synclite\users\bob\synclite\job1\test.db"
- 		"sql" : "begin"
-   	}
- 	```
+## Contributing
 
- 	Response from Server 
- 	```
-  	{
-  		"result" : "true"
- 		"message" : "Transaction started successfully"
-  		"txn-handle": "f47ac10b-58cc-4372-a567-0e02b2c3d479"
-   	}
-  	```
-	
-	- Send a request to execute a sql inside started transaction
+We welcome contributions! Please read [CONTRIBUTING.md](CONTRIBUTING.md) and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) before opening a pull request.
 
-   	Request
-	```
- 	{
- 		"db-path" : "C:\synclite\users\bob\synclite\job1\test.db"
- 		"sql" : "INSERT INTO t1(a,b) VALUES(?, ?)"
-		"txn-handle": "f47ac10b-58cc-4372-a567-0e02b2c3d479"
- 		"arguments" : [[3, "three"], [4, "four"]]
-   	}
- 	```
+## License
 
- 	Response from Server 
- 	```
-  	{
-  		"result" : "true"
- 		"message" : "Batch executed successfully, rows affected: 2"
-   	}
-  	```
+SyncLite is licensed under the [Apache License 2.0](LICENSE).
 
-	- Send a request to commit a transaction
 
+<<<<<<< Updated upstream
 	Request	
 	```
  	{
@@ -979,3 +492,5 @@ public class TestKafkaProducer {
 
 # Patent
 SyncLite is backed by patented technlogy, more info : https://www.synclite.io/resources/patent  
+=======
+>>>>>>> Stashed changes

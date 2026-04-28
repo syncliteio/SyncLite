@@ -1,7 +1,9 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Text;
+using System.Security.Cryptography;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -85,12 +87,43 @@ namespace SyncLite
         public string Message { get; set; }
         public JArray ResultSet { get; set; }
         public string TxnHandle { get; set; }
+        public string ResultsetHandle { get; set; }
+        public bool? HasMore { get; set; }
+        public JArray ColumnMetadata { get; set; }
     }
 
     public class SyncLiteDBClient
     {
         private static string syncLiteDBAddress = "http://localhost:5555";
         private static string dbDir;
+
+        private static SyncLiteDBResult ToDBResult(JObject jsonResponse)
+        {
+            return new SyncLiteDBResult
+            {
+                Result = jsonResponse["result"] != null && jsonResponse["result"].ToObject<bool>(),
+                Message = jsonResponse["message"]?.ToString(),
+                ResultSet = jsonResponse["resultset"] as JArray,
+                TxnHandle = jsonResponse["txn-handle"]?.ToString(),
+                ResultsetHandle = jsonResponse["resultset-handle"]?.ToString(),
+                HasMore = jsonResponse["has-more"]?.ToObject<bool>(),
+                ColumnMetadata = jsonResponse["resultset-metadata"] as JArray
+            };
+        }
+
+        private static string Sha256Hex(string value)
+        {
+            using (var sha = SHA256.Create())
+            {
+                byte[] hash = sha.ComputeHash(Encoding.UTF8.GetBytes(value));
+                StringBuilder sb = new StringBuilder();
+                foreach (byte b in hash)
+                {
+                    sb.Append(b.ToString("x2"));
+                }
+                return sb.ToString();
+            }
+        }
 
         public static JObject ProcessRequest(JObject jsonRequest)
         {
@@ -103,31 +136,69 @@ namespace SyncLite
                 request.ContentType = "application/json";
                 request.Timeout = 10000;
 
+                string payload = jsonRequest.ToString(Formatting.None);
+                string token = Environment.GetEnvironmentVariable("SYNCLITE_DB_AUTH_TOKEN");
+                if (!string.IsNullOrEmpty(token))
+                {
+                    request.Headers["X-SyncLite-Token"] = token;
+                }
+
+                string appId = Environment.GetEnvironmentVariable("SYNCLITE_DB_APP_ID");
+                string appSecret = Environment.GetEnvironmentVariable("SYNCLITE_DB_APP_SECRET");
+                if (!string.IsNullOrEmpty(appId) && !string.IsNullOrEmpty(appSecret))
+                {
+                    string timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
+                    string nonce = Guid.NewGuid().ToString();
+                    string canonical = "POST\n/\n" + timestamp + "\n" + nonce + "\n" + Sha256Hex(payload);
+                    using (var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(appSecret)))
+                    {
+                        string signature = Convert.ToBase64String(hmac.ComputeHash(Encoding.UTF8.GetBytes(canonical)));
+                        request.Headers["X-SyncLite-App-Id"] = appId;
+                        request.Headers["X-SyncLite-Timestamp"] = timestamp;
+                        request.Headers["X-SyncLite-Nonce"] = nonce;
+                        request.Headers["X-SyncLite-Signature"] = signature;
+                    }
+                }
+
                 Console.WriteLine("Request JSON: " + jsonRequest.ToString(Formatting.Indented));
 
                 // Send the JSON request
                 using (var streamWriter = new StreamWriter(request.GetRequestStream()))
                 {
-                    string json = jsonRequest.ToString();
-                    streamWriter.Write(json);
+                    streamWriter.Write(payload);
                     streamWriter.Flush();
                     streamWriter.Close();
                 }
 
                 // Get the response
-                HttpWebResponse response = (HttpWebResponse)request.GetResponse();
-                if (response.StatusCode == HttpStatusCode.OK)
+                HttpWebResponse response;
+                try
+                {
+                    response = (HttpWebResponse)request.GetResponse();
+                }
+                catch (WebException ex)
+                {
+                    response = ex.Response as HttpWebResponse;
+                    if (response == null)
+                    {
+                        throw;
+                    }
+                }
+
+                using (response)
                 {
                     using (var streamReader = new StreamReader(response.GetResponseStream()))
                     {
                         string result = streamReader.ReadToEnd();
                         jsonResponse = JObject.Parse(result);
                     }
+
+                    if (response.StatusCode != HttpStatusCode.OK && response.StatusCode != HttpStatusCode.BadRequest && response.StatusCode != HttpStatusCode.Unauthorized && (int)response.StatusCode != 413)
+                    {
+                        throw new Exception("Failed to get a valid response from the server : " + response.StatusCode);
+                    }
+
                     Console.WriteLine("Response JSON: " + jsonResponse.ToString(Formatting.Indented));
-                }
-                else
-                {
-                    throw new Exception("Failed to get a valid response from the server : " + response.StatusCode);
                 }
             }
             catch (Exception ex)
@@ -140,8 +211,6 @@ namespace SyncLite
 
         public static SyncLiteDBResult InitializeDB(string dbPath, string dbType, string dbName, string syncLiteLoggerConfigPath = null)
         {
-            SyncLiteDBResult dbResult = new SyncLiteDBResult();
-
             try
             {
                 JObject jsonRequest = new JObject
@@ -159,21 +228,16 @@ namespace SyncLite
 
                 JObject jsonResponse = ProcessRequest(jsonRequest);
 
-                dbResult.Result = jsonResponse["result"].ToObject<bool>();
-                dbResult.Message = jsonResponse["message"].ToString();
+                return ToDBResult(jsonResponse);
             }
             catch (Exception e)
             {
                 throw new Exception("Failed to initialize DB: " + dbPath + " : " + e.Message, e);
             }
-
-            return dbResult;
         }
 
         public static SyncLiteDBResult BeginTransaction(string dbPath)
         {
-            SyncLiteDBResult dbResult = new SyncLiteDBResult();
-
             try
             {
                 JObject jsonRequest = new JObject
@@ -184,22 +248,16 @@ namespace SyncLite
 
                 JObject jsonResponse = ProcessRequest(jsonRequest);
 
-                dbResult.Result = jsonResponse["result"].ToObject<bool>();
-                dbResult.Message = jsonResponse["message"].ToString();
-                dbResult.TxnHandle = jsonResponse["txn-handle"].ToString();
+                return ToDBResult(jsonResponse);
             }
             catch (Exception e)
             {
                 throw new Exception("Failed to begin transaction on DB: " + dbPath + " : " + e.Message, e);
             }
-
-            return dbResult;
         }
 
         public static SyncLiteDBResult CommitTransaction(string dbPath, string txnHandle)
         {
-            SyncLiteDBResult dbResult = new SyncLiteDBResult();
-
             try
             {
                 JObject jsonRequest = new JObject
@@ -211,21 +269,16 @@ namespace SyncLite
 
                 JObject jsonResponse = ProcessRequest(jsonRequest);
 
-                dbResult.Result = jsonResponse["result"].ToObject<bool>();
-                dbResult.Message = jsonResponse["message"].ToString();
+                return ToDBResult(jsonResponse);
             }
             catch (Exception e)
             {
                 throw new Exception("Failed to commit transaction on DB: " + dbPath + " : " + e.Message, e);
             }
-
-            return dbResult;
         }
 
 	public static SyncLiteDBResult RollbackTransaction(string dbPath, string txnHandle)
         {
-            SyncLiteDBResult dbResult = new SyncLiteDBResult();
-
             try
             {
                 JObject jsonRequest = new JObject
@@ -237,22 +290,17 @@ namespace SyncLite
 
                 JObject jsonResponse = ProcessRequest(jsonRequest);
 
-                dbResult.Result = jsonResponse["result"].ToObject<bool>();
-                dbResult.Message = jsonResponse["message"].ToString();
+                return ToDBResult(jsonResponse);
             }
             catch (Exception e)
             {
                 throw new Exception("Failed to commit transaction on DB: " + dbPath + " : " + e.Message, e);
             }
-
-            return dbResult;
         }
 
 
-        public static SyncLiteDBResult ExecuteSQL(string dbPath, string txnHandle, string sql, JArray arguments = null)
+        public static SyncLiteDBResult ExecuteSQL(string dbPath, string txnHandle, string sql, JArray arguments = null, string dataFormat = null, bool? includeMetadata = null)
         {
-            SyncLiteDBResult dbResult = new SyncLiteDBResult();
-
             try
             {
                 JObject jsonRequest = new JObject
@@ -271,21 +319,77 @@ namespace SyncLite
                     jsonRequest["arguments"] = arguments;
                 }
 
+                if (dataFormat != null)
+                {
+                    jsonRequest["resultset-data-format"] = dataFormat;
+                }
+
+                if (includeMetadata.HasValue)
+                {
+                    jsonRequest["resultset-include-metadata"] = includeMetadata.Value ? "ON" : "OFF";
+                }
+
                 JObject jsonResponse = ProcessRequest(jsonRequest);
 
-                dbResult.Result = jsonResponse["result"].ToObject<bool>();
-                dbResult.Message = jsonResponse["message"].ToString();
-                if (jsonResponse["resultset"] != null)
-                {
-                    dbResult.ResultSet = (JArray)jsonResponse["resultset"];
-                }
+                return ToDBResult(jsonResponse);
             }
             catch (Exception e)
             {
                 throw new Exception("Failed to execute SQL on DB: " + dbPath + " : " + e.Message, e);
             }
+        }
 
-            return dbResult;
+        public static SyncLiteDBResult Next(string resultsetHandle, int? resultsetPaginationSize = null, string dataFormat = null, bool? includeMetadata = null)
+        {
+            try
+            {
+                JObject jsonRequest = new JObject
+                {
+                    { "request-type", "next" },
+                    { "resultset-handle", resultsetHandle }
+                };
+
+                if (resultsetPaginationSize.HasValue && resultsetPaginationSize.Value > 0)
+                {
+                    jsonRequest["resultset-pagination-size"] = resultsetPaginationSize.Value;
+                }
+
+                if (dataFormat != null)
+                {
+                    jsonRequest["resultset-data-format"] = dataFormat;
+                }
+
+                if (includeMetadata.HasValue)
+                {
+                    jsonRequest["resultset-include-metadata"] = includeMetadata.Value ? "ON" : "OFF";
+                }
+
+                JObject jsonResponse = ProcessRequest(jsonRequest);
+                return ToDBResult(jsonResponse);
+            }
+            catch (Exception e)
+            {
+                throw new Exception("Failed to fetch next page for resultset-handle: " + resultsetHandle + " : " + e.Message, e);
+            }
+        }
+
+        public static SyncLiteDBResult CloseDB(string dbPath)
+        {
+            try
+            {
+                JObject jsonRequest = new JObject
+                {
+                    { "db-path", dbPath },
+                    { "sql", "close" }
+                };
+
+                JObject jsonResponse = ProcessRequest(jsonRequest);
+                return ToDBResult(jsonResponse);
+            }
+            catch (Exception e)
+            {
+                throw new Exception("Failed to close DB: " + dbPath + " : " + e.Message, e);
+            }
         }
 
         public static void Main(string[] args)
@@ -368,18 +472,78 @@ namespace SyncLite
                 Environment.Exit(1);
             }
 
-            // Select from table
+            // Select from table (JSON format - default, records as {colName: colValue} objects)
             Console.WriteLine("========================================================");
-            Console.WriteLine("Executing select from table");
+            Console.WriteLine("Executing select from table (JSON format)");
             Console.WriteLine("========================================================");
             r = ExecuteSQL(dbPath, null, "select a, b from t1");
             Console.WriteLine("Result: " + r.Result);
             Console.WriteLine("Message: " + r.Message);
 
-            Console.WriteLine("Selected Records: ");
-            foreach (var rec in r.ResultSet)
+            if (r.ColumnMetadata != null)
             {
-                Console.WriteLine($"a = {rec["a"]}, b = {rec["b"]}");
+                Console.WriteLine(string.Join("\t", r.ColumnMetadata.Select(c => c["label"]?.ToString())));
+            }
+            SyncLiteDBResult current = r;
+            while (true)
+            {
+                if (current.ResultSet != null)
+                {
+                    foreach (var rec in current.ResultSet)
+                    {
+                        Console.WriteLine($"a = {rec["a"]}, b = {rec["b"]}");
+                    }
+                }
+
+                if (current.HasMore != true || string.IsNullOrEmpty(current.ResultsetHandle))
+                {
+                    break;
+                }
+
+                current = Next(current.ResultsetHandle);
+                if (!current.Result)
+                {
+                    throw new Exception("Next page call failed: " + current.Message);
+                }
+            }
+
+            // Select from table (DB format - records as value arrays, column order matches ColumnMetadata)
+            Console.WriteLine("========================================================");
+            Console.WriteLine("Executing select from table (DB format)");
+            Console.WriteLine("========================================================");
+            r = ExecuteSQL(dbPath, null, "select a, b from t1", null, "DB", true);
+            Console.WriteLine("Result: " + r.Result);
+            Console.WriteLine("Message: " + r.Message);
+
+            if (r.ColumnMetadata != null)
+            {
+                Console.WriteLine(string.Join("\t", r.ColumnMetadata.Select(c => c["label"]?.ToString())));
+            }
+            current = r;
+            while (true)
+            {
+                if (current.ResultSet != null)
+                {
+                    foreach (var row in current.ResultSet)
+                    {
+                        var rowArr = row as JArray;
+                        if (rowArr != null)
+                        {
+                            Console.WriteLine(string.Join("\t", rowArr.Select(v => v.Type == JTokenType.Null ? "null" : v.ToString())));
+                        }
+                    }
+                }
+
+                if (current.HasMore != true || string.IsNullOrEmpty(current.ResultsetHandle))
+                {
+                    break;
+                }
+
+                current = Next(current.ResultsetHandle, null, "DB");
+                if (!current.Result)
+                {
+                    throw new Exception("Next page call failed: " + current.Message);
+                }
             }
 
             // Drop table
@@ -387,6 +551,13 @@ namespace SyncLite
             Console.WriteLine("Executing drop table");
             Console.WriteLine("========================================================");
             r = ExecuteSQL(dbPath, null, "drop table t1");
+            Console.WriteLine("Result: " + r.Result);
+            Console.WriteLine("Message: " + r.Message);
+
+            Console.WriteLine("========================================================");
+            Console.WriteLine("Executing close DB");
+            Console.WriteLine("========================================================");
+            r = CloseDB(dbPath);
             Console.WriteLine("Result: " + r.Result);
             Console.WriteLine("Message: " + r.Message);
         }

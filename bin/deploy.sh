@@ -1,44 +1,52 @@
 #!/usr/bin/env bash
+set -euo pipefail
 
-#Set tomcat version
-TOMCAT_VER="9.0.95"
+# Change to the directory containing this script
+cd "$(cd "$(dirname "$0")" && pwd)"
 
-# Set the URL of the tar file to download
-URL="https://dlcdn.apache.org/tomcat/tomcat-9/v$TOMCAT_VER/bin/apache-tomcat-$TOMCAT_VER.tar.gz"
-# Set the destination directory for the downloaded tar file
-DESTINATION="."
+# ── Versions ──────────────────────────────────────────────────────────────────
+TOMCAT_VER="9.0.117"
+JDK_VER="25"
+JDK_DIR="jdk-${JDK_VER}"
 
-# Download the tar file using curl
-wget -O "$DESTINATION/apache-tomcat-$TOMCAT_VER.tar.gz" "$URL" --no-check-certificate
+# ── Download and extract Tomcat ───────────────────────────────────────────────
+TOMCAT_TGZ="apache-tomcat-${TOMCAT_VER}.tar.gz"
+TOMCAT_URL="https://dlcdn.apache.org/tomcat/tomcat-9/v${TOMCAT_VER}/bin/${TOMCAT_TGZ}"
 
-# Extract the zip file using unzip
-tar -xzf "$DESTINATION/apache-tomcat-$TOMCAT_VER.tar.gz" -C "$DESTINATION"
+echo "Downloading Apache Tomcat ${TOMCAT_VER}..."
+curl -fsSL -o "${TOMCAT_TGZ}" "${TOMCAT_URL}"
+tar -xzf "${TOMCAT_TGZ}"
+cp -f tomcat-users.xml "apache-tomcat-${TOMCAT_VER}/conf/tomcat-users.xml"
+chmod +x "apache-tomcat-${TOMCAT_VER}/bin/"*.sh
+rm -f "${TOMCAT_TGZ}"
 
-# Copy tomcat-users.xml file into extracted tomcat folder
-cp -f tomcat-users.xml apache-tomcat-$TOMCAT_VER/conf/tomcat-users.xml
+# ── Download and extract OpenJDK 25 (Eclipse Temurin) ─────────────────────────
+JDK_TGZ="openjdk-${JDK_VER}-linux-x64.tar.gz"
+JDK_URL="https://api.adoptium.net/v3/binary/latest/${JDK_VER}/ga/linux/x64/jdk/hotspot/normal/eclipse"
 
-# Clean up the downloaded zip file
-rm $DESTINATION/apache-tomcat-$TOMCAT_VER.zip
+echo "Downloading OpenJDK ${JDK_VER}..."
+curl -fsSL -o "${JDK_TGZ}" "${JDK_URL}"
+mkdir -p jdk_tmp
+tar -xzf "${JDK_TGZ}" -C jdk_tmp
+# Rename extracted folder to a stable name (jdk-25)
+rm -rf "${JDK_DIR}"
+mv jdk_tmp/jdk-* "${JDK_DIR}"
+rm -rf jdk_tmp
+rm -f "${JDK_TGZ}"
 
+if [[ ! -x "${JDK_DIR}/bin/java" ]]; then
+	echo "ERROR: JDK setup failed. Missing ${JDK_DIR}/bin/java"
+	exit 1
+fi
 
-# Set the URL of the tar file to download
-URL="https://download.java.net/openjdk/jdk11/ri/openjdk-11+28_linux-x64_bin.tar.gz"
+# ── Deploy WAR files ──────────────────────────────────────────────────────────
+WEBAPPS="apache-tomcat-${TOMCAT_VER}/webapps"
+echo "Deploying WAR files..."
+cp -f ../lib/consolidator/synclite-consolidator-*.war                         "${WEBAPPS}/synclite-consolidator.war"
+cp -f ../sample-apps/synclite-logger/jsp-servlet/web/target/*.war             "${WEBAPPS}/synclite-sample-app.war"
+cp -f ../tools/synclite-dbreader/*.war                                         "${WEBAPPS}/synclite-dbreader.war"
+cp -f ../tools/synclite-qreader/*.war                                          "${WEBAPPS}/synclite-qreader.war"
+cp -f ../tools/synclite-jobmonitor/*.war                                       "${WEBAPPS}/synclite-jobmonitor.war"
 
-# Set the destination directory for the downloaded tar file
-DESTINATION="."
-
-# Download the tar file using curl
-wget -O "$DESTINATION/openjdk-11+28_linux-x64_bin.tar.gz" "$URL" --no-check-certificate
-
-# Extract the zip file using unzip
-tar -xzf "$DESTINATION/openjdk-11+28_linux-x64_bin.tar.gz" -C "$DESTINATION"
-
-# Clean up the downloaded zip file
-rm $DESTINATION/openjdk-11+28_linux-x64_bin.tar.gz
-
-cp -f ../lib/consolidator/synclite-consolidator-*.war apache-tomcat-$TOMCAT_VER/webapps/synclite-consolidator.war
-cp -f ../sample-apps/synclite-logger/jsp-servlet/web/target/*.war apache-tomcat-$TOMCAT_VER/webapps/synclite-sample-app.war
-cp -f ../tools/synclite-dbreader/*.war apache-tomcat-$TOMCAT_VER/webapps/synclite-dbreader.war
-cp -f ../tools/synclite-qreader/*.war apache-tomcat-$TOMCAT_VER/webapps/synclite-qreader.war
-cp -f ../tools/synclite-jobmonitor/*.war apache-tomcat-$TOMCAT_VER/webapps/synclite-jobmonitor.war
+echo "Deploy complete."
 
