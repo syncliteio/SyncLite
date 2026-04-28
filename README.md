@@ -34,98 +34,12 @@ All of this flows through a unified pipeline architecture: sources produce compa
 
 Most data integration problems at the edge are solved today by one of two approaches: ship everything to the cloud and query there (high latency, no offline resilience), or write custom replication code (brittle, expensive, operationally painful). SyncLite is a third way.
 
-        {"db-path" : "C:\synclite\users\bob\synclite\job1\test.db",
-            "txn-handle": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
-            "sql" : "commit"
-        }
-        ```
+---
 
-        Response from Server 
-        ```
-        {
-            "result" : "true",
-            "message" : "Transaction committed successfully"
-        }
-        ```
+## Components
 
-        - Send a request to close database   
-        Request
-
-        ```
-        {
-            "db-path" : "C:\synclite\users\bob\synclite\job1\test.db",
-            "sql" : "close"
-        }
-        ```
-    
-        Response from Server 
-        ```
-        {
-            "result" : "true",
-            "message" : "Database closed successfully"
-        }
-        ```
-
-5. SyncLite DB (internally leveraging SyncLite Logger), creates a device stage directory at configured stage path with sql logs created for each device. These device stage directories are continuously synchronized with SyncLite consolidator for consolidating them into final destination databases.
-
-6. Several such hosts, each running SyncLite DB, each of them creating several SyncLite databases/devices (i.e. embedded databases), can synchronize these embedded databases in real-time with a centralized SyncLite consolidator that aggregates the incoming data and changes, in real-time, into configured destination databases.
-
-# Running Integration Tests
-
-`SyncLite Validator` is a GUI based tool with a war file deployed on app server, it can be launched at http://localhost:8080/synclite-validator. A test job can be configured and run to execute all the end to end integration tests which validate data consolidation functionality for various SyncLite device types.  
-
-# Pre-Built Releases:
-
-## SyncLite Logger
-
-1. SyncLite Logger is published as maven dependency :
-        ```
-        <!-- https://mvnrepository.com/artifact/io.synclite/synclite-logger -->
-        <dependency>
-                <groupId>io.synclite</groupId>
-                <artifactId>synclite-logger</artifactId>
-                <version>#LatestVersion#</version>
-        </dependency>
-        ```
-2. OR You can directly download the latest published synclite-logger-<version>.jar from : https://github.com/syncliteio/SyncLiteLoggerJava/blob/main/src/main/resources/ and add it as a dependency in your applications.
-
-## SyncLite Consolidator
-
-1. A docker image of SyncLite Consolidator is available on docker hub : https://hub.docker.com/r/syncliteio/synclite-consolidator
-
-2. OR a release zip file can be downloaded from this GitHub Repo : https://github.com/syncliteio/SyncLite/releases
-
-# Supported Systems
-
-## Source Systems
-1. Edge Applications(Java/Python) +  SyncLite Logger (wrapping embedded databases :SQLite, DuckDB, Apache Derby, H2, HyperSQL)
-2. Edge Applications (any programming language) + SyncLite DB (wrapping embedded databases :SQLite, DuckDB, Apache Derby, H2, HyperSQL)
-3. Databases : PostgreSQL, MySQL, MongoDB, SQLite
-4. Message Brokers : Eclipse Mosquitto MQTT broker
-5. Data Files : CSV (stored on FS/S3/MinIO)
-
-## Staging Storages
-1. Local FS
-2. SFTP
-3. S3
-4. MinIO
-5. Kafka
-6. Microsoft OneDrive
-7. Google Drive
-
-## Destination Systems
-1. PostgreSQL
-2. MySQL
-3. MongoDB
-4. Microsoft SQL Server
-5. Apache Iceberg
-6. SQLite
-7. DuckDB
-8. ClickHouse
-9. FerretDB
-
-# Patent
-SyncLite is backed by patented technology, more info : https://www.synclite.io/resources/patent
+| Component | Description | README |
+|---|---|---|
 | **SyncLite Client** | Interactive CLI for SyncLite devices | [→](synclite-client/README.md) |
 | **SyncLite Consolidator** | Central real-time consolidation engine | [→](synclite-consolidator/README.md) |
 | **SyncLite DBReader** | Database ETL / replication / migration tool | [→](synclite-dbreader/README.md) |
@@ -375,6 +289,12 @@ bin/stage/minio/docker-deploy.sh   # MinIO object storage
 
 ---
 
+## Patent
+
+SyncLite is backed by patented technology, more info: https://www.synclite.io/resources/patent
+
+---
+
 ## Contributing
 
 We welcome contributions! Please read [CONTRIBUTING.md](CONTRIBUTING.md) and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) before opening a pull request.
@@ -382,105 +302,3 @@ We welcome contributions! Please read [CONTRIBUTING.md](CONTRIBUTING.md) and [CO
 ## License
 
 SyncLite is licensed under the [Apache License 2.0](LICENSE).
-
-
-<<<<<<< Updated upstream
-	Request	
-	```
- 	{
- 		"db-path" : "C:\synclite\users\bob\synclite\job1\test.db"
-  		"txn-handle": "f47ac10b-58cc-4372-a567-0e02b2c3d479"
- 		"sql" : "commit"
- 	}
- 	```
-
- 	Response from Server 
- 	```
-  	{
-  		"result" : "true"
- 		"message" : "Transaction committed successfully"
-   	}
-  	```
-
-	- Send a request to close database   	
- 	Request
-
-	 ```
- 	{
- 		"db-path" : "C:\synclite\users\bob\synclite\job1\test.db"
- 		"sql" : "close"
-   	}
- 	```
-	
- 	Response from Server 
- 	```
-  	{
-  		"result" : "true"
-		"message" : "Database closed successfully"
-   	}
-  	```
- 
-5. SyncLite DB (internally leveraging SyncLite Logger), creates a device stage directory at configured stage path with sql logs created for each device. These device stage directories are continuously synchronized with SyncLite consolidator for consolidating them into final destination databases.
-   
-6. Several such hosts, each running SyncLite DB, each of them creating several SyncLite databases/devices (i.e. embedded databases), can synchornize these embedded databases in real-time with a centralized SyncLite consolidator that aggregates the incoming data and changes, in real-time, into configured destination databases.
-
-     
-# Running Integration Tests
-
-```SyncLite Validator``` is a GUI based tool with a war file deployed on app server, it can be launched at http://localhost:8080/synclite-validator. A test job can be configured and run to execute all the end to end integration tests which validate data consolidation functionality for various SyncLite device types.  
-    
-	
-# Pre-Built Releases:
-
-## SyncLite Logger
-
-1. SyncLite Logger is is published as maven dependency :
-   ```
-	<!-- https://mvnrepository.com/artifact/io.synclite/synclite-logger -->
-	<dependency>
-	    <groupId>io.synclite</groupId>
-	    <artifactId>synclite-logger</artifactId>
-	    <version>#LatestVersion#</version>
-	</dependency>
-   ```
-2. OR You can directly download the latest published synclite-logger-<version>.jar from : https://github.com/syncliteio/SyncLiteLoggerJava/blob/main/src/main/resources/ and add it as a dependency in your applications.
-   
-## SyncLite Consolidator
-
-1. A docker image of SyncLite Consolidator is available on docker hub : https://hub.docker.com/r/syncliteio/synclite-consolidator
-
-2. OR a release zip file can be downloaded from this GitHub Repo : https://github.com/syncliteio/SyncLite/releases
-
-# Supported Systems
-
-## Source Systems
-1. Edge Applications(Java/Python) +  SyncLite Logger (wrapping embedded databases :SQLite, DuckDB, Apache Derby, H2, HyperSQL)
-2. Edge Applications (any programming language) + SyncLite DB (wrapping embedded databases :SQLite, DuckDB, Apache Derby, H2, HyperSQL)
-3. Databases : PostgreSQL, MySQL, MongoDB, SQLite
-4. Message Brokers : Eclipse Mosquitto MQTT broker
-5. Data Files : CSV ( stored on FS/S3/MinIO)
-
-## Staging Storages
-1. Local FS
-2. SFTP
-3. S3
-4. MinIO
-5. Kafka
-6. Microsoft OneDrive
-7. Google Drive
-   
-## Destination Systems
-1. PostgreSQL
-2. MySQL
-3. MongoDB
-4. Microsoft SQL Server
-5. Apache Iceberg
-8. ClickHouse
-9. MongoDB
-6. SQLite
-7. DuckDB
-
-# Patent
-SyncLite is backed by patented technlogy, more info : https://www.synclite.io/resources/patent  
-=======
->>>>>>> Stashed changes
