@@ -4,7 +4,10 @@
   <img src="docs/images/SyncLite_logo.png" alt="SyncLite - Build Anything Sync Anywhere">
   </a>
   <p align="center">
-    <a href="https://www.synclite.io">Learn more</a>
+    <a href="https://www.synclite.io">Website</a>
+    ·
+    <a href="https://www.synclite.io/resources/documentation">Documentation</a>
+    ·
   </p>
 </p>
 
@@ -31,103 +34,98 @@ All of this flows through a unified pipeline architecture: sources produce compa
 
 Most data integration problems at the edge are solved today by one of two approaches: ship everything to the cloud and query there (high latency, no offline resilience), or write custom replication code (brittle, expensive, operationally painful). SyncLite is a third way.
 
-| | Traditional approach | SyncLite |
-|---|---|---|
-| **Offline resilience** | Build it yourself | Built in — embedded DB works without network |
-| **Real-time sync** | Custom CDC or polling | Automatic, transactional, sub-second |
-| **Language support** | Driver-specific | Any language via HTTP/JSON (SyncLite DB) |
-| **Destination flexibility** | One pipeline per destination | Fan-out to many destinations from one source |
-| **IoT integration** | Custom MQTT consumers | SyncLite QReader — configure in minutes |
-| **ETL/migration** | Heavy ETL tools | SyncLite DBReader — lightweight, incremental |
-| **Operational overhead** | High | Low — web UI, Docker, one-command deploy |
+        {"db-path" : "C:\synclite\users\bob\synclite\job1\test.db",
+            "txn-handle": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+            "sql" : "commit"
+        }
+        ```
 
----
+        Response from Server 
+        ```
+        {
+            "result" : "true",
+            "message" : "Transaction committed successfully"
+        }
+        ```
 
-## Use Cases
+        - Send a request to close database   
+        Request
 
-### 🔵 Sync-Ready Edge & Desktop Applications
-Embed SyncLite Logger (a JDBC driver) directly into your Java/Python app. Every SQL transaction on the local embedded database is transparently captured and shipped to the cloud — **zero replication code required**. For CRUD-first workloads, use the typed **SyncLiteStore API** (no raw SQL) with `SQLITE_STORE`, `DUCKDB_STORE`, `DERBY_STORE`, `H2_STORE`, or `HYPERSQL_STORE` device types.
+        ```
+        {
+            "db-path" : "C:\synclite\users\bob\synclite\job1\test.db",
+            "sql" : "close"
+        }
+        ```
+    
+        Response from Server 
+        ```
+        {
+            "result" : "true",
+            "message" : "Database closed successfully"
+        }
+        ```
 
-```
-Edge/Desktop App  +  SyncLite Logger  +  SQLite/DuckDB/Derby/H2/HyperSQL (JDBC or SyncLiteStore API)
-    └──► Staging Storage ──► SyncLite Consolidator ──► Destination DB / DW / Data Lake
-```
+5. SyncLite DB (internally leveraging SyncLite Logger), creates a device stage directory at configured stage path with sql logs created for each device. These device stage directories are continuously synchronized with SyncLite consolidator for consolidating them into final destination databases.
 
-→ [synclite-logger-java](synclite-logger-java/) · [Learn more](https://www.synclite.io/synclite/sync-ready-apps)
+6. Several such hosts, each running SyncLite DB, each of them creating several SyncLite databases/devices (i.e. embedded databases), can synchronize these embedded databases in real-time with a centralized SyncLite consolidator that aggregates the incoming data and changes, in real-time, into configured destination databases.
 
-### 🟢 Language-Agnostic Edge Apps (Any Language)
-Can't use Java? Use **SyncLite DB** — an HTTP/JSON database server wrapping the same embedded databases, compatible with Python, C++, C#, Go, Rust, Ruby, Node.js, and any other language.
+# Running Integration Tests
 
-```
-Any-Language App ──HTTP/JSON──► SyncLite DB ──► Staging Storage ──► SyncLite Consolidator ──► Destination
-```
+`SyncLite Validator` is a GUI based tool with a war file deployed on app server, it can be launched at http://localhost:8080/synclite-validator. A test job can be configured and run to execute all the end to end integration tests which validate data consolidation functionality for various SyncLite device types.  
 
-→ [synclite-db](synclite-db/) · [SDK samples (8 languages)](synclite-db/sdk-source/)
+# Pre-Built Releases:
 
-### 🟡 Large-Scale Data Streaming & Last-Mile Delivery
-Use SyncLite Logger's **Kafka Producer API** (JDBC) or the fluent **SyncLiteStream API** (`insert` / `insertBatch` with auto schema-evolution) to ingest append-only events at massive throughput from thousands of concurrent streaming producer instances.
+## SyncLite Logger
 
-```
-Streaming App  +  SyncLite Logger (Kafka API / SyncLiteStream API)  ──► Staging Storage ──► Consolidator ──► Destination
-```
+1. SyncLite Logger is published as maven dependency :
+        ```
+        <!-- https://mvnrepository.com/artifact/io.synclite/synclite-logger -->
+        <dependency>
+                <groupId>io.synclite</groupId>
+                <artifactId>synclite-logger</artifactId>
+                <version>#LatestVersion#</version>
+        </dependency>
+        ```
+2. OR You can directly download the latest published synclite-logger-<version>.jar from : https://github.com/syncliteio/SyncLiteLoggerJava/blob/main/src/main/resources/ and add it as a dependency in your applications.
 
-→ [synclite-logger-java](synclite-logger-java/) · [Learn more](https://www.synclite.io/synclite/last-mile-streaming)
+## SyncLite Consolidator
 
-### 🟠 Database ETL / Replication / Migration
-Configure many-to-many, incremental or CDC-based replication and migration pipelines across heterogeneous databases — from PostgreSQL, MySQL, SQL Server, Oracle, and more.
+1. A docker image of SyncLite Consolidator is available on docker hub : https://hub.docker.com/r/syncliteio/synclite-consolidator
 
-```
-Source DB(s) ──► SyncLite DBReader ──► Staging Storage ──► SyncLite Consolidator ──► Destination(s)
-```
+2. OR a release zip file can be downloaded from this GitHub Repo : https://github.com/syncliteio/SyncLite/releases
 
-→ [synclite-dbreader](synclite-dbreader/) · [Learn more](https://www.synclite.io/solutions/smart-database-etl)
+# Supported Systems
 
-### 🔴 IoT Data Integration
-Subscribe to MQTT brokers and stream IoT sensor data into any destination database or data warehouse for real-time analytics at edge, fog, and cloud.
+## Source Systems
+1. Edge Applications(Java/Python) +  SyncLite Logger (wrapping embedded databases :SQLite, DuckDB, Apache Derby, H2, HyperSQL)
+2. Edge Applications (any programming language) + SyncLite DB (wrapping embedded databases :SQLite, DuckDB, Apache Derby, H2, HyperSQL)
+3. Databases : PostgreSQL, MySQL, MongoDB, SQLite
+4. Message Brokers : Eclipse Mosquitto MQTT broker
+5. Data Files : CSV (stored on FS/S3/MinIO)
 
-```
-IoT Devices ──MQTT──► MQTT Broker ──► SyncLite QReader ──► Staging Storage ──► Consolidator ──► Destination
-```
+## Staging Storages
+1. Local FS
+2. SFTP
+3. S3
+4. MinIO
+5. Kafka
+6. Microsoft OneDrive
+7. Google Drive
 
-→ [synclite-qreader](synclite-qreader/) · [Learn more](https://www.synclite.io/solutions/iot-data-connector)
+## Destination Systems
+1. PostgreSQL
+2. MySQL
+3. MongoDB
+4. Microsoft SQL Server
+5. Apache Iceberg
+6. SQLite
+7. DuckDB
+8. ClickHouse
+9. FerretDB
 
-### � Redis-Compatible Cache with Durable Replication (Jedis API)
-Use `io.synclite.logger.Jedis` — a drop-in subclass of `redis.clients.jedis.Jedis` — to back your Redis cache with a `SQLITE_STORE` device. Every write (strings, hashes, lists, sets, sorted sets, expiry, delete) is durably committed to SyncLite before forwarding to Redis. The cache is automatically repopulated from the store on restart, and all mutations replicate downstream via SyncLite Consolidator.
-
-```
-App  +  SyncLite Jedis API  ──► SQLiteStore (local log)  ──► Staging Storage ──► Consolidator ──► Destination
-                             └──► Redis (live cache)
-```
-
-→ [synclite-logger-java](synclite-logger-java/)
-
-### �🟣 GenAI Search & RAG at the Edge
-SyncLite enables a compelling architecture for GenAI Search and Retrieval-Augmented Generation (RAG): build local vector/SQL indices with embedded databases on edge devices, then continuously replicate them to a centralized embedding store and LLM backend — with no custom sync code.
-
-→ [Learn more](https://www.synclite.io/solutions/gen-ai-search-rag)
-
----
-
-## Destinations Supported
-
-| Category | Systems |
-|---|---|
-| Relational (OLTP) | PostgreSQL, MySQL, Microsoft SQL Server / Azure SQL DB, SQLite, DuckDB |
-| Data Lakes | Apache Iceberg |
-| NoSQL | MongoDB |
-
-## Staging Storages Supported
-
-SFTP · Amazon S3 · MinIO · Apache Kafka · Microsoft OneDrive · Google Drive · NFS · Local file system
-
----
-
-## Platform Components
-
-| Component | Description | README |
-|---|---|---|
-| **SyncLite Logger** | Embeddable JDBC driver for Java/Python edge apps | [→](synclite-logger-java/README.md) |
-| **SyncLite DB** | Standalone HTTP/JSON database server for any language | [→](synclite-db/README.md) |
+# Patent
+SyncLite is backed by patented technology, more info : https://www.synclite.io/resources/patent
 | **SyncLite Client** | Interactive CLI for SyncLite devices | [→](synclite-client/README.md) |
 | **SyncLite Consolidator** | Central real-time consolidation engine | [→](synclite-consolidator/README.md) |
 | **SyncLite DBReader** | Database ETL / replication / migration tool | [→](synclite-dbreader/README.md) |
@@ -478,7 +476,7 @@ SyncLite is licensed under the [Apache License 2.0](LICENSE).
 4. Microsoft SQL Server
 5. Apache Iceberg
 8. ClickHouse
-9. FerretDB
+9. MongoDB
 6. SQLite
 7. DuckDB
 
