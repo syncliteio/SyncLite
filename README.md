@@ -40,15 +40,16 @@ Most data integration problems at the edge are solved today by one of two approa
 
 | Component | Description | README |
 |---|---|---|
-| **SyncLite Logger** | Embeddable JDBC driver for Java/Python edge apps | [→](./synclite-logger-java/README.md) |
-| **SyncLite DB** | Standalone HTTP/JSON database server for any language | [→](./synclite-db/README.md) |
-| **SyncLite Client** | Interactive CLI for SyncLite devices | [→](./synclite-client/README.md) |
-| **SyncLite Consolidator** | Central real-time consolidation engine | [→](./synclite-consolidator/README.md) |
-| **SyncLite DBReader** | Database ETL / replication / migration tool | [→](./synclite-dbreader/README.md) |
-| **SyncLite QReader** | IoT MQTT connector | [→](./synclite-qreader/README.md) |
-| **SyncLite Job Monitor** | Unified job management and scheduling UI | [→](./synclite-job-monitor/README.md) |
-| **SyncLite Validator** | End-to-end integration testing tool | [→](./synclite-validator/README.md) |
-| **Sample Web App** | JSP/Servlet demo showing SyncLite Logger in action | [→](./synclite-sample-web-app/README.md) |
+| **SyncLite Logger** | Embeddable JDBC driver for Java/Python edge apps | [→](/synclite-logger-java/README.md) |
+| **SyncLite DB** | Standalone HTTP/JSON database server for any language | [→](/synclite-db/README.md) |
+| **SyncLite Client** | Interactive CLI for SyncLite devices | [→](/synclite-client/README.md) |
+| **SyncLite Consolidator** | Central real-time consolidation engine | [→](/synclite-consolidator/README.md) |
+| **SyncLite DBReader** | Database ETL / replication / migration tool | [→](/synclite-dbreader/README.md) |
+| **SyncLite QReader** | IoT MQTT connector | [→](/synclite-qreader/README.md) |
+| **SyncLite Job Monitor** | Unified job management and scheduling UI | [→](/synclite-job-monitor/README.md) |
+| **SyncLite Validator** | End-to-end integration testing tool | [→](/synclite-validator/README.md) |
+| **Sample Web App** | JSP/Servlet demo showing SyncLite Logger in action | [→](/synclite-sample-web-app/README.md) |
+
 
 ---
 
