@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -euo pipefail
 
 #Set STAGE to SFTP/MINIO if you need a docker container for stage to be deployed too
 STAGE=""
@@ -7,22 +8,36 @@ STAGE=""
 DST=""
 
 # Get the path of the parent directory
-script_dir=$(dirname "$(readlink -f "$0")")
+script_dir="$(cd "$(dirname "$0")" && pwd)"
 parent_directory=$(dirname "$script_dir")
+cd "$script_dir"
 
 # Define the output archive path
 archive_path="synclite-platform.tar.gz"
 
 # Delete existing tar file
-rm -rf "$archive_path"
+rm -f "$archive_path"
 
-# Create the tar archive
-tar -czf "$archive_path" -C "$parent_directory" .
+# Create the tar archive, excluding the archive itself to avoid tar warnings
+tar -czf "$archive_path" --exclude="./bin/$archive_path" -C "$parent_directory" .
+
+docker_cmd="docker"
+if ! docker info >/dev/null 2>&1; then
+    if sudo -n docker info >/dev/null 2>&1; then
+        docker_cmd="sudo docker"
+    else
+        echo "ERROR: Docker daemon is not reachable for the current user."
+        echo "Run one of the following and retry:"
+        echo "  sudo usermod -aG docker \$USER && newgrp docker"
+        echo "  or run this script with sudo"
+        exit 1
+    fi
+fi
 
 echo -e "\n=======Deploying synclite-consolidator docker container=====\n"
-docker build -t synclite-consolidator .
+$docker_cmd build -t synclite-consolidator .
 
-rm -rf "$archive_path"
+rm -f "$archive_path"
 
 if [ "$STAGE" = "SFTP" ]; then
     cd "$script_dir/stage/sftp"

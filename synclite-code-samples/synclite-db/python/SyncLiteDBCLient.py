@@ -1,6 +1,12 @@
 import requests
 import json
 import os
+import sys
+import time
+import uuid
+import base64
+import hashlib
+import hmac
 
 """
 * ===========================================================
@@ -75,27 +81,69 @@ sql: drop table t1
  
 """
 class SyncLiteDBResult:
-    def __init__(self, result, message, result_set=None, txn_handle=None):
+    def __init__(self, result, message, result_set=None, txn_handle=None, resultset_handle=None, has_more=None, column_metadata=None):
         self.result = result
         self.message = message
         self.result_set = result_set
         self.txn_handle = txn_handle
+        self.resultset_handle = resultset_handle
+        self.has_more = has_more
+        self.column_metadata = column_metadata
+
+
+def _to_result(json_response):
+    return SyncLiteDBResult(
+        result=json_response.get('result'),
+        message=json_response.get('message'),
+        result_set=json_response.get('resultset') if 'resultset' in json_response else None,
+        txn_handle=json_response.get('txn-handle') if 'txn-handle' in json_response else None,
+        resultset_handle=json_response.get('resultset-handle') if 'resultset-handle' in json_response else None,
+        has_more=json_response.get('has-more') if 'has-more' in json_response else None,
+        column_metadata=json_response.get('resultset-metadata') if 'resultset-metadata' in json_response else None
+    )
 
 # The base URL for the API
 syncLiteDBAddress = "http://localhost:5555"
 
+def _sha256_hex(value):
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+def _build_auth_headers(payload):
+    headers = {'Content-Type': 'application/json'}
+
+    token = os.getenv("SYNCLITE_DB_AUTH_TOKEN")
+    if token:
+        headers['X-SyncLite-Token'] = token
+
+    app_id = os.getenv("SYNCLITE_DB_APP_ID")
+    app_secret = os.getenv("SYNCLITE_DB_APP_SECRET")
+    if app_id and app_secret:
+        timestamp = str(int(time.time() * 1000))
+        nonce = str(uuid.uuid4())
+        canonical = "POST\n/\n" + timestamp + "\n" + nonce + "\n" + _sha256_hex(payload)
+        signature = base64.b64encode(
+            hmac.new(app_secret.encode("utf-8"), canonical.encode("utf-8"), hashlib.sha256).digest()
+        ).decode("utf-8")
+
+        headers['X-SyncLite-App-Id'] = app_id
+        headers['X-SyncLite-Timestamp'] = timestamp
+        headers['X-SyncLite-Nonce'] = nonce
+        headers['X-SyncLite-Signature'] = signature
+
+    return headers
+
 # Function to send an HTTP request
 def process_request(json_request):
-    response = None
     try:
         print(f"Request JSON: {json.dumps(json_request, indent=4)}")
-        
-        headers = {'Content-Type': 'application/json'}
-        response = requests.post(syncLiteDBAddress, json=json_request, headers=headers, timeout=10)
+
+        payload = json.dumps(json_request, separators=(",", ":"), ensure_ascii=False)
+        headers = _build_auth_headers(payload)
+        response = requests.post(syncLiteDBAddress, data=payload.encode("utf-8"), headers=headers, timeout=10)
         
         print(f"Response Code: {response.status_code}")
         
-        if response.status_code == 200:
+        if response.status_code in (200, 400, 401, 413):
             json_response = response.json()
             print(f"Response JSON: {json.dumps(json_response, indent=4)}")
             
@@ -105,12 +153,9 @@ def process_request(json_request):
             print(f"Message: {message}")
             
             return json_response
-        else:
-            raise Exception(f"Failed to get a valid response from the server : {response.status_code}")
+        raise Exception(f"Failed to get a valid response from the server : {response.status_code} : {response.text}")
     except Exception as e:
         raise Exception(f"Failed to process request: {str(e)}") from e
-
-    return response
 
 def initialize_db(db_path, db_type, db_name, logger_config_path=None):
     try:
@@ -125,10 +170,7 @@ def initialize_db(db_path, db_type, db_name, logger_config_path=None):
         
         json_response = process_request(json_request)
         
-        return SyncLiteDBResult(
-            result=json_response.get('result'),
-            message=json_response.get('message')
-        )
+        return _to_result(json_response)
     except Exception as e:
         raise Exception(f"Failed to initialize DB: {str(db_path)} : {str(e)}")
 
@@ -141,10 +183,7 @@ def close_db(db_path):
 
         json_response = process_request(json_request)
         
-        return SyncLiteDBResult(
-            result=json_response.get('result'),
-            message=json_response.get('message')
-        )
+        return _to_result(json_response)
     except Exception as e:
         raise Exception(f"Failed to close DB: {str(db_path)} : {str(e)}")
 
@@ -157,11 +196,7 @@ def begin_transaction(db_path):
         
         json_response = process_request(json_request)
         
-        return SyncLiteDBResult(
-            result=json_response.get('result'),
-            message=json_response.get('message'),
-			txn_handle=json_response.get('txn-handle')
-        )
+        return _to_result(json_response)
     except Exception as e:
         raise Exception(f"Failed to begin transaction on DB: {str(db_path)} : {str(e)}")
 
@@ -175,10 +210,7 @@ def commit_transaction(db_path, txn_handle):
         
         json_response = process_request(json_request)
         
-        return SyncLiteDBResult(
-            result=json_response.get('result'),
-            message=json_response.get('message')
-        )
+        return _to_result(json_response)
     except Exception as e:
         raise Exception(f"Failed to commit transaction on DB: {str(db_path)} : {str(e)}")
 
@@ -192,14 +224,11 @@ def rollback_transaction(db_path, txn_handle):
         
         json_response = process_request(json_request)
         
-        return SyncLiteDBResult(
-            result=json_response.get('result'),
-            message=json_response.get('message')
-        )
+        return _to_result(json_response)
     except Exception as e:
         raise Exception(f"Failed to rollback transaction on DB: {str(db_path)} : {str(e)}")
 
-def execute_sql(db_path, txn_handle, sql, arguments):
+def execute_sql(db_path, txn_handle, sql, arguments, data_format=None, include_metadata=None):
     try:
         json_request = {
             "db-path": str(db_path),
@@ -211,16 +240,37 @@ def execute_sql(db_path, txn_handle, sql, arguments):
 
         if arguments:
             json_request["arguments"] = arguments
+
+        if data_format is not None:
+            json_request["resultset-data-format"] = data_format
+
+        if include_metadata is not None:
+            json_request["resultset-include-metadata"] = "ON" if include_metadata else "OFF"
         
         json_response = process_request(json_request)
         
-        return SyncLiteDBResult(
-            result=json_response.get('result'),
-            message=json_response.get('message'),			
-		    result_set=json_response.get('resultset') if 'resultset' in json_response else None
-        )
+        return _to_result(json_response)
     except Exception as e:
         raise Exception(f"Failed to rollback transaction on DB: {str(db_path)} : {str(e)}")
+
+
+def next_page(resultset_handle, resultset_pagination_size=None, data_format=None, include_metadata=None):
+    try:
+        json_request = {
+            "request-type": "next",
+            "resultset-handle": resultset_handle
+        }
+        if resultset_pagination_size and resultset_pagination_size > 0:
+            json_request["resultset-pagination-size"] = resultset_pagination_size
+        if data_format is not None:
+            json_request["resultset-data-format"] = data_format
+        if include_metadata is not None:
+            json_request["resultset-include-metadata"] = "ON" if include_metadata else "OFF"
+
+        json_response = process_request(json_request)
+        return _to_result(json_response)
+    except Exception as e:
+        raise Exception(f"Failed to fetch next page for resultset-handle: {resultset_handle} : {str(e)}")
 
 
 # Init db directory
@@ -290,17 +340,49 @@ if not r.result:
 print("=" * 56)
 
 
-# Select from table
+# Select from table (JSON format - default, records as {colName: colValue} dicts)
 print("=" * 56)
-print("Executing select from table")
+print("Executing select from table (JSON format)")
 print("=" * 56)
 r = execute_sql(db_path, None, "select a, b from t1", None)
 print(f"result : {r.result}")
 print(f"message : {r.message}")
-result_set = r.result_set
-print("Selected Records: ")
-for rec in result_set:
-    print(f"a = {rec['a']}, b = {rec['b']}")
+if r.column_metadata:
+    print("\t".join(col['label'] for col in r.column_metadata))
+current = r
+while True:
+    if current.result_set:
+        for rec in current.result_set:
+            print(f"a = {rec['a']}, b = {rec['b']}")
+    if not current.has_more or not current.resultset_handle:
+        break
+    current = next_page(current.resultset_handle)
+    if not current.result:
+        print(f"next failed: {current.message}")
+        sys.exit(1)
+print("=" * 56)
+
+
+# Select from table (DB format - records as value arrays, column order matches metadata)
+print("=" * 56)
+print("Executing select from table (DB format)")
+print("=" * 56)
+r = execute_sql(db_path, None, "select a, b from t1", None, data_format="DB", include_metadata=True)
+print(f"result : {r.result}")
+print(f"message : {r.message}")
+if r.column_metadata:
+    print("\t".join(col['label'] for col in r.column_metadata))
+current = r
+while True:
+    if current.result_set:
+        for row in current.result_set:
+            print("\t".join(str(v) if v is not None else "null" for v in row))
+    if not current.has_more or not current.resultset_handle:
+        break
+    current = next_page(current.resultset_handle, data_format="DB")
+    if not current.result:
+        print(f"next failed: {current.message}")
+        sys.exit(1)
 print("=" * 56)
 
 

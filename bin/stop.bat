@@ -1,23 +1,35 @@
 @echo off
 setlocal enabledelayedexpansion
 
-for /f "tokens=1" %%a in ('%JAVA_HOME%\bin\jps -l ^| findstr "com.synclite.consolidator.Main"') do (
-    set "pid=%%a"
-    if defined pid (
-        tasklist /fi "pid eq !pid!" | findstr /i "!pid!" >nul
-        if !errorlevel! equ 0 (
-            taskkill /F /PID !pid!
-        )
+REM Change to the directory containing this script
+cd /d "%~dp0"
+
+set "TOMCAT_VER=9.0.117"
+set "TOMCAT_DIR=apache-tomcat-%TOMCAT_VER%"
+
+if exist "%TOMCAT_DIR%\bin\shutdown.bat" (
+    echo Attempting graceful Tomcat shutdown...
+    call "%TOMCAT_DIR%\bin\shutdown.bat" >nul 2>&1
+)
+
+set "JAVA_HOME=%~dp0jdk-25"
+if not exist "%JAVA_HOME%\bin\jps.exe" (
+    echo WARNING: jps not found at %JAVA_HOME% - skipping process termination.
+    goto :eof
+)
+
+for %%C in (
+    com.synclite.consolidator.Main
+    com.synclite.dbreader.Main
+    com.synclite.qreader.Main
+    org.apache.catalina.startup.Bootstrap
+) do (
+    for /f "tokens=1" %%P in ('"%JAVA_HOME%\bin\jps" -l 2^>nul ^| findstr "%%C"') do (
+        echo Stopping %%C (PID %%P)...
+        taskkill /F /PID %%P 2>nul
     )
 )
 
-for /f "tokens=1" %%b in ('%JAVA_HOME%\bin\jps -l ^| findstr "org.apache.catalina.startup.Bootstrap"') do (
-    set "pid=%%b"
-    if defined pid (
-        tasklist /fi "pid eq !pid!" | findstr /i "!pid!" >nul
-        if !errorlevel! equ 0 (
-            taskkill /F /PID !pid!
-        )
-    )
-)
+echo Done.
+endlocal
 

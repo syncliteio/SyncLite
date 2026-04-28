@@ -1,48 +1,64 @@
-# Use the Ubuntu base image
-FROM ubuntu:20.04 as builder
+# ── Build stage ────────────────────────────────────────────────────────────────
+FROM ubuntu:24.04 AS builder
 
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends wget && \
+    apt-get install -y --no-install-recommends curl ca-certificates && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# Create the home directory for the root user, set ownership and permissions, and set the HOME environment variable
-RUN mkdir -p /home/root && \
-    chown -R root:root /home/root && \
-    chmod 700 /home/root
+# Create non-root user for running SyncLite
+RUN groupadd -r synclite && \
+    useradd -r -g synclite -d /home/synclite -s /sbin/nologin synclite && \
+    mkdir -p /home/synclite && \
+    chown synclite:synclite /home/synclite
 
-# Set the HOME environment variable for the root user
-ENV HOME=/home/root
+ENV HOME=/home/synclite
 
 WORKDIR /synclite
 
-# Copy files from the RELEASE_DIR to /synclite/
 COPY synclite-platform.tar.gz /synclite/synclite-platform.tar.gz
 
 RUN tar -xf /synclite/synclite-platform.tar.gz -C /synclite && \
     chmod +x /synclite/bin/*.sh
 
+# Override packaged scripts with current hardened scripts from build context.
+COPY deploy.sh deploy.bat start.sh start.bat stop.sh stop.bat docker-deploy.sh docker-start.sh docker-stop.sh /synclite/bin/
+RUN chmod +x /synclite/bin/*.sh
+
 WORKDIR /synclite/bin
 
 RUN ./deploy.sh && \
-     rm -rf /synclite/lib && \
-     rm -rf /synclite/tools/synclite-dbreader && \
-     rm -rf /synclite/tools/synclite-qreader && \
-     rm -rf /synclite/tools/synclite-jobmonitor && \
-     rm -rf /synclite/tools/synclite-validator && \
-     rm -rf /synclite/synclite-platform.tar.gz
-	 
-FROM ubuntu:20.04
+    rm -rf /synclite/lib \
+           /synclite/tools/synclite-dbreader \
+           /synclite/tools/synclite-qreader \
+           /synclite/tools/synclite-jobmonitor \
+           /synclite/tools/synclite-validator \
+           /synclite/synclite-platform.tar.gz && \
+    chown -R synclite:synclite /synclite
 
-# Create the home directory for the root user, set ownership and permissions, and set the HOME environment variable
-RUN mkdir -p /home/root && \
-    chown -R root:root /home/root && \
-    chmod 700 /home/root
+# ── Runtime stage ──────────────────────────────────────────────────────────────
+FROM ubuntu:24.04
 
-# Set the HOME environment variable for the root user
-ENV HOME=/home/root
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends ca-certificates && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
-COPY --from=builder /synclite /synclite
+RUN groupadd -r synclite && \
+    useradd -r -g synclite -d /home/synclite -s /sbin/nologin synclite && \
+    mkdir -p /home/synclite && \
+    chown synclite:synclite /home/synclite
+
+ENV HOME=/home/synclite \
+    JAVA_HOME=/synclite/bin/jdk-25 \
+    CATALINA_HOME=/synclite/bin/apache-tomcat-9.0.117
+ENV PATH="${JAVA_HOME}/bin:${CATALINA_HOME}/bin:${PATH}"
+
+COPY --from=builder --chown=synclite:synclite /synclite /synclite
 
 WORKDIR /synclite/bin
 
+USER synclite
+EXPOSE 8080
+
+CMD ["catalina.sh", "run"]

@@ -1,6 +1,7 @@
 const axios = require('axios');
 const path = require('path');
 const fs = require('fs').promises;
+const crypto = require('crypto');
 
 /*
 * ===========================================================
@@ -86,17 +87,55 @@ class SyncLiteDBResult {
     this.message = '';
     this.resultSet = [];
     this.txnHandle = '';
+    this.resultsetHandle = '';
+    this.hasMore = false;
+    this.columnMetadata = null;
   }
+}
+
+function toDBResult(jsonResponse) {
+  const dbResult = new SyncLiteDBResult();
+  dbResult.result = Boolean(jsonResponse.result);
+  dbResult.message = jsonResponse.message || '';
+  dbResult.resultSet = jsonResponse.resultset || [];
+  dbResult.txnHandle = jsonResponse['txn-handle'] || '';
+  dbResult.resultsetHandle = jsonResponse['resultset-handle'] || '';
+  dbResult.hasMore = Boolean(jsonResponse['has-more']);
+  dbResult.columnMetadata = jsonResponse['resultset-metadata'] || null;
+  return dbResult;
 }
 
 async function processRequest(jsonRequest) {
   try {
     console.log('Request JSON:', JSON.stringify(jsonRequest, null, 4));
-    const response = await axios.post(syncLiteDBAddress, jsonRequest, {
-      headers: {
-        'Content-Type': 'application/json',
-      },
+    const payload = JSON.stringify(jsonRequest);
+    const headers = {
+      'Content-Type': 'application/json',
+    };
+
+    if (process.env.SYNCLITE_DB_AUTH_TOKEN) {
+      headers['X-SyncLite-Token'] = process.env.SYNCLITE_DB_AUTH_TOKEN;
+    }
+
+    const appId = process.env.SYNCLITE_DB_APP_ID;
+    const appSecret = process.env.SYNCLITE_DB_APP_SECRET;
+    if (appId && appSecret) {
+      const timestamp = Date.now().toString();
+      const nonce = crypto.randomUUID();
+      const bodyHash = crypto.createHash('sha256').update(payload, 'utf8').digest('hex');
+      const canonical = `POST\n/\n${timestamp}\n${nonce}\n${bodyHash}`;
+      const signature = crypto.createHmac('sha256', appSecret).update(canonical, 'utf8').digest('base64');
+
+      headers['X-SyncLite-App-Id'] = appId;
+      headers['X-SyncLite-Timestamp'] = timestamp;
+      headers['X-SyncLite-Nonce'] = nonce;
+      headers['X-SyncLite-Signature'] = signature;
+    }
+
+    const response = await axios.post(syncLiteDBAddress, payload, {
+      headers,
       timeout: 10000,
+      validateStatus: () => true,
     });
 
     console.log('Response Code:', response.status);
@@ -104,13 +143,12 @@ async function processRequest(jsonRequest) {
 
     const jsonResponse = response.data;
 
-    if (response.status === 200 && jsonResponse.result === true) {
+    if ([200, 400, 401, 413].includes(response.status)) {
       console.log('Result:', jsonResponse.result);
       console.log('Message:', jsonResponse.message);
       return jsonResponse;
-    } else {
-      throw new Error('Failed to get a valid response from the server');
     }
+    throw new Error(`Failed to get a valid response from the server: ${response.status}`);
   } catch (error) {
     throw new Error(`Failed to process request: ${error.message}`);
   }
@@ -130,11 +168,7 @@ async function initializeDB(dbPath, dbType, dbName, syncLiteLoggerConfigPath) {
     }
 
     const jsonResponse = await processRequest(jsonRequest);
-    const dbResult = new SyncLiteDBResult();
-    dbResult.result = jsonResponse.result;
-    dbResult.message = jsonResponse.message;
-
-    return dbResult;
+    return toDBResult(jsonResponse);
   } catch (error) {
     throw new Error(`Failed to initialize DB: ${dbPath}: ${error.message}`);
   }
@@ -148,12 +182,7 @@ async function beginTransaction(dbPath) {
     };
 
     const jsonResponse = await processRequest(jsonRequest);
-    const dbResult = new SyncLiteDBResult();
-    dbResult.result = jsonResponse.result;
-    dbResult.message = jsonResponse.message;
-    dbResult.txnHandle = jsonResponse['txn-handle'];
-
-    return dbResult;
+    return toDBResult(jsonResponse);
   } catch (error) {
     throw new Error(`Failed to begin transaction on DB: ${dbPath}: ${error.message}`);
   }
@@ -168,11 +197,7 @@ async function commitTransaction(dbPath, txnHandle) {
     };
 
     const jsonResponse = await processRequest(jsonRequest);
-    const dbResult = new SyncLiteDBResult();
-    dbResult.result = jsonResponse.result;
-    dbResult.message = jsonResponse.message;
-
-    return dbResult;
+    return toDBResult(jsonResponse);
   } catch (error) {
     throw new Error(`Failed to commit transaction on DB: ${dbPath}: ${error.message}`);
   }
@@ -187,17 +212,13 @@ async function rollbackTransaction(dbPath, txnHandle) {
     };
 
     const jsonResponse = await processRequest(jsonRequest);
-    const dbResult = new SyncLiteDBResult();
-    dbResult.result = jsonResponse.result;
-    dbResult.message = jsonResponse.message;
-
-    return dbResult;
+    return toDBResult(jsonResponse);
   } catch (error) {
     throw new Error(`Failed to rollback transaction on DB: ${dbPath}: ${error.message}`);
   }
 }
 
-async function executeSQL(dbPath, txnHandle, sql, arguments = null) {
+async function executeSQL(dbPath, txnHandle, sql, args = null, dataFormat = null, includeMetadata = null) {
   try {
     const jsonRequest = {
       'db-path': dbPath,
@@ -208,22 +229,48 @@ async function executeSQL(dbPath, txnHandle, sql, arguments = null) {
       jsonRequest['txn-handle'] = txnHandle;
     }
 
-    if (arguments) {
-      jsonRequest['arguments'] = arguments;
+    if (args) {
+      jsonRequest['arguments'] = args;
+    }
+
+    if (dataFormat !== null) {
+      jsonRequest['resultset-data-format'] = dataFormat;
+    }
+
+    if (includeMetadata !== null) {
+      jsonRequest['resultset-include-metadata'] = includeMetadata ? 'ON' : 'OFF';
     }
 
     const jsonResponse = await processRequest(jsonRequest);
-    const dbResult = new SyncLiteDBResult();
-    dbResult.result = jsonResponse.result;
-    dbResult.message = jsonResponse.message;
-
-    if (jsonResponse.resultset) {
-      dbResult.resultSet = jsonResponse.resultset;
-    }
-
-    return dbResult;
+    return toDBResult(jsonResponse);
   } catch (error) {
     throw new Error(`Failed to execute SQL on DB: ${dbPath}: ${error.message}`);
+  }
+}
+
+async function next(resultsetHandle, resultsetPaginationSize = null, dataFormat = null, includeMetadata = null) {
+  try {
+    const jsonRequest = {
+      'request-type': 'next',
+      'resultset-handle': resultsetHandle,
+    };
+
+    if (resultsetPaginationSize && resultsetPaginationSize > 0) {
+      jsonRequest['resultset-pagination-size'] = resultsetPaginationSize;
+    }
+
+    if (dataFormat !== null) {
+      jsonRequest['resultset-data-format'] = dataFormat;
+    }
+
+    if (includeMetadata !== null) {
+      jsonRequest['resultset-include-metadata'] = includeMetadata ? 'ON' : 'OFF';
+    }
+
+    const jsonResponse = await processRequest(jsonRequest);
+    return toDBResult(jsonResponse);
+  } catch (error) {
+    throw new Error(`Failed to fetch next page for resultset-handle: ${resultsetHandle}: ${error.message}`);
   }
 }
 
@@ -235,11 +282,7 @@ async function closeDB(dbPath) {
     };
 
     const jsonResponse = await processRequest(jsonRequest);
-    const dbResult = new SyncLiteDBResult();
-    dbResult.result = jsonResponse.result;
-    dbResult.message = jsonResponse.message;
-
-    return dbResult;
+    return toDBResult(jsonResponse);
   } catch (error) {
     throw new Error(`Failed to close DB: ${dbPath}: ${error.message}`);
   }
@@ -293,11 +336,11 @@ async function createDBDirs() {
     console.log('========================================================');
     console.log('Executing insert into table');
     console.log('========================================================');
-    const arguments = [
+    const insertArgs = [
       [1, 'one'],
       [2, 'two'],
     ];
-    r = await executeSQL(dbPath, txnHandle, 'INSERT INTO t1 (a, b) VALUES (?, ?)', arguments);
+    r = await executeSQL(dbPath, txnHandle, 'INSERT INTO t1 (a, b) VALUES (?, ?)', insertArgs);
     console.log('result :', r.result);
     console.log('message :', r.message);
     if (!r.result) process.exit(1);
@@ -311,17 +354,53 @@ async function createDBDirs() {
     console.log('message :', r.message);
     if (!r.result) process.exit(1);
 
-    // Select Data
+    // Select Data (JSON format - default, records as {colName: colValue} objects)
     console.log('========================================================');
-    console.log('Executing select from table');
+    console.log('Executing select from table (JSON format)');
     console.log('========================================================');
     r = await executeSQL(dbPath, null, 'SELECT a, b FROM t1');
     console.log('result :', r.result);
     console.log('message :', r.message);
-    console.log('Selected Records:');
-    r.resultSet.forEach((record) => {
-      console.log('a =', record.a, ', b =', record.b);
-    });
+    if (r.columnMetadata) {
+      console.log(r.columnMetadata.map(c => c.label).join('\t'));
+    }
+    let current = r;
+    while (true) {
+      current.resultSet.forEach((record) => {
+        console.log('a =', record.a, ', b =', record.b);
+      });
+      if (!current.hasMore || !current.resultsetHandle) {
+        break;
+      }
+      current = await next(current.resultsetHandle);
+      if (!current.result) {
+        throw new Error(`Next page call failed: ${current.message}`);
+      }
+    }
+
+    // Select Data (DB format - records as value arrays, column order matches metadata)
+    console.log('========================================================');
+    console.log('Executing select from table (DB format)');
+    console.log('========================================================');
+    r = await executeSQL(dbPath, null, 'SELECT a, b FROM t1', null, 'DB', true);
+    console.log('result :', r.result);
+    console.log('message :', r.message);
+    if (r.columnMetadata) {
+      console.log(r.columnMetadata.map(c => c.label).join('\t'));
+    }
+    current = r;
+    while (true) {
+      current.resultSet.forEach((row) => {
+        console.log(row.map(v => (v === null ? 'null' : v)).join('\t'));
+      });
+      if (!current.hasMore || !current.resultsetHandle) {
+        break;
+      }
+      current = await next(current.resultsetHandle, null, 'DB');
+      if (!current.result) {
+        throw new Error(`Next page call failed: ${current.message}`);
+      }
+    }
 
     // Drop Table
     console.log('========================================================');

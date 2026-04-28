@@ -6,9 +6,15 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.SQLException;
+import java.util.Base64;
+import java.util.UUID;
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+import java.security.MessageDigest;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -100,10 +106,44 @@ public class SyncLiteDBClient {
 		public String message;
 		public JSONArray resultSet;
 		public String txnHandle;
+		public String resultsetHandle;
+		public Boolean hasMore;
+                public JSONArray columnMetadata;
+        }
+
+        private static SyncLiteDBResult toResult(JSONObject jsonResponse) {
+                SyncLiteDBResult dbResult = new SyncLiteDBResult();
+                dbResult.result = jsonResponse.optBoolean("result");
+                dbResult.message = jsonResponse.optString("message");
+                if (jsonResponse.has("resultset")) {
+                        dbResult.resultSet = jsonResponse.getJSONArray("resultset");
+                }
+                if (jsonResponse.has("txn-handle")) {
+                        dbResult.txnHandle = jsonResponse.optString("txn-handle", null);
+                }
+                if (jsonResponse.has("resultset-handle")) {
+                        dbResult.resultsetHandle = jsonResponse.optString("resultset-handle", null);
+                }
+                if (jsonResponse.has("has-more")) {
+                        dbResult.hasMore = Boolean.valueOf(jsonResponse.optBoolean("has-more"));
+                }
+                if (jsonResponse.has("resultset-metadata")) {
+                        dbResult.columnMetadata = jsonResponse.getJSONArray("resultset-metadata");
+	private static String sha256Hex(String value) throws Exception {
+		MessageDigest digest = MessageDigest.getInstance("SHA-256");
+		byte[] hash = digest.digest(value.getBytes(StandardCharsets.UTF_8));
+		StringBuilder builder = new StringBuilder();
+		for (byte b : hash) {
+			builder.append(String.format("%02x", b));
+		}
+		return builder.toString();
 	}
 
-	private static String syncLiteDBAddress = "http://localhost:5555";
-	private static Path dbDir;
+	private static String sign(String secret, String payload) throws Exception {
+		Mac mac = Mac.getInstance("HmacSHA256");
+		mac.init(new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
+		return Base64.getEncoder().encodeToString(mac.doFinal(payload.getBytes(StandardCharsets.UTF_8)));
+	}
 
 	public static JSONObject processRequest(JSONObject jsonRequest) throws SQLException {
 		JSONObject jsonResponse = null;
@@ -119,11 +159,31 @@ public class SyncLiteDBClient {
 			conn.setConnectTimeout(10000);
 			conn.setReadTimeout(10000);
 
+			String token = System.getenv("SYNCLITE_DB_AUTH_TOKEN");
+			if (token != null && !token.isBlank()) {
+				conn.setRequestProperty("X-SyncLite-Token", token);
+			}
+
+			String appId = System.getenv("SYNCLITE_DB_APP_ID");
+			String appSecret = System.getenv("SYNCLITE_DB_APP_SECRET");
+			String payload = jsonRequest.toString();
+			if (appId != null && !appId.isBlank() && appSecret != null && !appSecret.isBlank()) {
+				String timestamp = String.valueOf(System.currentTimeMillis());
+				String nonce = UUID.randomUUID().toString();
+				String canonical = "POST\n/\n" + timestamp + "\n" + nonce + "\n" + sha256Hex(payload);
+				String signature = sign(appSecret, canonical);
+
+				conn.setRequestProperty("X-SyncLite-App-Id", appId);
+				conn.setRequestProperty("X-SyncLite-Timestamp", timestamp);
+				conn.setRequestProperty("X-SyncLite-Nonce", nonce);
+				conn.setRequestProperty("X-SyncLite-Signature", signature);
+			}
+
 			System.out.println("Request JSON: " + jsonRequest.toString(4)); // Pretty print with 4 spaces
 
 			// Send the JSON request
 			try (OutputStream os = conn.getOutputStream()) {
-				byte[] input = jsonRequest.toString().getBytes("utf-8");
+				byte[] input = payload.getBytes(StandardCharsets.UTF_8);
 				os.write(input, 0, input.length);
 			}
 
@@ -132,8 +192,13 @@ public class SyncLiteDBClient {
 			System.out.println("Response Code: " + responseCode);
 
 			// If the response code is 200 OK, read the response
-			if (responseCode == HttpURLConnection.HTTP_OK) {
-				BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+			if (responseCode == HttpURLConnection.HTTP_OK || responseCode == HttpURLConnection.HTTP_BAD_REQUEST || responseCode == HttpURLConnection.HTTP_UNAUTHORIZED || responseCode == 413) {
+				BufferedReader in;
+				if (responseCode == HttpURLConnection.HTTP_OK) {
+					in = new BufferedReader(new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8));
+				} else {
+					in = new BufferedReader(new InputStreamReader(conn.getErrorStream(), StandardCharsets.UTF_8));
+				}
 				String inputLine;
 				StringBuilder response = new StringBuilder();
 
@@ -175,9 +240,7 @@ public class SyncLiteDBClient {
 
 			JSONObject jsonRespose = processRequest(jsonRequest);
 
-			dbResult = new SyncLiteDBResult();
-			dbResult.result = jsonRespose.getBoolean("result");
-			dbResult.message = jsonRespose.getString("message");
+			dbResult = toResult(jsonRespose);
 		} catch (Exception e) {
 			throw new SQLException("Failed to initialize DB : " + dbPath + " : " + e.getMessage(), e);
 		}
@@ -193,10 +256,7 @@ public class SyncLiteDBClient {
 
 			JSONObject jsonRespose = processRequest(jsonRequest);
 
-			dbResult = new SyncLiteDBResult();
-			dbResult.result = jsonRespose.getBoolean("result");
-			dbResult.message = jsonRespose.getString("message");
-			dbResult.txnHandle = jsonRespose.getString("txn-handle");
+			dbResult = toResult(jsonRespose);
 		} catch (Exception e) {
 			throw new SQLException("Failed to begin transaction on DB : " + dbPath + " : " + e.getMessage(), e);
 		}
@@ -213,9 +273,7 @@ public class SyncLiteDBClient {
 
 			JSONObject jsonRespose = processRequest(jsonRequest);
 
-			dbResult = new SyncLiteDBResult();
-			dbResult.result = jsonRespose.getBoolean("result");
-			dbResult.message = jsonRespose.getString("message");
+			dbResult = toResult(jsonRespose);
 		} catch (Exception e) {
 			throw new SQLException("Failed to commit transaction on DB : " + dbPath + " : " + e.getMessage(), e);
 		}
@@ -232,9 +290,7 @@ public class SyncLiteDBClient {
 
 			JSONObject jsonRespose = processRequest(jsonRequest);
 
-			dbResult = new SyncLiteDBResult();
-			dbResult.result = jsonRespose.getBoolean("result");
-			dbResult.message = jsonRespose.getString("message");
+			dbResult = toResult(jsonRespose);
 		} catch (Exception e) {
 			throw new SQLException("Failed to rollback trasnaction on DB : " + dbPath + " : " + e.getMessage(), e);
 		}
@@ -242,30 +298,59 @@ public class SyncLiteDBClient {
 	}
 
 	public static SyncLiteDBResult executeSQL(Path dbPath, String txnHandle, String sql, JSONArray arguments) throws SQLException {
-		SyncLiteDBResult dbResult;
-		try {
-			JSONObject jsonRequest = new JSONObject();
-			jsonRequest.put("db-path", dbPath);			
-			jsonRequest.put("sql", sql);
-			if (txnHandle != null) {
-				jsonRequest.put("txn-handle", txnHandle);
-			}
-			if (arguments != null) {
-				jsonRequest.put("arguments", arguments);
-			}
+                return executeSQL(dbPath, txnHandle, sql, arguments, null, null);
+        }
+
+        public static SyncLiteDBResult executeSQL(Path dbPath, String txnHandle, String sql, JSONArray arguments, String dataFormat, Boolean includeMetadata) throws SQLException {
+                SyncLiteDBResult dbResult;
+                try {
+                        JSONObject jsonRequest = new JSONObject();
+                        jsonRequest.put("db-path", dbPath);
+                        jsonRequest.put("sql", sql);
+                        if (txnHandle != null) {
+                                jsonRequest.put("txn-handle", txnHandle);
+                        }
+                        if (arguments != null) {
+                                jsonRequest.put("arguments", arguments);
+                        }
+                        if (dataFormat != null) {
+                                jsonRequest.put("resultset-data-format", dataFormat);
+                        }
+                        if (includeMetadata != null) {
+                                jsonRequest.put("resultset-include-metadata", includeMetadata ? "ON" : "OFF");
 
 			JSONObject jsonRespose = processRequest(jsonRequest);
 
-			dbResult = new SyncLiteDBResult();
-			dbResult.result = jsonRespose.getBoolean("result");
-			dbResult.message = jsonRespose.getString("message");
-			if (jsonRespose.has("resultset")) {
-				dbResult.resultSet = jsonRespose.getJSONArray("resultset");
-			}
+			dbResult = toResult(jsonRespose);
 		} catch (Exception e) {
 			throw new SQLException("Failed to execute sql on DB : " + dbPath + " : " + e.getMessage(), e);
 		}
 		return dbResult;
+	}
+
+	public static SyncLiteDBResult next(String resultsetHandle, Integer resultsetPaginationSize) throws SQLException {
+                return next(resultsetHandle, resultsetPaginationSize, null, null);
+        }
+
+        public static SyncLiteDBResult next(String resultsetHandle, Integer resultsetPaginationSize, String dataFormat, Boolean includeMetadata) throws SQLException {
+                try {
+                        JSONObject jsonRequest = new JSONObject();
+                        jsonRequest.put("request-type", "next");
+                        jsonRequest.put("resultset-handle", resultsetHandle);
+                        if (resultsetPaginationSize != null && resultsetPaginationSize.intValue() > 0) {
+                                jsonRequest.put("resultset-pagination-size", resultsetPaginationSize.intValue());
+                        }
+                        if (dataFormat != null) {
+                                jsonRequest.put("resultset-data-format", dataFormat);
+                        }
+                        if (includeMetadata != null) {
+                                jsonRequest.put("resultset-include-metadata", includeMetadata ? "ON" : "OFF");
+
+			JSONObject jsonRespose = processRequest(jsonRequest);
+			return toResult(jsonRespose);
+		} catch (Exception e) {
+			throw new SQLException("Failed to fetch next page for resultset-handle : " + resultsetHandle + " : " + e.getMessage(), e);
+		}
 	}
 
 	public static SyncLiteDBResult closeDB(Path dbPath) throws SQLException {
@@ -277,9 +362,7 @@ public class SyncLiteDBClient {
 
 			JSONObject jsonRespose = processRequest(jsonRequest);
 
-			dbResult = new SyncLiteDBResult();
-			dbResult.result = jsonRespose.getBoolean("result");
-			dbResult.message = jsonRespose.getString("message");
+			dbResult = toResult(jsonRespose);
 		} catch (Exception e) {
 			throw new SQLException("Failed to close DB : " + dbPath + " : " + e.getMessage(), e);
 		}
@@ -370,20 +453,78 @@ public class SyncLiteDBClient {
 		}
 		System.out.println("========================================================");
 
-		//Select from table
-		System.out.println("========================================================");
-		System.out.println("Excecuting select from table"); 
-		System.out.println("========================================================");
-		r = executeSQL(dbPath, null, "select a, b from t1", null);
-		System.out.println("result : " + r.result);
-		System.out.println("message : " + r.message);
-		
-		JSONArray resultSet = r.resultSet;
-		
-		System.out.println("Selected Records : ");
-		for (int i = 0; i < resultSet.length(); ++i) {
-			JSONObject rec = resultSet.getJSONObject(i);			
-			System.out.println("a = " + rec.get("a") + ", b = " + rec.get("b"));
+//Select from table (JSON format - default, records as {colName: colValue} objects)
+                System.out.println("========================================================");
+                System.out.println("Excecuting select from table (JSON format)"); 
+                System.out.println("========================================================");
+                r = executeSQL(dbPath, null, "select a, b from t1", null);
+                System.out.println("result : " + r.result);
+                System.out.println("message : " + r.message);
+
+                // Print column headers from metadata
+                if (r.columnMetadata != null) {
+                        StringBuilder header = new StringBuilder();
+                        for (int i = 0; i < r.columnMetadata.length(); i++) {
+                                if (i > 0) header.append("\t");
+                                header.append(r.columnMetadata.getJSONObject(i).getString("label"));
+                        }
+                        System.out.println(header);
+                }
+                SyncLiteDBResult current = r;
+                while (true) {
+                        if (current.resultSet != null) {
+                                for (int i = 0; i < current.resultSet.length(); ++i) {
+                                        JSONObject rec = current.resultSet.getJSONObject(i);
+                                        System.out.println("a = " + rec.get("a") + ", b = " + rec.get("b"));
+                                }
+                        }
+                        if (!Boolean.TRUE.equals(current.hasMore) || current.resultsetHandle == null || current.resultsetHandle.isBlank()) {
+                                break;
+                        }
+                        current = next(current.resultsetHandle, null);
+                        if (!current.result) {
+                                throw new SQLException("Failed to fetch next page: " + current.message);
+                        }
+                }
+                System.out.println("========================================================");
+
+                //Select from table (DB format - records as value arrays, column order matches metadata)
+                System.out.println("========================================================");
+                System.out.println("Excecuting select from table (DB format)"); 
+                System.out.println("========================================================");
+                r = executeSQL(dbPath, null, "select a, b from t1", null, "DB", true);
+                System.out.println("result : " + r.result);
+                System.out.println("message : " + r.message);
+
+                // Print column headers from metadata
+                if (r.columnMetadata != null) {
+                        StringBuilder header = new StringBuilder();
+                        for (int i = 0; i < r.columnMetadata.length(); i++) {
+                                if (i > 0) header.append("\t");
+                                header.append(r.columnMetadata.getJSONObject(i).getString("label"));
+                        }
+                        System.out.println(header);
+                }
+                current = r;
+                while (true) {
+                        if (current.resultSet != null) {
+                                for (int i = 0; i < current.resultSet.length(); ++i) {
+                                        JSONArray row = current.resultSet.getJSONArray(i);
+                                        StringBuilder sb = new StringBuilder();
+                                        for (int j = 0; j < row.length(); j++) {
+                                                if (j > 0) sb.append("\t");
+                                                sb.append(row.isNull(j) ? "null" : row.get(j));
+                                        }
+                                        System.out.println(sb);
+                                }
+                        }
+                        if (!Boolean.TRUE.equals(current.hasMore) || current.resultsetHandle == null || current.resultsetHandle.isBlank()) {
+                                break;
+                        }
+                        current = next(current.resultsetHandle, null, "DB", null);
+			if (!current.result) {
+				throw new SQLException("Failed to fetch next page: " + current.message);
+			}
 		}
 		System.out.println("========================================================");
 		

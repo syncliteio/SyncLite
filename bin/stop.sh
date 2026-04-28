@@ -1,26 +1,39 @@
 #!/usr/bin/env bash
 
-PARENT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# Change to the directory containing this script
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "${SCRIPT_DIR}"
 
-export JAVA_HOME="$PARENT_DIR/jdk-11"
+export JAVA_HOME="${SCRIPT_DIR}/jdk-25"
+TOMCAT_VER="9.0.117"
+TOMCAT_DIR="apache-tomcat-${TOMCAT_VER}"
 
-# Function to find and kill process by name using ps -eaf
-kill_process_by_name() {
-  local process_name=$1
-  local pid
+# ── Graceful Tomcat shutdown ──────────────────────────────────────────────────────
+if [[ -x "${TOMCAT_DIR}/bin/shutdown.sh" ]]; then
+    echo "Shutting down Tomcat gracefully..."
+    export CATALINA_HOME="${SCRIPT_DIR}/${TOMCAT_DIR}"
+    "${CATALINA_HOME}/bin/shutdown.sh" || true
+fi
 
-  pid=$(ps -eaf | grep "$process_name" | grep -v grep | awk '{print $2}')
-  if [[ -n $pid && $pid =~ ^[0-9]+$ ]]; then
-    kill -9 "$pid"
-    echo "Killed process $pid ($process_name)"
-  else
-    echo "No valid process found for $process_name"
-  fi
+# ── Kill any remaining Java processes by class name ──────────────────────────────
+kill_by_class() {
+    local classname="$1"
+    local pids
+    pids=$(pgrep -f "${classname}" 2>/dev/null || true)
+    if [[ -n "${pids}" ]]; then
+        echo "Stopping ${classname} (PID ${pids})..."
+        kill -15 ${pids} 2>/dev/null || true
+        sleep 2
+        # Force kill if still running
+        pids=$(pgrep -f "${classname}" 2>/dev/null || true)
+        [[ -n "${pids}" ]] && kill -9 ${pids} 2>/dev/null || true
+    fi
 }
 
-# Kill the Java processes
-kill_process_by_name "com.synclite.consolidator.Main"
-kill_process_by_name "com.synclite.dbreader.Main"
-kill_process_by_name "com.synclite.qreader.Main"
-kill_process_by_name "org.apache.catalina.startup.Bootstrap"
+kill_by_class "com.synclite.consolidator.Main"
+kill_by_class "com.synclite.dbreader.Main"
+kill_by_class "com.synclite.qreader.Main"
+kill_by_class "org.apache.catalina.startup.Bootstrap"
+
+echo "Done."
 
