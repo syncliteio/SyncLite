@@ -4,15 +4,7 @@
   <img src="docs/images/SyncLite_logo.png" alt="SyncLite - Build Anything Sync Anywhere">
   </a>
   <p align="center">
-<<<<<<< Updated upstream
     <a href="https://www.synclite.io">Learn more</a>
-=======
-    <a href="https://www.synclite.io">Website</a>
-    ·
-    <a href="https://www.synclite.io/resources/documentation">Documentation</a>
-    ·
-    <a href="https://join.slack.com/t/syncliteworkspace/shared_invite/zt-2pz945vva-uuKapsubC9Mu~uYDRKo6Jw">Slack Community</a>
->>>>>>> Stashed changes
   </p>
 </p>
 
