@@ -281,11 +281,6 @@ bin/stage/minio/docker-deploy.sh   # MinIO object storage
 |---|---|
 | Full Documentation | https://www.synclite.io/resources/documentation |
 | Website | https://www.synclite.io |
-| Slack Community | https://join.slack.com/t/syncliteworkspace/shared_invite/zt-2pz945vva-uuKapsubC9Mu~uYDRKo6Jw |
-| GenAI / RAG solution | https://www.synclite.io/solutions/gen-ai-search-rag |
-| Database ETL solution | https://www.synclite.io/solutions/smart-database-etl |
-| IoT Connector solution | https://www.synclite.io/solutions/iot-data-connector |
-| Streaming solution | https://www.synclite.io/synclite/last-mile-streaming |
 
 ---
 
