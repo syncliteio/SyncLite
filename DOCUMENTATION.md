@@ -1810,14 +1810,3 @@ synclite-platform-oss/
 We welcome contributions! Please read [CONTRIBUTING.md](CONTRIBUTING.md) and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) before opening a pull request.
 
 ---
-
-## Resources
-
-| Resource | Link |
-|---|---|
-| Website | https://www.synclite.io |
-| Full Online Documentation | https://www.synclite.io/resources/documentation |
-| Smart Database ETL solution | https://www.synclite.io/solutions/smart-database-etl |
-| IoT Data Connector solution | https://www.synclite.io/solutions/iot-data-connector |
-| Patent | https://www.synclite.io/resources/patent |
-| Community Slack | https://join.slack.com/t/syncliteworkspace/shared_invite/zt-2pz945vva-uuKapsubC9Mu~uYDRKo6Jw |
