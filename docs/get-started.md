@@ -344,8 +344,8 @@ For remote staging, set the appropriate properties in the same config file:
 | Full platform documentation | https://www.synclite.io/resources/documentation |
 | Website | https://www.synclite.io |
 | GitHub repository | https://github.com/syncliteio/SyncLite |
-| Slack community | https://join.slack.com/t/syncliteworkspace/shared_invite/zt-2pz945vva-uuKapsubC9Mu~uYDRKo6Jw |
-| Patent | https://www.synclite.io/resources/patent |
+| Support email | support@synclite.io |
+| Patent | about.html#patent |
 | Contribution guide | [CONTRIBUTING.md](CONTRIBUTING.md) |
 | License (Apache 2.0) | [LICENSE](LICENSE) |
 
