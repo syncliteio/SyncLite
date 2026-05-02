@@ -1,27 +1,36 @@
 [submodule "synclite-logger-java"]
 	path = synclite-logger-java
 	url = https://github.com/syncliteio/synclite-logger-java
+	branch = main
 [submodule "synclite-consolidator"]
 	path = synclite-consolidator
 	url = https://github.com/syncliteio/synclite-consolidator
+	branch = main
 [submodule "synclite-sample-web-app"]
 	path = synclite-sample-web-app
 	url = https://github.com/syncliteio/synclite-sample-web-app
+	branch = main
 [submodule "synclite-client"]
 	path = synclite-client
 	url = https://github.com/syncliteio/synclite-client
+	branch = main
 [submodule "synclite-dbreader"]
 	path = synclite-dbreader
 	url = https://github.com/syncliteio/synclite-dbreader
+	branch = main
 [submodule "synclite-qreader"]
 	path = synclite-qreader
 	url = https://github.com/syncliteio/synclite-qreader
+	branch = main
 [submodule "synclite-job-monitor"]
 	path = synclite-job-monitor
 	url = https://github.com/syncliteio/synclite-job-monitor
+	branch = main
 [submodule "synclite-db"]
 	path = synclite-db
 	url = https://github.com/syncliteio/synclite-db
+	branch = main
 [submodule "synclite-validator"]
 	path = synclite-validator
 	url = https://github.com/syncliteio/synclite-validator
+	branch = main
