@@ -40,15 +40,15 @@ Most data integration problems at the edge are solved today by one of two approa
 
 | Component | Description | README |
 |---|---|---|
-| **SyncLite Logger** | Embeddable JDBC driver for Java/Python edge apps | [→](/synclite-logger-java/README.md) |
-| **SyncLite DB** | Standalone HTTP/JSON database server for any language | [→](/synclite-db/README.md) |
-| **SyncLite Client** | Interactive CLI for SyncLite devices | [→](/synclite-client/README.md) |
-| **SyncLite Consolidator** | Central real-time consolidation engine | [→](/synclite-consolidator/README.md) |
-| **SyncLite DBReader** | Database ETL / replication / migration tool | [→](/synclite-dbreader/README.md) |
-| **SyncLite QReader** | IoT MQTT connector | [→](/synclite-qreader/README.md) |
-| **SyncLite Job Monitor** | Unified job management and scheduling UI | [→](/synclite-job-monitor/README.md) |
-| **SyncLite Validator** | End-to-end integration testing tool | [→](/synclite-validator/README.md) |
-| **Sample Web App** | JSP/Servlet demo showing SyncLite Logger in action | [→](/synclite-sample-web-app/README.md) |
+| **SyncLite Logger** | Embeddable JDBC driver for Java/Python edge apps | [→](https://github.com/syncliteio/synclite-logger-java/blob/main/README.md) |
+| **SyncLite DB** | Standalone HTTP/JSON database server for any language | [→](https://github.com/syncliteio/synclite-db/blob/main/README.md) |
+| **SyncLite Client** | Interactive CLI for SyncLite devices | [→](https://github.com/syncliteio/synclite-client/blob/main/README.md) |
+| **SyncLite Consolidator** | Central real-time consolidation engine | [→](https://github.com/syncliteio/synclite-consolidator/blob/main/README.md) |
+| **SyncLite DBReader** | Database ETL / replication / migration tool | [→](https://github.com/syncliteio/synclite-dbreader/blob/main/README.md) |
+| **SyncLite QReader** | IoT MQTT connector | [→](https://github.com/syncliteio/synclite-qreader/blob/main/README.md) |
+| **SyncLite Job Monitor** | Unified job management and scheduling UI | [→](https://github.com/syncliteio/synclite-job-monitor/blob/main/README.md) |
+| **SyncLite Validator** | End-to-end integration testing tool | [→](https://github.com/syncliteio/synclite-validator/blob/main/README.md) |
+| **Sample Web App** | JSP/Servlet demo showing SyncLite Logger in action | [→](https://github.com/syncliteio/synclite-sample-web-app/blob/main/README.md) |
 
 
 ---
