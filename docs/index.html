@@ -417,7 +417,15 @@
 
     s.<span class="fn">execute</span>(<span class="str">"CREATE TABLE IF NOT EXISTS orders(id INT, item TEXT, qty INT)"</span>);
     s.<span class="fn">execute</span>(<span class="str">"INSERT INTO orders VALUES(1, 'widget', 100)"</span>);
-    <span class="cmt">// ↑ logged to a binary file → shipped to stage → consolidated into destination</span>
+
+    <span class="cmt">// SELECT — local read from the embedded database</span>
+    <span class="cls">ResultSet</span> rs = s.<span class="fn">executeQuery</span>(<span class="str">"SELECT id, item, qty FROM orders WHERE id = 1"</span>);
+    <span class="kw">while</span> (rs.<span class="fn">next</span>()) { <span class="cmt">/* process row */</span> }
+
+    <span class="cmt">// UPDATE and DELETE — also captured and replicated to destination</span>
+    s.<span class="fn">execute</span>(<span class="str">"UPDATE orders SET qty = 200 WHERE id = 1"</span>);
+    s.<span class="fn">execute</span>(<span class="str">"DELETE FROM orders WHERE id = 1"</span>);
+    <span class="cmt">// ↑ all DML logged to a binary file → shipped to stage → consolidated into destination</span>
 }
 <span class="cls">SQLite</span>.<span class="fn">closeAll</span>();</pre>
     </div>
@@ -469,35 +477,51 @@
 
     <!-- DBReader -->
     <div id="tab-dbreader" class="tab-pane">
-<pre><span class="cmt"># SyncLite DBReader — ETL/replication configuration (not application code)</span>
-job-name = <span class="str">orders_incremental</span>
-source-type = <span class="str">POSTGRESQL</span>
-source.host = <span class="str">pg.internal</span>
-source.port = <span class="num">5432</span>
-source.database = <span class="str">sales</span>
-source.user = <span class="str">reader</span>
+<pre><span class="cmt"># SyncLite DBReader — job configuration file (not application code)</span>
+<span class="cmt"># Table/topic mappings are configured via the web UI at http://localhost:8080/synclite-dbreader</span>
 
-table.1.source = <span class="str">public.orders</span>
-table.1.target = <span class="str">orders</span>
-table.1.mode = <span class="str">INCREMENTAL</span>
-table.1.watermark-column = <span class="str">updated_at</span>
+synclite-device-dir = <span class="str">/opt/synclite/devices</span>
+synclite-logger-configuration-file = <span class="str">/opt/synclite/synclite_logger.conf</span>
+
+src-type = <span class="str">POSTGRESQL</span>
+src-connection-string = <span class="str">jdbc:postgresql://pg.internal:5432/sales</span>
+src-user = <span class="str">reader</span>
+src-password = <span class="str">secret</span>
+src-connection-timeout-s = <span class="num">30</span>
+
+src-dbreader-method = <span class="str">INCREMENTAL</span>
+src-dbreader-interval-s = <span class="num">10</span>
+src-dbreader-batch-size = <span class="num">100000</span>
+
+src-object-type = <span class="str">TABLE</span>
+src-default-unique-key-column-list = <span class="str">id</span>
+src-default-incremental-key-column-list = <span class="str">updated_at</span>
+src-infer-schema-changes = <span class="str">true</span>
 
 <span class="cmt"># DBReader handles batching, retries, checkpoints, and restarts.</span></pre>
     </div>
 
     <!-- QReader -->
     <div id="tab-qreader" class="tab-pane">
-<pre><span class="cmt"># SyncLite QReader — MQTT ingestion configuration (not application code)</span>
-job-name = <span class="str">iot_temperature_ingest</span>
-broker = <span class="str">tcp://mqtt.example.com:1883</span>
-client-id = <span class="str">synclite-qreader-01</span>
-subscription.1 = <span class="str">devices/+/telemetry</span>
-payload-format = <span class="str">JSON</span>
-target-table = <span class="str">iot_events</span>
+<pre><span class="cmt"># SyncLite QReader — job configuration file (not application code)</span>
+<span class="cmt"># Topic-to-table mappings are configured via the web UI at http://localhost:8080/synclite-qreader</span>
 
-field.device_id = <span class="str">$.deviceId</span>
-field.temperature = <span class="str">$.temp</span>
-field.event_time = <span class="str">$.ts</span>
+synclite-device-dir = <span class="str">/opt/synclite/devices</span>
+synclite-logger-configuration-file = <span class="str">/opt/synclite/synclite_logger.conf</span>
+
+mqtt-broker-url = <span class="str">tcp://mqtt.example.com:1883</span>
+mqtt-qos-level = <span class="num">1</span>
+mqtt-clean-session = <span class="str">true</span>
+mqtt-broker-connection-timeout-s = <span class="num">10</span>
+mqtt-broker-connection-retry-interval-s = <span class="num">2</span>
+
+src-message-format = <span class="str">CSV</span>
+src-message-field-delimiter = <span class="str">,</span>
+
+qreader-synclite-device-type = <span class="str">SQLITE_APPENDER</span>
+qreader-map-devices-to-single-synclite-device = <span class="str">true</span>
+qreader-default-synclite-device-name = <span class="str">iot_device</span>
+qreader-default-synclite-table-name = <span class="str">iot_events</span>
 
 <span class="cmt"># Works with Mosquitto, EMQX, AWS IoT Core, and Azure IoT Hub.</span></pre>
     </div>
@@ -519,6 +543,11 @@ conn = jaydebeapi.connect(
 cur = conn.cursor()
 cur.execute(<span class="str">"CREATE TABLE IF NOT EXISTS events(id INT, payload TEXT)"</span>)
 cur.execute(<span class="str">"INSERT INTO events VALUES(1, 'hello from Python')"</span>)
+
+<span class="cmt"># SELECT — local read from the embedded database</span>
+cur.execute(<span class="str">"SELECT id, payload FROM events WHERE id = 1"</span>)
+<span class="kw">for</span> row <span class="kw">in</span> cur.fetchall(): <span class="kw">print</span>(row)
+
 conn.commit()
 conn.close()
 
@@ -559,7 +588,12 @@ requests.post(BASE, json={<span class="str">"db-path"</span>: <span class="str">
 <span class="cmt"># 3. Batched insert</span>
 requests.post(BASE, json={<span class="str">"db-path"</span>: <span class="str">"/tmp/myapp.db"</span>,
     <span class="str">"sql"</span>: <span class="str">"INSERT INTO orders VALUES(?, ?)"</span>,
-    <span class="str">"arguments"</span>: [[<span class="num">1</span>, <span class="str">"widget"</span>], [<span class="num">2</span>, <span class="str">"gadget"</span>]]})</pre>
+    <span class="str">"arguments"</span>: [[<span class="num">1</span>, <span class="str">"widget"</span>], [<span class="num">2</span>, <span class="str">"gadget"</span>]]})
+
+<span class="cmt"># 4. SELECT — local read from the embedded database</span>
+resp = requests.post(BASE, json={<span class="str">"db-path"</span>: <span class="str">"/tmp/myapp.db"</span>,
+    <span class="str">"sql"</span>: <span class="str">"SELECT id, item FROM orders"</span>})
+<span class="kw">print</span>(resp.json())</pre>
     </div>
 
   <!-- Jedis API -->
