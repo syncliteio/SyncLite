@@ -1,6 +1,5 @@
 # SyncLite Platform — Complete Technical Documentation
 
-> **Version:** 2024.10.02  
 > **License:** Apache License 2.0  
 > **Website:** https://www.synclite.io  
 > **Full Online Docs:** https://www.synclite.io/resources/documentation  
@@ -696,57 +695,75 @@ try (KafkaProducer producer = new KafkaProducer(props)) {
 
 ### 6.8 Python Usage
 
-SyncLite Logger can be used from Python via two bridge libraries: **JayDeBeApi** (JDBC bridge) and **JPype** (direct JVM API bridge).
+SyncLite Logger can be used from Python via two bridge libraries: **JayDeBeApi** (SQL / JDBC style) and **JPype** (direct Java API calls). Use JayDeBeApi for standard SQL workloads; use JPype when you need the higher-level `SyncLiteStore` or `SyncLiteStream` APIs.
 
-#### JayDeBeApi (SQL-style, equivalent to JDBC)
+#### JayDeBeApi — SQL (JDBC-style)
 
 ```python
-import jaydebeapi
-import jpype
+import jaydebeapi, jpype
 
-jvm_path = jpype.getDefaultJVMPath()
-jar_path  = "/path/to/synclite-logger-<version>.jar"
-
-jpype.startJVM(jvm_path, f"-Djava.class.path={jar_path}", convertStrings=True)
+jar = "/path/to/synclite-logger-<version>.jar"
+jpype.startJVM(jpype.getDefaultJVMPath(), f"-Djava.class.path={jar}", convertStrings=True)
 
 conn = jaydebeapi.connect(
     "io.synclite.logger.SQLite",
     "jdbc:synclite_sqlite:/home/alice/synclite/db/myapp.db",
     {"config": "/home/alice/synclite/synclite_logger.conf"},
-    jar_path
+    jar
 )
-curs = conn.cursor()
-curs.execute("CREATE TABLE IF NOT EXISTS events(id INT, payload TEXT)")
-curs.execute("INSERT INTO events VALUES(1, 'hello from Python')")
+cur = conn.cursor()
+cur.execute("CREATE TABLE IF NOT EXISTS events(id INT, payload TEXT)")
+cur.execute("INSERT INTO events VALUES(1, 'hello from Python')")
 conn.commit()
 conn.close()
 ```
 
-#### JPype (direct Java API, for SyncLiteStore / SyncLiteStream / Jedis)
+#### JPype — `SyncLiteStore` API
 
 ```python
-import jpype
-import jpype.imports
-
+import jpype, jpype.imports
 jpype.startJVM(classpath=["/path/to/synclite-logger-<version>.jar"])
 
 from io.synclite.logger import SQLiteStore, SyncLiteStore
 from java.nio.file import Paths
-from java.util import LinkedHashMap, Map, List
+from java.util import LinkedHashMap
 
-db_path = Paths.get("/home/alice/synclite/db/mystore.db")
-conf    = Paths.get("/home/alice/synclite/synclite_logger.conf")
+db   = Paths.get("/home/alice/synclite/db/mystore.db")
+conf = Paths.get("/home/alice/synclite/synclite_logger.conf")
+SQLiteStore.initialize(db, conf)
 
-SQLiteStore.initialize(db_path, conf)
-
-with SQLiteStore.open(db_path) as store:
+with SyncLiteStore.open(db) as store:
     cols = LinkedHashMap()
-    cols.put("id",   "INTEGER PRIMARY KEY")
+    cols.put("id", "INTEGER PRIMARY KEY")
     cols.put("name", "TEXT")
     store.createTable("users", cols)
-    store.insert("users", Map.of("id", 1, "name", "Alice"))
+    store.insert("users", {"id": 1, "name": "Alice"})
 
-SQLiteStore.closeDevice(db_path)
+SQLiteStore.closeDevice(db)
+jpype.shutdownJVM()
+```
+
+#### JPype — `SyncLiteStream` API
+
+```python
+import jpype, jpype.imports
+jpype.startJVM(classpath=["/path/to/synclite-logger-<version>.jar"])
+
+from io.synclite.logger import Streaming, SyncLiteStream
+from java.nio.file import Paths
+from java.util import LinkedHashMap
+
+db   = Paths.get("/home/alice/synclite/db/events.db")
+conf = Paths.get("/home/alice/synclite/synclite_logger.conf")
+Streaming.initialize(db, conf)
+
+with SyncLiteStream.open(db) as stream:
+    cols = LinkedHashMap()
+    cols.put("ts",         "BIGINT")
+    cols.put("event_type", "TEXT")
+    stream.createTable("events", cols)
+    stream.insert("events", {"ts": 1714200000000, "event_type": "SIGNUP"})
+
 jpype.shutdownJVM()
 ```
 
