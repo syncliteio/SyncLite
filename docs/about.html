@@ -321,14 +321,22 @@
   <div id="patent" class="about-section">
     <h2>Patent</h2>
     <div class="patent-card">
-      <h3>🔏 Patented Technology</h3>
+      <h3>🔏 System and Method for Handling Data Consolidation from an Edge Device to a Target Database</h3>
       <p>
-        The core synchronization architecture underlying SyncLite — covering the binary log capture, staging transport, and transactional consolidation pipeline — is backed by an issued patent. This protects the novel approach to exactly-once, offline-resilient edge-to-cloud data replication.
+        SyncLite's core architecture is protected by granted patents and published international filings that cover transaction-log capture on edge devices, staged transfer, and exactly-once consolidation into a target database.
       </p>
       <p>
-        The patent covers the method by which embedded database transactions are captured as structured log segments, shipped through an intermediate staging layer, and applied idempotently to one or more destination systems — without requiring the source device to have persistent connectivity to the destination.
+        The patented flow describes: application transactions on edge devices, wrapper-based transaction log capture, storage in device-specific remote directories, and a consolidator/replicator pipeline that reads logs, produces change logs, schedules consolidation, and applies schema plus data into destination databases.
       </p>
-      <span class="patent-link" style="display:inline-block;">Patent details are summarized above and on this page.</span>
+      <p><strong>Patent references:</strong></p>
+      <ul style="margin:.6rem 0 0 1.1rem;color:var(--text);line-height:1.7;">
+        <li><strong>US Patent:</strong> US 12,505,123 B2 — Granted on 23-12-2025</li>
+        <li><strong>India Patent Office:</strong> 429657 — Granted on 21-04-2023</li>
+        <li><strong>PCT Publication:</strong> WO/2023/111765 — Published on 22-06-2023</li>
+      </ul>
+      <p style="margin-top:1rem;">
+        In practical terms, this covers offline-resilient edge logging, staged synchronization, and deterministic transaction replay into centralized targets with high integrity and low operational complexity.
+      </p>
     </div>
   </div>
 
