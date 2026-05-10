@@ -61,7 +61,7 @@ Example:
 ```json
 {
 	"protocol-version": "1",
-	"db-path": "C:\\synclite\\users\\bob\\synclite\\job1\\test.db",
+	"db-name": "test",
 	"sql": "select 1"
 }
 ```

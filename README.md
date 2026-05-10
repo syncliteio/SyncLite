@@ -239,7 +239,7 @@ Alternatively, supply a pre-opened `SyncLiteStore` via `Jedis.builder(store)` wh
 
 ```bash
 # Start the server
-cd tools/synclite-db/
+cd tools/synclite-db
 ./synclite-db.sh --config synclite_db.conf
 ```
 
@@ -249,13 +249,14 @@ import requests, json
 
 BASE = "http://localhost:5555/synclite"
 
-requests.post(BASE, json={"db-type": "SQLITE", "db-path": "/tmp/myapp.db",
-    "synclite-logger-config": "/tmp/synclite_logger.conf", "sql": "initialize"})
+requests.post(BASE, json={"db-type": "SQLITE", "db-name": "myapp",
+    "synclite-logger-options": {"local-data-stage-directory": "/tmp/stage"},
+    "sql": "initialize"})
 
-requests.post(BASE, json={"db-path": "/tmp/myapp.db",
+requests.post(BASE, json={"db-name": "myapp",
     "sql": "CREATE TABLE IF NOT EXISTS t1(a INT, b TEXT)"})
 
-requests.post(BASE, json={"db-path": "/tmp/myapp.db",
+requests.post(BASE, json={"db-name": "myapp",
     "sql": "INSERT INTO t1 VALUES(?, ?)", "arguments": [[1, "hello"], [2, "world"]]})
 ```
 

@@ -251,20 +251,23 @@ BASE = "http://localhost:5555/synclite"
 # Initialize
 requests.post(BASE, json={
     "db-type": "SQLITE",
-    "db-path": "/tmp/myapp.db",
-    "synclite-logger-config": "/tmp/synclite_logger.conf",
+    "db-name": "myapp",
+    "synclite-logger-options": {
+        "local-data-stage-directory": "/tmp/synclite/stageDir",
+        "destination-type": "FS"
+    },
     "sql": "initialize"
 })
 
 # DDL
 requests.post(BASE, json={
-    "db-path": "/tmp/myapp.db",
+    "db-name": "myapp",
     "sql": "CREATE TABLE IF NOT EXISTS events(id INT, payload TEXT)"
 })
 
 # Batched insert
 requests.post(BASE, json={
-    "db-path": "/tmp/myapp.db",
+    "db-name": "myapp",
     "sql": "INSERT INTO events VALUES(?, ?)",
     "arguments": [[1, "hello"], [2, "world"]]
 })

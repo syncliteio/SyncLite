@@ -680,21 +680,21 @@ BASE = <span class="str">"http://localhost:5555/synclite"</span>
 
 <span class="cmt"># 1. Initialize</span>
 requests.post(BASE, json={
-    <span class="str">"db-type"</span>: <span class="str">"SQLITE"</span>, <span class="str">"db-path"</span>: <span class="str">"/tmp/myapp.db"</span>,
-    <span class="str">"synclite-logger-config"</span>: <span class="str">"/tmp/synclite_logger.conf"</span>, <span class="str">"sql"</span>: <span class="str">"initialize"</span>
+    <span class="str">"db-type"</span>: <span class="str">"SQLITE"</span>, <span class="str">"db-name"</span>: <span class="str">"myapp"</span>,
+    <span class="str">"sql"</span>: <span class="str">"initialize"</span>
 })
 
 <span class="cmt"># 2. DDL</span>
-requests.post(BASE, json={<span class="str">"db-path"</span>: <span class="str">"/tmp/myapp.db"</span>,
+requests.post(BASE, json={<span class="str">"db-name"</span>: <span class="str">"myapp"</span>,
     <span class="str">"sql"</span>: <span class="str">"CREATE TABLE IF NOT EXISTS orders(id INT, item TEXT)"</span>})
 
 <span class="cmt"># 3. Batched insert</span>
-requests.post(BASE, json={<span class="str">"db-path"</span>: <span class="str">"/tmp/myapp.db"</span>,
+requests.post(BASE, json={<span class="str">"db-name"</span>: <span class="str">"myapp"</span>,
     <span class="str">"sql"</span>: <span class="str">"INSERT INTO orders VALUES(?, ?)"</span>,
     <span class="str">"arguments"</span>: [[<span class="num">1</span>, <span class="str">"widget"</span>], [<span class="num">2</span>, <span class="str">"gadget"</span>]]})
 
 <span class="cmt"># 4. SELECT — local read from the embedded database</span>
-resp = requests.post(BASE, json={<span class="str">"db-path"</span>: <span class="str">"/tmp/myapp.db"</span>,
+resp = requests.post(BASE, json={<span class="str">"db-name"</span>: <span class="str">"myapp"</span>,
     <span class="str">"sql"</span>: <span class="str">"SELECT id, item FROM orders"</span>})
 <span class="kw">print</span>(resp.json())</pre>
     </div>

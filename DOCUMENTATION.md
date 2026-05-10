@@ -166,7 +166,7 @@ cd synclite-qreader/root
 mvn -Drevision=oss clean install
 
 # SyncLite DB
-cd synclite-db/db
+cd synclite-db/root/core
 mvn -Drevision=oss clean install
 
 # Client
@@ -921,7 +921,7 @@ Your App (any language)  ──HTTP/JSON──▶  SyncLite DB Server  ──▶
 
 ```bash
 # Linux / macOS
-cd tools/synclite-db/
+cd tools/synclite-db
 ./synclite-db.sh --config synclite_db.conf
 
 # Windows
@@ -941,11 +941,19 @@ All requests are `POST /synclite` with a JSON body.
 ```json
 {
   "db-type": "SQLITE",
-  "db-path": "/home/alice/synclite/job1/myapp.db",
-  "synclite-logger-config": "/home/alice/synclite/job1/synclite_logger.conf",
+  "db-name": "myapp",
+  "synclite-logger-options": {
+    "local-data-stage-directory": "/home/alice/synclite/job1/stageDir",
+    "destination-type": "FS"
+  },
   "sql": "initialize"
 }
 ```
+
+- Applications send `db-name` (not a file path). SyncLite DB resolves the physical database path internally under the server DB root directory.
+- `db-name` is also used internally as SyncLite Logger `device-name`.
+- Logger settings are passed as a nested JSON object in `synclite-logger-options` (or `synclite-logger-config` object alias). File-path based logger config is deprecated.
+- If `synclite-logger-options` is omitted, server default logger config is used.
 
 **`db-type` values:** `SQLITE` · `DUCKDB` · `DERBY` · `H2` · `HYPERSQL` · `STREAMING` · `SQLITE_APPENDER` · `DUCKDB_APPENDER` · `DERBY_APPENDER` · `H2_APPENDER` · `HYPERSQL_APPENDER`
 
@@ -953,7 +961,7 @@ All requests are `POST /synclite` with a JSON body.
 
 ```json
 {
-  "db-path": "/home/alice/synclite/job1/myapp.db",
+  "db-name": "myapp",
   "sql": "CREATE TABLE IF NOT EXISTS events(id INT, payload TEXT)"
 }
 ```
@@ -962,7 +970,7 @@ All requests are `POST /synclite` with a JSON body.
 
 ```json
 {
-  "db-path": "/home/alice/synclite/job1/myapp.db",
+  "db-name": "myapp",
   "sql": "INSERT INTO events VALUES(?, ?)",
   "arguments": [[1, "edge-event-1"], [2, "edge-event-2"]]
 }
@@ -974,28 +982,28 @@ Each sub-array in `arguments` is one row. This performs a batch insert in a sing
 
 ```json
 // 1. Begin — response contains "txn-handle"
-{ "db-path": "...", "sql": "begin" }
+{ "db-name": "myapp", "sql": "begin" }
 
 // 2. Execute inside transaction
 {
-  "db-path": "...",
+  "db-name": "myapp",
   "sql": "INSERT INTO events VALUES(?, ?)",
   "txn-handle": "<uuid-from-begin-response>",
   "arguments": [[3, "three"]]
 }
 
 // 3. Commit
-{ "db-path": "...", "sql": "commit", "txn-handle": "<uuid>" }
+{ "db-name": "myapp", "sql": "commit", "txn-handle": "<uuid>" }
 
 // 3. (alternatively) Rollback
-{ "db-path": "...", "sql": "rollback", "txn-handle": "<uuid>" }
+{ "db-name": "myapp", "sql": "rollback", "txn-handle": "<uuid>" }
 ```
 
 #### SELECT — basic query
 
 ```json
 {
-  "db-path": "/home/alice/synclite/job1/myapp.db",
+  "db-name": "myapp",
   "sql": "SELECT id, name, score FROM players ORDER BY id",
   "resultset-include-metadata": "ON"
 }
@@ -1026,7 +1034,7 @@ Each sub-array in `arguments` is one row. This performs a batch insert in a sing
 
 ```json
 {
-  "db-path": "...",
+  "db-name": "myapp",
   "sql": "SELECT id, name, score FROM players ORDER BY id",
   "resultset-pagination-size": 100,
   "resultset-include-metadata": "ON"
@@ -1063,7 +1071,7 @@ Pass `"resultset-data-format": "DB"` to receive rows as value arrays instead of 
 
 ```json
 {
-  "db-path": "...",
+  "db-name": "myapp",
   "sql": "SELECT id, name, score FROM players ORDER BY id",
   "resultset-data-format": "DB",
   "resultset-include-metadata": "ON"
@@ -1087,7 +1095,7 @@ Pass `"resultset-data-format": "DB"` to receive rows as value arrays instead of 
 #### Close a database
 
 ```json
-{ "db-path": "...", "sql": "close" }
+{ "db-name": "myapp", "sql": "close" }
 ```
 
 #### Common response fields
@@ -1134,7 +1142,7 @@ import requests
 
 headers = {"X-SyncLite-Token": "change-me"}
 requests.post("http://localhost:5555/synclite",
-              json={"db-path": "/tmp/myapp.db", "sql": "SELECT 1"},
+              json={"db-name": "myapp", "sql": "SELECT 1"},
               headers=headers)
 ```
 
@@ -1222,7 +1230,7 @@ def signed_post(payload: dict) -> dict:
     }
     return requests.post(BASE_URL, data=body, headers=headers).json()
 
-result = signed_post({"db-path": "/tmp/myapp.db", "sql": "SELECT 1"})
+result = signed_post({"db-name": "myapp", "sql": "SELECT 1"})
 ```
 
 Java example (same canonical format):
@@ -1281,20 +1289,23 @@ BASE = "http://localhost:5555/synclite"
 # Initialize
 requests.post(BASE, json={
     "db-type": "SQLITE",
-    "db-path": "/tmp/myapp.db",
-    "synclite-logger-config": "/tmp/synclite_logger.conf",
+    "db-name": "myapp",
+    "synclite-logger-options": {
+        "local-data-stage-directory": "/tmp/synclite/stageDir",
+        "destination-type": "FS"
+    },
     "sql": "initialize"
 })
 
 # Create table
 requests.post(BASE, json={
-    "db-path": "/tmp/myapp.db",
+    "db-name": "myapp",
     "sql": "CREATE TABLE IF NOT EXISTS t1(a INT, b TEXT)"
 })
 
 # Batch insert
 requests.post(BASE, json={
-    "db-path": "/tmp/myapp.db",
+    "db-name": "myapp",
     "sql": "INSERT INTO t1 VALUES(?, ?)",
     "arguments": [[1, "hello"], [2, "world"]]
 })

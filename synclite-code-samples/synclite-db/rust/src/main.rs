@@ -1,9 +1,7 @@
 use reqwest::blocking::Client;
 use reqwest::header::CONTENT_TYPE;
 use serde_json::{json, Value};
-use std::fs;
 use std::time::{SystemTime, UNIX_EPOCH};
-use std::path::{Path, PathBuf};
 use std::collections::HashMap;
 
 use hmac::{Hmac, Mac};
@@ -19,12 +17,14 @@ Refer Cargo.toml file for dependencies.
 
 This source file implements following APIs to connect to SyncLiteDB:
 
-1. initializeDB : Initialize the given database/device of specified type (SQLITE, DUCKDB, DERBY, H2, HYPERSQL, SQLITE_APPENDER, DUCKDB_APPENDER, DERBY_APPENDER, H2_APPENDER, HYPERSQL_APPENDER, STREAMING) at the specified path. 
+1. initializeDB : Initialize the given database/device of specified type (SQLITE, DUCKDB, DERBY, H2, HYPERSQL, SQLITE_APPENDER, DUCKDB_APPENDER, DERBY_APPENDER, H2_APPENDER, HYPERSQL_APPENDER, STREAMING) with the specified db-name.
 2. beginTransaction: Begin a transaction on specified database, returning a transaction handle
 3. executeSQL: Execute specified SQL with (optional arguments for batch operations with prepared statements), on the specified database.
 4. commitTransction: Commit the transaction with given transaction handle
 5. rollbackTransaction: Rollback the transaction with given transaction handle
 6. closeDB: Close the given database.
+
+Applications send db-name (not db-path). SyncLite DB resolves the physical database path internally.
 
 You can copy these APIs in your application to get started with SyncLite DB. 
 
@@ -93,7 +93,6 @@ struct SyncLiteDBResult {
 }
 
 const SYNC_LITE_DB_ADDRESS: &str = "http://localhost:5555";
-static mut DB_DIR: Option<PathBuf> = None;
 
 fn process_request(json_request: &Value) -> Result<Value, String> {
 	
@@ -170,22 +169,25 @@ fn to_db_result(json_response: &Value) -> SyncLiteDBResult {
     }
 }
 
-fn initialize_db(db_path: &Path, db_type: &str, db_name: &str) -> Result<SyncLiteDBResult, String> {
-    let json_request = json!({
-        "db-path": db_path.to_str().unwrap(),
+fn initialize_db(db_name: &str, db_type: &str, logger_options: Option<&Value>) -> Result<SyncLiteDBResult, String> {
+    let mut json_request = json!({
         "db-type": db_type,
         "db-name": db_name,
         "sql": "initialize",
     });
+
+    if let Some(opts) = logger_options {
+        json_request["synclite-logger-options"] = opts.clone();
+    }
 
     let json_response = process_request(&json_request)?;
 
     Ok(to_db_result(&json_response))
 }
 
-fn begin_transaction(db_path: &Path) -> Result<SyncLiteDBResult, String> {
+fn begin_transaction(db_name: &str) -> Result<SyncLiteDBResult, String> {
     let json_request = json!({
-        "db-path": db_path.to_str().unwrap(),
+        "db-name": db_name,
         "sql": "begin",
     });
 
@@ -194,9 +196,9 @@ fn begin_transaction(db_path: &Path) -> Result<SyncLiteDBResult, String> {
     Ok(to_db_result(&json_response))
 }
 
-fn commit_transaction(db_path: &Path, txn_handle: &str) -> Result<SyncLiteDBResult, String> {
+fn commit_transaction(db_name: &str, txn_handle: &str) -> Result<SyncLiteDBResult, String> {
     let json_request = json!({
-        "db-path": db_path.to_str().unwrap(),
+        "db-name": db_name,
         "txn-handle": txn_handle,
         "sql": "commit",
     });
@@ -206,9 +208,9 @@ fn commit_transaction(db_path: &Path, txn_handle: &str) -> Result<SyncLiteDBResu
     Ok(to_db_result(&json_response))
 }
 
-fn rollback_transaction(db_path: &Path, txn_handle: &str) -> Result<SyncLiteDBResult, String> {
+fn rollback_transaction(db_name: &str, txn_handle: &str) -> Result<SyncLiteDBResult, String> {
     let json_request = json!({
-        "db-path": db_path.to_str().unwrap(),
+        "db-name": db_name,
         "txn-handle": txn_handle,
         "sql": "rollback",
     });
@@ -218,9 +220,9 @@ fn rollback_transaction(db_path: &Path, txn_handle: &str) -> Result<SyncLiteDBRe
     Ok(to_db_result(&json_response))
 }
 
-fn execute_sql(db_path: &Path, txn_handle: Option<&str>, sql: &str, arguments: Option<&Value>, data_format: Option<&str>, include_metadata: Option<bool>) -> Result<SyncLiteDBResult, String> {
+fn execute_sql(db_name: &str, txn_handle: Option<&str>, sql: &str, arguments: Option<&Value>, data_format: Option<&str>, include_metadata: Option<bool>) -> Result<SyncLiteDBResult, String> {
     let mut json_request = json!({
-        "db-path": db_path.to_str().unwrap(),
+        "db-name": db_name,
         "sql": sql,
     });
 
@@ -264,9 +266,9 @@ fn next_page(resultset_handle: &str, resultset_pagination_size: Option<u64>, dat
     Ok(to_db_result(&json_response))
 }
 
-fn close_db(db_path: &Path) -> Result<SyncLiteDBResult, String> {
+fn close_db(db_name: &str) -> Result<SyncLiteDBResult, String> {
     let json_request = json!({
-        "db-path": db_path.to_str().unwrap(),
+        "db-name": db_name,
         "sql": "close",
     });
 
@@ -275,27 +277,13 @@ fn close_db(db_path: &Path) -> Result<SyncLiteDBResult, String> {
     Ok(to_db_result(&json_response))
 }
 
-fn create_db_dirs() -> std::io::Result<()> {
-    let home_dir = std::env::var("USERPROFILE")
-        .or_else(|_| std::env::var("HOME"))
-        .expect("Neither USERPROFILE nor HOME environment variable is set");
-
-    let db_path_str = format!("{}/synclite/job1/db", home_dir);
-    let db_dir = Path::new(&db_path_str);
-    fs::create_dir_all(&db_dir)?;
-    unsafe { DB_DIR = Some(db_dir.to_path_buf()) };
-    Ok(())
-}
-
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    create_db_dirs()?;
-
-    let db_path = unsafe { DB_DIR.as_ref().unwrap().join("testRust.db") };
+    let db_name = "testRust";
 
     println!("========================================================");
     println!("Executing initialize DB");
     println!("========================================================");
-    let r = initialize_db(&db_path, "SQLITE", "testRust").map_err(|e| format!("Error: {}", e))?;
+    let r = initialize_db(db_name, "SQLITE", None).map_err(|e| format!("Error: {}", e))?;
     println!("result : {}", r.result);
     println!("message : {}", r.message);
     if !r.result {
@@ -307,7 +295,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("========================================================");
     println!("Executing begin transaction");
     println!("========================================================");
-    let r = begin_transaction(&db_path).map_err(|e| format!("Error: {}", e))?;
+    let r = begin_transaction(db_name).map_err(|e| format!("Error: {}", e))?;
     println!("result : {}", r.result);
     println!("message : {}", r.message);
     let txn_handle = r.txn_handle.as_ref().unwrap();
@@ -320,7 +308,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("========================================================");
     println!("Executing create table");
     println!("========================================================");
-    let r = execute_sql(&db_path, Some(txn_handle), "create table if not exists t1(a int, b text)", None, None, None).map_err(|e| format!("Error: {}", e))?;
+    let r = execute_sql(db_name, Some(txn_handle), "create table if not exists t1(a int, b text)", None, None, None).map_err(|e| format!("Error: {}", e))?;
     println!("result : {}", r.result);
     println!("message : {}", r.message);
     if !r.result {
@@ -337,7 +325,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         [2, "two"],
     ]);
 
-    let r = execute_sql(&db_path, Some(txn_handle), "insert into t1 (a, b) values(?, ?)", Some(&arguments), None, None).map_err(|e| format!("Error: {}", e))?;
+    let r = execute_sql(db_name, Some(txn_handle), "insert into t1 (a, b) values(?, ?)", Some(&arguments), None, None).map_err(|e| format!("Error: {}", e))?;
     println!("result : {}", r.result);
     println!("message : {}", r.message);
     if !r.result {
@@ -349,7 +337,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("========================================================");
     println!("Executing commit transaction");
     println!("========================================================");
-    let r = commit_transaction(&db_path, txn_handle).map_err(|e| format!("Error: {}", e))?;
+    let r = commit_transaction(db_name, txn_handle).map_err(|e| format!("Error: {}", e))?;
     println!("result : {}", r.result);
     println!("message : {}", r.message);
     if !r.result {
@@ -361,7 +349,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("========================================================");
     println!("Executing select from table (JSON format)");
     println!("========================================================");
-    let r = execute_sql(&db_path, None, "select a, b from t1", None, None, None).map_err(|e| format!("Error: {}", e))?;
+    let r = execute_sql(db_name, None, "select a, b from t1", None, None, None).map_err(|e| format!("Error: {}", e))?;
     println!("result : {}", r.result);
     println!("message : {}", r.message);
 
@@ -401,7 +389,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("========================================================");
     println!("Executing select from table (DB format)");
     println!("========================================================");
-    let r = execute_sql(&db_path, None, "select a, b from t1", None, Some("DB"), Some(true)).map_err(|e| format!("Error: {}", e))?;
+    let r = execute_sql(db_name, None, "select a, b from t1", None, Some("DB"), Some(true)).map_err(|e| format!("Error: {}", e))?;
     println!("result : {}", r.result);
     println!("message : {}", r.message);
 
@@ -443,7 +431,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("========================================================");
     println!("Executing drop table");
     println!("========================================================");
-    let r = execute_sql(&db_path, None, "drop table t1", None, None, None).map_err(|e| format!("Error: {}", e))?;
+    let r = execute_sql(db_name, None, "drop table t1", None, None, None).map_err(|e| format!("Error: {}", e))?;
     println!("result : {}", r.result);
     println!("message : {}", r.message);
 
@@ -451,7 +439,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("========================================================");
     println!("Executing close DB");
     println!("========================================================");
-    let r = close_db(&db_path).map_err(|e| format!("Error: {}", e))?;
+    let r = close_db(db_name).map_err(|e| format!("Error: {}", e))?;
     println!("result : {}", r.result);
     println!("message : {}", r.message);
     println!("========================================================");

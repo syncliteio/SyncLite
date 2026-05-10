@@ -19,12 +19,14 @@ pip install requests
 
 This source file implements following APIs to connect to SyncLiteDB:
 
-1. initializeDB : Initialize the given database/device of specified type (SQLITE, DUCKDB, DERBY, H2, HYPERSQL, SQLITE_APPENDER, DUCKDB_APPENDER, DERBY_APPENDER, H2_APPENDER, HYPERSQL_APPENDER, STREAMING) at the specified path. 
+1. initializeDB : Initialize the given database/device of specified type (SQLITE, DUCKDB, DERBY, H2, HYPERSQL, SQLITE_APPENDER, DUCKDB_APPENDER, DERBY_APPENDER, H2_APPENDER, HYPERSQL_APPENDER, STREAMING) with the specified db-name. 
 2. beginTransaction: Begin a transaction on specified database, returning a transaction handle
 3. executeSQL: Execute specified SQL with (optional arguments for batch operations with prepared statements), on the specified database.
 4. commitTransction: Commit the transaction with given transaction handle
 5. rollbackTransaction: Rollback the transaction with given transaction handle
 6. closeDB: Close the given database.
+
+Applications send db-name (not db-path). SyncLite DB resolves the physical database path internally.
 
 You can copy these APIs in your application to get started with SyncLite DB. 
 
@@ -157,27 +159,26 @@ def process_request(json_request):
     except Exception as e:
         raise Exception(f"Failed to process request: {str(e)}") from e
 
-def initialize_db(db_path, db_type, db_name, logger_config_path=None):
+def initialize_db(db_name, db_type, logger_options=None):
     try:
         json_request = {
-            "db-path": str(db_path),
             "db-type": db_type,
             "db-name": db_name,
             "sql": "initialize"
         }
-        if logger_config_path:
-            json_request["synclite-logger-config"] = str(logger_config_path)
+        if logger_options:
+            json_request["synclite-logger-options"] = logger_options
         
         json_response = process_request(json_request)
         
         return _to_result(json_response)
     except Exception as e:
-        raise Exception(f"Failed to initialize DB: {str(db_path)} : {str(e)}")
+        raise Exception(f"Failed to initialize DB: {db_name} : {str(e)}")
 
-def close_db(db_path):
+def close_db(db_name):
     try:
         json_request = {
-            "db-path": str(db_path),
+            "db-name": db_name,
             "sql": "close"
         }
 
@@ -185,12 +186,12 @@ def close_db(db_path):
         
         return _to_result(json_response)
     except Exception as e:
-        raise Exception(f"Failed to close DB: {str(db_path)} : {str(e)}")
+        raise Exception(f"Failed to close DB: {db_name} : {str(e)}")
 
-def begin_transaction(db_path):
+def begin_transaction(db_name):
     try:
         json_request = {
-            "db-path": str(db_path),
+            "db-name": db_name,
             "sql": "begin"
         }
         
@@ -198,12 +199,12 @@ def begin_transaction(db_path):
         
         return _to_result(json_response)
     except Exception as e:
-        raise Exception(f"Failed to begin transaction on DB: {str(db_path)} : {str(e)}")
+        raise Exception(f"Failed to begin transaction on DB: {db_name} : {str(e)}")
 
-def commit_transaction(db_path, txn_handle):
+def commit_transaction(db_name, txn_handle):
     try:
         json_request = {
-            "db-path": str(db_path),
+            "db-name": db_name,
             "sql": "commit",
 			"txn-handle": txn_handle
         }
@@ -212,12 +213,12 @@ def commit_transaction(db_path, txn_handle):
         
         return _to_result(json_response)
     except Exception as e:
-        raise Exception(f"Failed to commit transaction on DB: {str(db_path)} : {str(e)}")
+        raise Exception(f"Failed to commit transaction on DB: {db_name} : {str(e)}")
 
-def rollback_transaction(db_path, txn_handle):
+def rollback_transaction(db_name, txn_handle):
     try:
         json_request = {
-            "db-path": str(db_path),
+            "db-name": db_name,
 			"txn-handle": txn_handle,
             "sql": "rollback"
         }
@@ -226,12 +227,12 @@ def rollback_transaction(db_path, txn_handle):
         
         return _to_result(json_response)
     except Exception as e:
-        raise Exception(f"Failed to rollback transaction on DB: {str(db_path)} : {str(e)}")
+        raise Exception(f"Failed to rollback transaction on DB: {db_name} : {str(e)}")
 
-def execute_sql(db_path, txn_handle, sql, arguments, data_format=None, include_metadata=None):
+def execute_sql(db_name, txn_handle, sql, arguments, data_format=None, include_metadata=None):
     try:
         json_request = {
-            "db-path": str(db_path),
+            "db-name": db_name,
             "sql": sql
         }
 
@@ -251,7 +252,7 @@ def execute_sql(db_path, txn_handle, sql, arguments, data_format=None, include_m
         
         return _to_result(json_response)
     except Exception as e:
-        raise Exception(f"Failed to rollback transaction on DB: {str(db_path)} : {str(e)}")
+        raise Exception(f"Failed to execute SQL on DB: {db_name} : {str(e)}")
 
 
 def next_page(resultset_handle, resultset_pagination_size=None, data_format=None, include_metadata=None):
@@ -273,17 +274,14 @@ def next_page(resultset_handle, resultset_pagination_size=None, data_format=None
         raise Exception(f"Failed to fetch next page for resultset-handle: {resultset_handle} : {str(e)}")
 
 
-# Init db directory
-db_dir = os.path.join(os.path.expanduser("~"), "synclite", "job1", "db")
-os.makedirs(db_dir, exist_ok=True)
-
-db_path = os.path.join(db_dir, "testPython.db")
+# Database name (server manages the path)
+db_name = "testPython"
 
 # Initialize DB
 print("=" * 56)
 print("Executing initialize DB")
 print("=" * 56)
-result = initialize_db(db_path, "SQLITE", "testPython", None)
+result = initialize_db(db_name, "SQLITE")
 print(f"Result: {result.result}, Message: {result.message}")
 print("=" * 56)
 
@@ -291,7 +289,7 @@ print("=" * 56)
 print("=" * 56)
 print("Executing begin transaction")
 print("=" * 56)
-r = begin_transaction(db_path)
+r = begin_transaction(db_name)
 print(f"result : {r.result}")
 print(f"message : {r.message}")
 print(f"txn-handle: {r.txn_handle}")
@@ -305,7 +303,7 @@ print("=" * 56)
 print("=" * 56)
 print("Executing create table")
 print("=" * 56)
-r = execute_sql(db_path, txn_handle, "create table if not exists t1(a int, b text)", None)
+r = execute_sql(db_name, txn_handle, "create table if not exists t1(a int, b text)", None)
 print(f"result : {r.result}")
 print(f"message : {r.message}")
 if not r.result:
@@ -320,7 +318,7 @@ arguments = [
     [1, "one"],
     [2, "two"]
 ]
-r = execute_sql(db_path, txn_handle, "insert into t1 (a,b) values(?, ?)", arguments)
+r = execute_sql(db_name, txn_handle, "insert into t1 (a,b) values(?, ?)", arguments)
 print(f"result : {r.result}")
 print(f"message : {r.message}")
 if not r.result:
@@ -332,7 +330,7 @@ print("=" * 56)
 print("=" * 56)
 print("Executing commit transaction")
 print("=" * 56)
-r = commit_transaction(db_path, txn_handle)
+r = commit_transaction(db_name, txn_handle)
 print(f"result : {r.result}")
 print(f"message : {r.message}")
 if not r.result:
@@ -344,7 +342,7 @@ print("=" * 56)
 print("=" * 56)
 print("Executing select from table (JSON format)")
 print("=" * 56)
-r = execute_sql(db_path, None, "select a, b from t1", None)
+r = execute_sql(db_name, None, "select a, b from t1", None)
 print(f"result : {r.result}")
 print(f"message : {r.message}")
 if r.column_metadata:
@@ -367,7 +365,7 @@ print("=" * 56)
 print("=" * 56)
 print("Executing select from table (DB format)")
 print("=" * 56)
-r = execute_sql(db_path, None, "select a, b from t1", None, data_format="DB", include_metadata=True)
+r = execute_sql(db_name, None, "select a, b from t1", None, data_format="DB", include_metadata=True)
 print(f"result : {r.result}")
 print(f"message : {r.message}")
 if r.column_metadata:
@@ -390,7 +388,7 @@ print("=" * 56)
 print("=" * 56)
 print("Executing drop table")
 print("=" * 56)
-r = execute_sql(db_path, None, "drop table t1", None)
+r = execute_sql(db_name, None, "drop table t1", None)
 print(f"result : {r.result}")
 print(f"message : {r.message}")
 
@@ -399,7 +397,7 @@ print(f"message : {r.message}")
 print("=" * 56)
 print("Executing close DB")
 print("=" * 56)
-r = close_db(db_path)
+r = close_db(db_name)
 print(f"result : {r.result}")
 print(f"message : {r.message}")
 print("=" * 56)

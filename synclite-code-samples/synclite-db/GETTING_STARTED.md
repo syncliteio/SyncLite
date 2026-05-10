@@ -29,8 +29,11 @@ synclite-db.sh --config synclite_db.conf
 ```json
 {
   "db-type": "SQLITE",
-  "db-path": "C:\\synclite\\users\\bob\\synclite\\job1\\test.db",
-  "synclite-logger-config": "C:\\synclite\\users\\bob\\synclite\\job1\\synclite_logger.conf",
+  "db-name": "test",
+  "synclite-logger-options": {
+    "local-data-stage-directory": "C:\\synclite\\users\\bob\\synclite\\job1\\stageDir",
+    "destination-type": "FS"
+  },
   "sql": "initialize"
 }
 ```
@@ -39,7 +42,7 @@ synclite-db.sh --config synclite_db.conf
 
 ```json
 {
-  "db-path": "C:\\synclite\\users\\bob\\synclite\\job1\\test.db",
+  "db-name": "test",
   "sql": "CREATE TABLE IF NOT EXISTS t1(a INT, b INT)"
 }
 ```
@@ -48,7 +51,7 @@ synclite-db.sh --config synclite_db.conf
 
 ```json
 {
-  "db-path": "C:\\synclite\\users\\bob\\synclite\\job1\\test.db",
+  "db-name": "test",
   "sql": "INSERT INTO t1(a,b) VALUES(?, ?)",
   "arguments": [[1, "one"], [2, "two"]]
 }
@@ -58,7 +61,7 @@ synclite-db.sh --config synclite_db.conf
 
 ```json
 {
-  "db-path": "C:\\synclite\\users\\bob\\synclite\\job1\\test.db",
+  "db-name": "test",
   "sql": "begin"
 }
 ```
@@ -67,7 +70,7 @@ synclite-db.sh --config synclite_db.conf
 
 ```json
 {
-  "db-path": "C:\\synclite\\users\\bob\\synclite\\job1\\test.db",
+  "db-name": "test",
   "sql": "INSERT INTO t1(a,b) VALUES(?, ?)",
   "txn-handle": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
   "arguments": [[3, "three"], [4, "four"]]
@@ -78,7 +81,7 @@ synclite-db.sh --config synclite_db.conf
 
 ```json
 {
-  "db-path": "C:\\synclite\\users\\bob\\synclite\\job1\\test.db",
+  "db-name": "test",
   "txn-handle": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
   "sql": "commit"
 }
@@ -88,7 +91,7 @@ synclite-db.sh --config synclite_db.conf
 
 ```json
 {
-  "db-path": "C:\\synclite\\users\\bob\\synclite\\job1\\test.db",
+  "db-name": "test",
   "sql": "close"
 }
 ```
