@@ -1,14 +1,11 @@
 package sampleapp;
 
 import java.io.BufferedReader;
-import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.sql.SQLException;
 import java.util.Base64;
 import java.util.UUID;
@@ -35,12 +32,14 @@ Add org.json library as dependency
 
 This source file implements following APIs to connect to SyncLiteDB:
 
-1. initializeDB : Initialize the given database/device of specified type (SQLITE, DUCKDB, DERBY, H2, HYPERSQL, SQLITE_APPENDER, DUCKDB_APPENDER, DERBY_APPENDER, H2_APPENDER, HYPERSQL_APPENDER, STREAMING) at the specified path. 
+1. initializeDB : Initialize the given database/device of specified type (SQLITE, DUCKDB, DERBY, H2, HYPERSQL, SQLITE_APPENDER, DUCKDB_APPENDER, DERBY_APPENDER, H2_APPENDER, HYPERSQL_APPENDER, STREAMING) with the specified db-name.
 2. beginTransaction: Begin a transaction on specified database, returning a transaction handle
 3. executeSQL: Execute specified SQL with (optional arguments for batch operations with prepared statements), on the specified database.
 4. commitTransction: Commit the transaction with given transaction handle
 5. rollbackTransaction: Rollback the transaction with given transaction handle
 6. closeDB: Close the given database.
+
+Applications send db-name (not db-path). SyncLite DB resolves the physical database path internally.
 
 You can copy these APIs in your application to get started with SyncLite DB. 
 
@@ -100,6 +99,9 @@ sql: drop table t1
 
 
 public class SyncLiteDBClient {
+
+	// The base URL for the API
+	static String syncLiteDBAddress = "http://localhost:5555";
 
 	public static class SyncLiteDBResult {
 		public boolean result;
@@ -226,15 +228,14 @@ public class SyncLiteDBClient {
 		return jsonResponse;
 	}
 
-	public static SyncLiteDBResult initializeDB(Path dbPath, String dbType, String dbName, Path syncLiteLoggerConfigPath) throws SQLException{
+	public static SyncLiteDBResult initializeDB(String dbName, String dbType, JSONObject loggerOptions) throws SQLException{
 		SyncLiteDBResult dbResult;
 		try {
 			JSONObject jsonRequest = new JSONObject();
-			jsonRequest.put("db-path", dbPath);
 			jsonRequest.put("db-type", dbType);
 			jsonRequest.put("db-name", dbName);
-			if (syncLiteLoggerConfigPath != null) {
-				jsonRequest.put("synclite-logger-config", syncLiteLoggerConfigPath);
+			if (loggerOptions != null) {
+				jsonRequest.put("synclite-logger-options", loggerOptions);
 			}
 			jsonRequest.put("sql", "initialize");
 
@@ -242,32 +243,32 @@ public class SyncLiteDBClient {
 
 			dbResult = toResult(jsonRespose);
 		} catch (Exception e) {
-			throw new SQLException("Failed to initialize DB : " + dbPath + " : " + e.getMessage(), e);
+			throw new SQLException("Failed to initialize DB : " + dbName + " : " + e.getMessage(), e);
 		}
 		return dbResult;
 	}
 
-	public static SyncLiteDBResult beginTransaction(Path dbPath) throws SQLException {
+	public static SyncLiteDBResult beginTransaction(String dbName) throws SQLException {
 		SyncLiteDBResult dbResult;
 		try {
 			JSONObject jsonRequest = new JSONObject();
-			jsonRequest.put("db-path", dbPath);
+			jsonRequest.put("db-name", dbName);
 			jsonRequest.put("sql", "begin");
 
 			JSONObject jsonRespose = processRequest(jsonRequest);
 
 			dbResult = toResult(jsonRespose);
 		} catch (Exception e) {
-			throw new SQLException("Failed to begin transaction on DB : " + dbPath + " : " + e.getMessage(), e);
+			throw new SQLException("Failed to begin transaction on DB : " + dbName + " : " + e.getMessage(), e);
 		}
 		return dbResult;
 	}
 
-	public static SyncLiteDBResult commitTransaction(Path dbPath, String txnHandle) throws SQLException {
+	public static SyncLiteDBResult commitTransaction(String dbName, String txnHandle) throws SQLException {
 		SyncLiteDBResult dbResult;
 		try {
 			JSONObject jsonRequest = new JSONObject();
-			jsonRequest.put("db-path", dbPath);
+			jsonRequest.put("db-name", dbName);
 			jsonRequest.put("txn-handle", txnHandle);
 			jsonRequest.put("sql", "commit");
 
@@ -275,16 +276,16 @@ public class SyncLiteDBClient {
 
 			dbResult = toResult(jsonRespose);
 		} catch (Exception e) {
-			throw new SQLException("Failed to commit transaction on DB : " + dbPath + " : " + e.getMessage(), e);
+			throw new SQLException("Failed to commit transaction on DB : " + dbName + " : " + e.getMessage(), e);
 		}
 		return dbResult;
 	}
 
-	public static SyncLiteDBResult rollbackTransaction(Path dbPath, String txnHandle) throws SQLException {
+	public static SyncLiteDBResult rollbackTransaction(String dbName, String txnHandle) throws SQLException {
 		SyncLiteDBResult dbResult;
 		try {
 			JSONObject jsonRequest = new JSONObject();
-			jsonRequest.put("db-path", dbPath);
+			jsonRequest.put("db-name", dbName);
 			jsonRequest.put("txn-handle", txnHandle);
 			jsonRequest.put("sql", "rollback");
 
@@ -292,20 +293,20 @@ public class SyncLiteDBClient {
 
 			dbResult = toResult(jsonRespose);
 		} catch (Exception e) {
-			throw new SQLException("Failed to rollback trasnaction on DB : " + dbPath + " : " + e.getMessage(), e);
+			throw new SQLException("Failed to rollback transaction on DB : " + dbName + " : " + e.getMessage(), e);
 		}
 		return dbResult;
 	}
 
-	public static SyncLiteDBResult executeSQL(Path dbPath, String txnHandle, String sql, JSONArray arguments) throws SQLException {
-                return executeSQL(dbPath, txnHandle, sql, arguments, null, null);
+	public static SyncLiteDBResult executeSQL(String dbName, String txnHandle, String sql, JSONArray arguments) throws SQLException {
+                return executeSQL(dbName, txnHandle, sql, arguments, null, null);
         }
 
-        public static SyncLiteDBResult executeSQL(Path dbPath, String txnHandle, String sql, JSONArray arguments, String dataFormat, Boolean includeMetadata) throws SQLException {
+        public static SyncLiteDBResult executeSQL(String dbName, String txnHandle, String sql, JSONArray arguments, String dataFormat, Boolean includeMetadata) throws SQLException {
                 SyncLiteDBResult dbResult;
                 try {
                         JSONObject jsonRequest = new JSONObject();
-                        jsonRequest.put("db-path", dbPath);
+                        jsonRequest.put("db-name", dbName);
                         jsonRequest.put("sql", sql);
                         if (txnHandle != null) {
                                 jsonRequest.put("txn-handle", txnHandle);
@@ -323,7 +324,7 @@ public class SyncLiteDBClient {
 
 			dbResult = toResult(jsonRespose);
 		} catch (Exception e) {
-			throw new SQLException("Failed to execute sql on DB : " + dbPath + " : " + e.getMessage(), e);
+			throw new SQLException("Failed to execute sql on DB : " + dbName + " : " + e.getMessage(), e);
 		}
 		return dbResult;
 	}
@@ -353,35 +354,32 @@ public class SyncLiteDBClient {
 		}
 	}
 
-	public static SyncLiteDBResult closeDB(Path dbPath) throws SQLException {
+	public static SyncLiteDBResult closeDB(String dbName) throws SQLException {
 		SyncLiteDBResult dbResult;
 		try {
 			JSONObject jsonRequest = new JSONObject();
-			jsonRequest.put("db-path", dbPath);
+			jsonRequest.put("db-name", dbName);
 			jsonRequest.put("sql", "close");
 
 			JSONObject jsonRespose = processRequest(jsonRequest);
 
 			dbResult = toResult(jsonRespose);
 		} catch (Exception e) {
-			throw new SQLException("Failed to close DB : " + dbPath + " : " + e.getMessage(), e);
+			throw new SQLException("Failed to close DB : " + dbName + " : " + e.getMessage(), e);
 		}
 		return dbResult;
 
 	}
 
-	public static void main(String[] args) throws IOException, SQLException {
+	public static void main(String[] args) throws SQLException {
 
-		//Initialize db directory
-		createDBDirs();
-
-		Path dbPath = dbDir.resolve("testJava.db");
+		String dbName = "testJava";
 
 		//Initialize DB
 		System.out.println("========================================================");
 		System.out.println("Excecuting initialize DB"); 
 		System.out.println("========================================================");
-		SyncLiteDBResult r = initializeDB(dbPath, "SQLITE", "testJava", null);
+		SyncLiteDBResult r = initializeDB(dbName, "SQLITE", null);
 		System.out.println("result : " + r.result);
 		System.out.println("message : " + r.message);
 
@@ -395,7 +393,7 @@ public class SyncLiteDBClient {
 		System.out.println("========================================================");
 		System.out.println("Excecuting begin transaction"); 
 		System.out.println("========================================================");
-		r = beginTransaction(dbPath);
+		r = beginTransaction(dbName);
 		System.out.println("result : " + r.result);
 		System.out.println("message : " + r.message);
 		System.out.println("txn-handle: " + r.txnHandle);
@@ -409,7 +407,7 @@ public class SyncLiteDBClient {
 		System.out.println("========================================================");
 		System.out.println("Excecuting create table"); 
 		System.out.println("========================================================");
-		r = executeSQL(dbPath, txnHandle, "create table if not exists t1(a int, b text)", null);
+		r = executeSQL(dbName, txnHandle, "create table if not exists t1(a int, b text)", null);
 		System.out.println("result : " + r.result);
 		System.out.println("message : " + r.message);
 		if (r.result == false) {
@@ -433,7 +431,7 @@ public class SyncLiteDBClient {
 		arguments.put(rec1);
 		arguments.put(rec2);
 
-		r = executeSQL(dbPath, txnHandle, "insert into t1 (a,b) values(?, ?)", arguments);
+		r = executeSQL(dbName, txnHandle, "insert into t1 (a,b) values(?, ?)", arguments);
 		System.out.println("result : " + r.result);
 		System.out.println("message : " + r.message);
 		if (r.result == false) {
@@ -445,7 +443,7 @@ public class SyncLiteDBClient {
 		System.out.println("========================================================");
 		System.out.println("Excecuting commit transaction"); 
 		System.out.println("========================================================");
-		r = commitTransaction(dbPath, txnHandle);
+		r = commitTransaction(dbName, txnHandle);
 		System.out.println("result : " + r.result);
 		System.out.println("message : " + r.message);
 		if (r.result == false) {
@@ -457,7 +455,7 @@ public class SyncLiteDBClient {
                 System.out.println("========================================================");
                 System.out.println("Excecuting select from table (JSON format)"); 
                 System.out.println("========================================================");
-                r = executeSQL(dbPath, null, "select a, b from t1", null);
+                r = executeSQL(dbName, null, "select a, b from t1", null);
                 System.out.println("result : " + r.result);
                 System.out.println("message : " + r.message);
 
@@ -492,7 +490,7 @@ public class SyncLiteDBClient {
                 System.out.println("========================================================");
                 System.out.println("Excecuting select from table (DB format)"); 
                 System.out.println("========================================================");
-                r = executeSQL(dbPath, null, "select a, b from t1", null, "DB", true);
+                r = executeSQL(dbName, null, "select a, b from t1", null, "DB", true);
                 System.out.println("result : " + r.result);
                 System.out.println("message : " + r.message);
 
@@ -532,7 +530,7 @@ public class SyncLiteDBClient {
 		System.out.println("========================================================");
 		System.out.println("Excecuting drop table"); 
 		System.out.println("========================================================");
-		r = executeSQL(dbPath, null, "drop table t1", null);
+		r = executeSQL(dbName, null, "drop table t1", null);
 		System.out.println("result : " + r.result);
 		System.out.println("message : " + r.message);
 
@@ -540,16 +538,11 @@ public class SyncLiteDBClient {
 		System.out.println("========================================================");
 		System.out.println("Excecuting close DB"); 
 		System.out.println("========================================================");
-		r = closeDB(dbPath);
+		r = closeDB(dbName);
 		System.out.println("result : " + r.result);
 		System.out.println("message : " + r.message);
 		System.out.println("========================================================");
 
-	}
-
-	private static void createDBDirs() throws IOException {
-		dbDir = Path.of(System.getProperty("user.home"), "synclite", "job1", "db");        	
-		Files.createDirectories(dbDir);
 	}
 
 }

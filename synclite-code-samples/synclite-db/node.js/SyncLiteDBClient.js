@@ -1,6 +1,4 @@
 const axios = require('axios');
-const path = require('path');
-const fs = require('fs').promises;
 const crypto = require('crypto');
 
 /*
@@ -16,12 +14,14 @@ npm install fs
 
 This source file implements following APIs to connect to SyncLiteDB:
 
-1. initializeDB : Initialize the given database/device of specified type (SQLITE, DUCKDB, DERBY, H2, HYPERSQL, SQLITE_APPENDER, DUCKDB_APPENDER, DERBY_APPENDER, H2_APPENDER, HYPERSQL_APPENDER, STREAMING) at the specified path. 
+1. initializeDB : Initialize the given database/device of specified type (SQLITE, DUCKDB, DERBY, H2, HYPERSQL, SQLITE_APPENDER, DUCKDB_APPENDER, DERBY_APPENDER, H2_APPENDER, HYPERSQL_APPENDER, STREAMING) with the specified db-name.
 2. beginTransaction: Begin a transaction on specified database, returning a transaction handle
 3. executeSQL: Execute specified SQL with (optional arguments for batch operations with prepared statements), on the specified database.
 4. commitTransction: Commit the transaction with given transaction handle
 5. rollbackTransaction: Rollback the transaction with given transaction handle
 6. closeDB: Close the given database.
+
+Applications send db-name (not db-path). SyncLite DB resolves the physical database path internally.
 
 You can copy these APIs in your application to get started with SyncLite DB. 
 
@@ -79,7 +79,6 @@ sql: drop table t1
 */
 
 const syncLiteDBAddress = 'http://localhost:5555';
-let dbDir;
 
 class SyncLiteDBResult {
   constructor() {
@@ -154,44 +153,43 @@ async function processRequest(jsonRequest) {
   }
 }
 
-async function initializeDB(dbPath, dbType, dbName, syncLiteLoggerConfigPath) {
+async function initializeDB(dbName, dbType, loggerOptions) {
   try {
     const jsonRequest = {
-      'db-path': dbPath,
       'db-type': dbType,
       'db-name': dbName,
       'sql': 'initialize',
     };
 
-    if (syncLiteLoggerConfigPath) {
-      jsonRequest['synclite-logger-config'] = syncLiteLoggerConfigPath;
+    if (loggerOptions) {
+      jsonRequest['synclite-logger-options'] = loggerOptions;
     }
 
     const jsonResponse = await processRequest(jsonRequest);
     return toDBResult(jsonResponse);
   } catch (error) {
-    throw new Error(`Failed to initialize DB: ${dbPath}: ${error.message}`);
+    throw new Error(`Failed to initialize DB: ${dbName}: ${error.message}`);
   }
 }
 
-async function beginTransaction(dbPath) {
+async function beginTransaction(dbName) {
   try {
     const jsonRequest = {
-      'db-path': dbPath,
+      'db-name': dbName,
       'sql': 'begin',
     };
 
     const jsonResponse = await processRequest(jsonRequest);
     return toDBResult(jsonResponse);
   } catch (error) {
-    throw new Error(`Failed to begin transaction on DB: ${dbPath}: ${error.message}`);
+    throw new Error(`Failed to begin transaction on DB: ${dbName}: ${error.message}`);
   }
 }
 
-async function commitTransaction(dbPath, txnHandle) {
+async function commitTransaction(dbName, txnHandle) {
   try {
     const jsonRequest = {
-      'db-path': dbPath,
+      'db-name': dbName,
       'txn-handle': txnHandle,
       'sql': 'commit',
     };
@@ -199,14 +197,14 @@ async function commitTransaction(dbPath, txnHandle) {
     const jsonResponse = await processRequest(jsonRequest);
     return toDBResult(jsonResponse);
   } catch (error) {
-    throw new Error(`Failed to commit transaction on DB: ${dbPath}: ${error.message}`);
+    throw new Error(`Failed to commit transaction on DB: ${dbName}: ${error.message}`);
   }
 }
 
-async function rollbackTransaction(dbPath, txnHandle) {
+async function rollbackTransaction(dbName, txnHandle) {
   try {
     const jsonRequest = {
-      'db-path': dbPath,
+      'db-name': dbName,
       'txn-handle': txnHandle,
       'sql': 'rollback',
     };
@@ -214,14 +212,14 @@ async function rollbackTransaction(dbPath, txnHandle) {
     const jsonResponse = await processRequest(jsonRequest);
     return toDBResult(jsonResponse);
   } catch (error) {
-    throw new Error(`Failed to rollback transaction on DB: ${dbPath}: ${error.message}`);
+    throw new Error(`Failed to rollback transaction on DB: ${dbName}: ${error.message}`);
   }
 }
 
-async function executeSQL(dbPath, txnHandle, sql, args = null, dataFormat = null, includeMetadata = null) {
+async function executeSQL(dbName, txnHandle, sql, args = null, dataFormat = null, includeMetadata = null) {
   try {
     const jsonRequest = {
-      'db-path': dbPath,
+      'db-name': dbName,
       'sql': sql,
     };
 
@@ -244,7 +242,7 @@ async function executeSQL(dbPath, txnHandle, sql, args = null, dataFormat = null
     const jsonResponse = await processRequest(jsonRequest);
     return toDBResult(jsonResponse);
   } catch (error) {
-    throw new Error(`Failed to execute SQL on DB: ${dbPath}: ${error.message}`);
+    throw new Error(`Failed to execute SQL on DB: ${dbName}: ${error.message}`);
   }
 }
 
@@ -274,40 +272,29 @@ async function next(resultsetHandle, resultsetPaginationSize = null, dataFormat 
   }
 }
 
-async function closeDB(dbPath) {
+async function closeDB(dbName) {
   try {
     const jsonRequest = {
-      'db-path': dbPath,
+      'db-name': dbName,
       'sql': 'close',
     };
 
     const jsonResponse = await processRequest(jsonRequest);
     return toDBResult(jsonResponse);
   } catch (error) {
-    throw new Error(`Failed to close DB: ${dbPath}: ${error.message}`);
-  }
-}
-
-async function createDBDirs() {
-  try {
-    const userHome = process.env.HOME || process.env.USERPROFILE;
-    dbDir = path.join(userHome, 'synclite', 'job1', 'db');
-    await fs.mkdir(dbDir, { recursive: true });
-  } catch (error) {
-    throw new Error(`Failed to create DB directories: ${error.message}`);
+    throw new Error(`Failed to close DB: ${dbName}: ${error.message}`);
   }
 }
 
 (async () => {
   try {
-    await createDBDirs();
-    const dbPath = path.join(dbDir, 'testNodeJS.db');
+    const dbName = 'testNodeJS';
 
     // Initialize DB
     console.log('========================================================');
     console.log('Executing initialize DB');
     console.log('========================================================');
-    let r = await initializeDB(dbPath, 'SQLITE', 'testNodeJS', null);
+    let r = await initializeDB(dbName, 'SQLITE');
     console.log('result :', r.result);
     console.log('message :', r.message);
     if (!r.result) process.exit(1);
@@ -316,7 +303,7 @@ async function createDBDirs() {
     console.log('========================================================');
     console.log('Executing begin transaction');
     console.log('========================================================');
-    r = await beginTransaction(dbPath);
+    r = await beginTransaction(dbName);
     console.log('result :', r.result);
     console.log('message :', r.message);
     const txnHandle = r.txnHandle;
@@ -327,7 +314,7 @@ async function createDBDirs() {
     console.log('========================================================');
     console.log('Executing create table');
     console.log('========================================================');
-    r = await executeSQL(dbPath, txnHandle, 'CREATE TABLE IF NOT EXISTS t1(a INT, b TEXT)');
+    r = await executeSQL(dbName, txnHandle, 'CREATE TABLE IF NOT EXISTS t1(a INT, b TEXT)');
     console.log('result :', r.result);
     console.log('message :', r.message);
     if (!r.result) process.exit(1);
@@ -340,7 +327,7 @@ async function createDBDirs() {
       [1, 'one'],
       [2, 'two'],
     ];
-    r = await executeSQL(dbPath, txnHandle, 'INSERT INTO t1 (a, b) VALUES (?, ?)', insertArgs);
+    r = await executeSQL(dbName, txnHandle, 'INSERT INTO t1 (a, b) VALUES (?, ?)', insertArgs);
     console.log('result :', r.result);
     console.log('message :', r.message);
     if (!r.result) process.exit(1);
@@ -349,7 +336,7 @@ async function createDBDirs() {
     console.log('========================================================');
     console.log('Executing commit transaction');
     console.log('========================================================');
-    r = await commitTransaction(dbPath, txnHandle);
+    r = await commitTransaction(dbName, txnHandle);
     console.log('result :', r.result);
     console.log('message :', r.message);
     if (!r.result) process.exit(1);
@@ -358,7 +345,7 @@ async function createDBDirs() {
     console.log('========================================================');
     console.log('Executing select from table (JSON format)');
     console.log('========================================================');
-    r = await executeSQL(dbPath, null, 'SELECT a, b FROM t1');
+    r = await executeSQL(dbName, null, 'SELECT a, b FROM t1');
     console.log('result :', r.result);
     console.log('message :', r.message);
     if (r.columnMetadata) {
@@ -382,7 +369,7 @@ async function createDBDirs() {
     console.log('========================================================');
     console.log('Executing select from table (DB format)');
     console.log('========================================================');
-    r = await executeSQL(dbPath, null, 'SELECT a, b FROM t1', null, 'DB', true);
+    r = await executeSQL(dbName, null, 'SELECT a, b FROM t1', null, 'DB', true);
     console.log('result :', r.result);
     console.log('message :', r.message);
     if (r.columnMetadata) {
@@ -406,7 +393,7 @@ async function createDBDirs() {
     console.log('========================================================');
     console.log('Executing drop table');
     console.log('========================================================');
-    r = await executeSQL(dbPath, null, 'DROP TABLE t1');
+    r = await executeSQL(dbName, null, 'DROP TABLE t1');
     console.log('result :', r.result);
     console.log('message :', r.message);
 
@@ -414,7 +401,7 @@ async function createDBDirs() {
     console.log('========================================================');
     console.log('Executing close DB');
     console.log('========================================================');
-    r = await closeDB(dbPath);
+    r = await closeDB(dbName);
     console.log('result :', r.result);
     console.log('message :', r.message);
   } catch (error) {

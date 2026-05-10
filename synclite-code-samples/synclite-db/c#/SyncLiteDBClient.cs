@@ -17,12 +17,14 @@ Install packge Newtonsoft.Json : Install-Package Newtonsoft.Json
 
 This source file implements following APIs to connect to SyncLiteDB:
 
-1. initializeDB : Initialize the given database/device of specified type (SQLITE, DUCKDB, DERBY, H2, HYPERSQL, SQLITE_APPENDER, DUCKDB_APPENDER, DERBY_APPENDER, H2_APPENDER, HYPERSQL_APPENDER, STREAMING) at the specified path. 
+1. initializeDB : Initialize the given database/device of specified type (SQLITE, DUCKDB, DERBY, H2, HYPERSQL, SQLITE_APPENDER, DUCKDB_APPENDER, DERBY_APPENDER, H2_APPENDER, HYPERSQL_APPENDER, STREAMING) with the specified db-name.
 2. beginTransaction: Begin a transaction on specified database, returning a transaction handle
 3. executeSQL: Execute specified SQL with (optional arguments for batch operations with prepared statements), on the specified database.
 4. commitTransction: Commit the transaction with given transaction handle
 5. rollbackTransaction: Rollback the transaction with given transaction handle
 6. closeDB: Close the given database.
+
+Applications send db-name (not db-path). SyncLite DB resolves the physical database path internally.
 
 You can copy these APIs in your application to get started with SyncLite DB. 
 
@@ -95,7 +97,6 @@ namespace SyncLite
     public class SyncLiteDBClient
     {
         private static string syncLiteDBAddress = "http://localhost:5555";
-        private static string dbDir;
 
         private static SyncLiteDBResult ToDBResult(JObject jsonResponse)
         {
@@ -209,21 +210,20 @@ namespace SyncLite
             return jsonResponse;
         }
 
-        public static SyncLiteDBResult InitializeDB(string dbPath, string dbType, string dbName, string syncLiteLoggerConfigPath = null)
+        public static SyncLiteDBResult InitializeDB(string dbName, string dbType, JObject loggerOptions = null)
         {
             try
             {
                 JObject jsonRequest = new JObject
                 {
-                    { "db-path", dbPath },
                     { "db-type", dbType },
                     { "db-name", dbName },
                     { "sql", "initialize" }
                 };
 
-                if (!string.IsNullOrEmpty(syncLiteLoggerConfigPath))
+                if (loggerOptions != null)
                 {
-                    jsonRequest["synclite-logger-config"] = syncLiteLoggerConfigPath;
+                    jsonRequest["synclite-logger-options"] = loggerOptions;
                 }
 
                 JObject jsonResponse = ProcessRequest(jsonRequest);
@@ -232,17 +232,17 @@ namespace SyncLite
             }
             catch (Exception e)
             {
-                throw new Exception("Failed to initialize DB: " + dbPath + " : " + e.Message, e);
+                throw new Exception("Failed to initialize DB: " + dbName + " : " + e.Message, e);
             }
         }
 
-        public static SyncLiteDBResult BeginTransaction(string dbPath)
+        public static SyncLiteDBResult BeginTransaction(string dbName)
         {
             try
             {
                 JObject jsonRequest = new JObject
                 {
-                    { "db-path", dbPath },
+                    { "db-name", dbName },
                     { "sql", "begin" }
                 };
 
@@ -252,17 +252,17 @@ namespace SyncLite
             }
             catch (Exception e)
             {
-                throw new Exception("Failed to begin transaction on DB: " + dbPath + " : " + e.Message, e);
+                throw new Exception("Failed to begin transaction on DB: " + dbName + " : " + e.Message, e);
             }
         }
 
-        public static SyncLiteDBResult CommitTransaction(string dbPath, string txnHandle)
+        public static SyncLiteDBResult CommitTransaction(string dbName, string txnHandle)
         {
             try
             {
                 JObject jsonRequest = new JObject
                 {
-                    { "db-path", dbPath },
+                    { "db-name", dbName },
                     { "txn-handle", txnHandle },
                     { "sql", "commit" }
                 };
@@ -273,17 +273,17 @@ namespace SyncLite
             }
             catch (Exception e)
             {
-                throw new Exception("Failed to commit transaction on DB: " + dbPath + " : " + e.Message, e);
+                throw new Exception("Failed to commit transaction on DB: " + dbName + " : " + e.Message, e);
             }
         }
 
-	public static SyncLiteDBResult RollbackTransaction(string dbPath, string txnHandle)
+	public static SyncLiteDBResult RollbackTransaction(string dbName, string txnHandle)
         {
             try
             {
                 JObject jsonRequest = new JObject
                 {
-                    { "db-path", dbPath },
+                    { "db-name", dbName },
                     { "txn-handle", txnHandle },
                     { "sql", "rollback" }
                 };
@@ -294,18 +294,18 @@ namespace SyncLite
             }
             catch (Exception e)
             {
-                throw new Exception("Failed to commit transaction on DB: " + dbPath + " : " + e.Message, e);
+                throw new Exception("Failed to rollback transaction on DB: " + dbName + " : " + e.Message, e);
             }
         }
 
 
-        public static SyncLiteDBResult ExecuteSQL(string dbPath, string txnHandle, string sql, JArray arguments = null, string dataFormat = null, bool? includeMetadata = null)
+        public static SyncLiteDBResult ExecuteSQL(string dbName, string txnHandle, string sql, JArray arguments = null, string dataFormat = null, bool? includeMetadata = null)
         {
             try
             {
                 JObject jsonRequest = new JObject
                 {
-                    { "db-path", dbPath },
+                    { "db-name", dbName },
                     { "sql", sql }
                 };
 
@@ -335,7 +335,7 @@ namespace SyncLite
             }
             catch (Exception e)
             {
-                throw new Exception("Failed to execute SQL on DB: " + dbPath + " : " + e.Message, e);
+                throw new Exception("Failed to execute SQL on DB: " + dbName + " : " + e.Message, e);
             }
         }
 
@@ -373,13 +373,13 @@ namespace SyncLite
             }
         }
 
-        public static SyncLiteDBResult CloseDB(string dbPath)
+        public static SyncLiteDBResult CloseDB(string dbName)
         {
             try
             {
                 JObject jsonRequest = new JObject
                 {
-                    { "db-path", dbPath },
+                    { "db-name", dbName },
                     { "sql", "close" }
                 };
 
@@ -388,22 +388,19 @@ namespace SyncLite
             }
             catch (Exception e)
             {
-                throw new Exception("Failed to close DB: " + dbPath + " : " + e.Message, e);
+                throw new Exception("Failed to close DB: " + dbName + " : " + e.Message, e);
             }
         }
 
         public static void Main(string[] args)
         {
-            // Initialize db directory
-            CreateDBDirs();
-
-            string dbPath = Path.Combine(dbDir, "testCSharp.db");
+            string dbName = "testCSharp";
 
             // Initialize DB
             Console.WriteLine("========================================================");
             Console.WriteLine("Executing initialize DB");
             Console.WriteLine("========================================================");
-            SyncLiteDBResult r = InitializeDB(dbPath, "SQLITE", "testCSharp");
+            SyncLiteDBResult r = InitializeDB(dbName, "SQLITE");
             Console.WriteLine("Result: " + r.Result);
             Console.WriteLine("Message: " + r.Message);
 
@@ -416,7 +413,7 @@ namespace SyncLite
             Console.WriteLine("========================================================");
             Console.WriteLine("Executing begin transaction");
             Console.WriteLine("========================================================");
-            r = BeginTransaction(dbPath);
+            r = BeginTransaction(dbName);
             Console.WriteLine("Result: " + r.Result);
             Console.WriteLine("Message: " + r.Message);
             Console.WriteLine("txn-handle: " + r.TxnHandle);
@@ -431,7 +428,7 @@ namespace SyncLite
             Console.WriteLine("========================================================");
             Console.WriteLine("Executing create table");
             Console.WriteLine("========================================================");
-            r = ExecuteSQL(dbPath, txnHandle, "create table if not exists t1(a int, b text)");
+            r = ExecuteSQL(dbName, txnHandle, "create table if not exists t1(a int, b text)");
             Console.WriteLine("Result: " + r.Result);
             Console.WriteLine("Message: " + r.Message);
 
@@ -450,7 +447,7 @@ namespace SyncLite
                 new JArray { 2, "two" }
             };
 
-            r = ExecuteSQL(dbPath, txnHandle, "insert into t1 (a, b) values (?, ?)", arguments);
+            r = ExecuteSQL(dbName, txnHandle, "insert into t1 (a, b) values (?, ?)", arguments);
             Console.WriteLine("Result: " + r.Result);
             Console.WriteLine("Message: " + r.Message);
 
@@ -463,7 +460,7 @@ namespace SyncLite
             Console.WriteLine("========================================================");
             Console.WriteLine("Executing commit transaction");
             Console.WriteLine("========================================================");
-            r = CommitTransaction(dbPath, txnHandle);
+            r = CommitTransaction(dbName, txnHandle);
             Console.WriteLine("Result: " + r.Result);
             Console.WriteLine("Message: " + r.Message);
 
@@ -476,7 +473,7 @@ namespace SyncLite
             Console.WriteLine("========================================================");
             Console.WriteLine("Executing select from table (JSON format)");
             Console.WriteLine("========================================================");
-            r = ExecuteSQL(dbPath, null, "select a, b from t1");
+            r = ExecuteSQL(dbName, null, "select a, b from t1");
             Console.WriteLine("Result: " + r.Result);
             Console.WriteLine("Message: " + r.Message);
 
@@ -511,7 +508,7 @@ namespace SyncLite
             Console.WriteLine("========================================================");
             Console.WriteLine("Executing select from table (DB format)");
             Console.WriteLine("========================================================");
-            r = ExecuteSQL(dbPath, null, "select a, b from t1", null, "DB", true);
+            r = ExecuteSQL(dbName, null, "select a, b from t1", null, "DB", true);
             Console.WriteLine("Result: " + r.Result);
             Console.WriteLine("Message: " + r.Message);
 
@@ -550,22 +547,17 @@ namespace SyncLite
             Console.WriteLine("========================================================");
             Console.WriteLine("Executing drop table");
             Console.WriteLine("========================================================");
-            r = ExecuteSQL(dbPath, null, "drop table t1");
+            r = ExecuteSQL(dbName, null, "drop table t1");
             Console.WriteLine("Result: " + r.Result);
             Console.WriteLine("Message: " + r.Message);
 
             Console.WriteLine("========================================================");
             Console.WriteLine("Executing close DB");
             Console.WriteLine("========================================================");
-            r = CloseDB(dbPath);
+            r = CloseDB(dbName);
             Console.WriteLine("Result: " + r.Result);
             Console.WriteLine("Message: " + r.Message);
         }
 
-        private static void CreateDBDirs()
-        {
-            dbDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "synclite", "job1", "db");
-            Directory.CreateDirectory(dbDir);
-        }
     }
 }

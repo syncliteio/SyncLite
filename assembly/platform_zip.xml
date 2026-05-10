@@ -62,16 +62,13 @@
 			<outputDirectory>tools/synclite-client</outputDirectory>
 		</fileSet>
 		<fileSet>
-			<directory>${project.basedir}/synclite-db/db/target
+			<directory>${project.basedir}/synclite-db/root/web/target
 			</directory>
 			<includes>
-				<include>*.jar</include>
-				<include>synclite-db.*</include>
-				<include>synclite_logger.conf</include>
-				<include>synclite_db.conf</include>
+				<include>*.war</include>
 			</includes>
 			<fileMode>755</fileMode>
-			<directoryMode>755</directoryMode>			
+			<directoryMode>755</directoryMode>
 			<outputDirectory>tools/synclite-db</outputDirectory>
 		</fileSet>
 		<fileSet>
@@ -109,11 +106,11 @@
 			<includes>
 				<include>LICENSE</include>
 			</includes>	
-			<outputDirectory>license</outputDirectory>
+			<outputDirectory>licenses</outputDirectory>
 		</fileSet>
 		<fileSet>
 			<directory>${project.basedir}/synclite-consolidator/root/core/target/generated-resources</directory>
-			<outputDirectory>license/third-party-software</outputDirectory>
+			<outputDirectory>licenses/third-party-software</outputDirectory>
 		</fileSet>
 		<fileSet>
 			<directory>${project.basedir}/bin</directory>

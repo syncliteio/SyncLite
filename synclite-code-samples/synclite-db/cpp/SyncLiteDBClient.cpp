@@ -11,12 +11,10 @@
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
 #include <openssl/sha.h>
-#include <filesystem>
 #include <stdexcept>
 #include <cstdlib>
 
 using json = nlohmann::json;
-namespace fs = std::filesystem;
 
 /*
 * ===========================================================
@@ -35,12 +33,14 @@ cd vcpkg
 
 This source file implements following APIs to connect to SyncLiteDB:
 
-1. initializeDB : Initialize the given database/device of specified type (SQLITE, DUCKDB, DERBY, H2, HYPERSQL, SQLITE_APPENDER, DUCKDB_APPENDER, DERBY_APPENDER, H2_APPENDER, HYPERSQL_APPENDER, STREAMING) at the specified path. 
+1. initializeDB : Initialize the given database/device of specified type (SQLITE, DUCKDB, DERBY, H2, HYPERSQL, SQLITE_APPENDER, DUCKDB_APPENDER, DERBY_APPENDER, H2_APPENDER, HYPERSQL_APPENDER, STREAMING) with the specified db-name.
 2. beginTransaction: Begin a transaction on specified database, returning a transaction handle
 3. executeSQL: Execute specified SQL with (optional arguments for batch operations with prepared statements), on the specified database.
 4. commitTransction: Commit the transaction with given transaction handle
 5. rollbackTransaction: Rollback the transaction with given transaction handle
 6. closeDB: Close the given database.
+
+Applications send db-name (not db-path). SyncLite DB resolves the physical database path internally.
 
 You can copy these APIs in your application to get started with SyncLite DB. 
 
@@ -132,7 +132,6 @@ static SyncLiteDBResult toDBResult(const json& jsonResponse) {
 
 // Global variables
 std::string syncLiteDBAddress = "http://localhost:5555";
-fs::path dbDir;
 
 // Helper function to perform HTTP POST requests
 size_t WriteCallback(void* contents, size_t size, size_t nmemb, void* userp) {
@@ -278,14 +277,13 @@ json processRequest(const json& jsonRequest) {
     }
 }
 
-SyncLiteDBResult initializeDB(const fs::path& dbPath, const std::string& dbType, const std::string& dbName, const std::string& syncLiteLoggerConfigPath) {
+SyncLiteDBResult initializeDB(const std::string& dbName, const std::string& dbType, const json& loggerOptions = json()) {
     try {
         json jsonRequest;
-        jsonRequest["db-path"] = dbPath.string();
         jsonRequest["db-type"] = dbType;
         jsonRequest["db-name"] = dbName;
-        if (!syncLiteLoggerConfigPath.empty()) {
-            jsonRequest["synclite-logger-config"] = syncLiteLoggerConfigPath;
+        if (!loggerOptions.empty()) {
+            jsonRequest["synclite-logger-options"] = loggerOptions;
         }
         jsonRequest["sql"] = "initialize";
 
@@ -294,14 +292,14 @@ SyncLiteDBResult initializeDB(const fs::path& dbPath, const std::string& dbType,
         return toDBResult(jsonResponse);
     }
     catch (const std::exception& e) {
-        throw std::runtime_error("Failed to initialize DB: " + dbPath.string() + " : " + e.what());
+        throw std::runtime_error("Failed to initialize DB: " + dbName + " : " + e.what());
     }
 }
 
-SyncLiteDBResult beginTransaction(const fs::path& dbPath) {
+SyncLiteDBResult beginTransaction(const std::string& dbName) {
     try {
         json jsonRequest;
-        jsonRequest["db-path"] = dbPath.string();
+        jsonRequest["db-name"] = dbName;
         jsonRequest["sql"] = "begin";
 
         json jsonResponse = processRequest(jsonRequest);
@@ -309,14 +307,14 @@ SyncLiteDBResult beginTransaction(const fs::path& dbPath) {
         return toDBResult(jsonResponse);
     }
     catch (const std::exception& e) {
-        throw std::runtime_error("Failed to begin transaction on DB: " + dbPath.string() + " : " + e.what());
+        throw std::runtime_error("Failed to begin transaction on DB: " + dbName + " : " + e.what());
     }
 }
 
-SyncLiteDBResult commitTransaction(const fs::path& dbPath, const std::string& txnHandle) {
+SyncLiteDBResult commitTransaction(const std::string& dbName, const std::string& txnHandle) {
     try {
         json jsonRequest;
-        jsonRequest["db-path"] = dbPath.string();
+        jsonRequest["db-name"] = dbName;
         jsonRequest["txn-handle"] = txnHandle;
         jsonRequest["sql"] = "commit";
 
@@ -325,14 +323,14 @@ SyncLiteDBResult commitTransaction(const fs::path& dbPath, const std::string& tx
         return toDBResult(jsonResponse);
     }
     catch (const std::exception& e) {
-        throw std::runtime_error("Failed to commit transaction on DB: " + dbPath.string() + " : " + e.what());
+        throw std::runtime_error("Failed to commit transaction on DB: " + dbName + " : " + e.what());
     }
 }
 
-SyncLiteDBResult rollbackTransaction(const fs::path& dbPath, const std::string& txnHandle) {
+SyncLiteDBResult rollbackTransaction(const std::string& dbName, const std::string& txnHandle) {
     try {
         json jsonRequest;
-        jsonRequest["db-path"] = dbPath.string();
+        jsonRequest["db-name"] = dbName;
         jsonRequest["txn-handle"] = txnHandle;
         jsonRequest["sql"] = "rollback";
 
@@ -341,14 +339,14 @@ SyncLiteDBResult rollbackTransaction(const fs::path& dbPath, const std::string& 
         return toDBResult(jsonResponse);
     }
     catch (const std::exception& e) {
-        throw std::runtime_error("Failed to rollback transaction on DB: " + dbPath.string() + " : " + e.what());
+        throw std::runtime_error("Failed to rollback transaction on DB: " + dbName + " : " + e.what());
     }
 }
 
-SyncLiteDBResult executeSQL(const fs::path& dbPath, const std::string& txnHandle, const std::string& sql, const json& arguments, const std::string& dataFormat, bool includeMetadata) {
+SyncLiteDBResult executeSQL(const std::string& dbName, const std::string& txnHandle, const std::string& sql, const json& arguments, const std::string& dataFormat, bool includeMetadata) {
     try {
         json jsonRequest;
-        jsonRequest["db-path"] = dbPath.string();
+        jsonRequest["db-name"] = dbName;
         jsonRequest["sql"] = sql;
         if (!txnHandle.empty()) {
             jsonRequest["txn-handle"] = txnHandle;
@@ -366,12 +364,12 @@ SyncLiteDBResult executeSQL(const fs::path& dbPath, const std::string& txnHandle
         return toDBResult(jsonResponse);
     }
     catch (const std::exception& e) {
-        throw std::runtime_error("Failed to execute SQL on DB: " + dbPath.string() + " : " + e.what());
+        throw std::runtime_error("Failed to execute SQL on DB: " + dbName + " : " + e.what());
     }
 }
 
-SyncLiteDBResult executeSQL(const fs::path& dbPath, const std::string& txnHandle, const std::string& sql, const json& arguments) {
-    return executeSQL(dbPath, txnHandle, sql, arguments, "", true);
+SyncLiteDBResult executeSQL(const std::string& dbName, const std::string& txnHandle, const std::string& sql, const json& arguments) {
+    return executeSQL(dbName, txnHandle, sql, arguments, "", true);
 }
 
 SyncLiteDBResult next(const std::string& resultsetHandle, int resultsetPaginationSize, const std::string& dataFormat, bool includeMetadata) {
@@ -399,10 +397,10 @@ SyncLiteDBResult next(const std::string& resultsetHandle, int resultsetPaginatio
     return next(resultsetHandle, resultsetPaginationSize, "", true);
 }
 
-SyncLiteDBResult closeDB(const fs::path& dbPath) {
+SyncLiteDBResult closeDB(const std::string& dbName) {
     try {
         json jsonRequest;
-        jsonRequest["db-path"] = dbPath.string();
+        jsonRequest["db-name"] = dbName;
         jsonRequest["sql"] = "close";
 
         json jsonResponse = processRequest(jsonRequest);
@@ -410,44 +408,19 @@ SyncLiteDBResult closeDB(const fs::path& dbPath) {
         return toDBResult(jsonResponse);
     }
     catch (const std::exception& e) {
-        throw std::runtime_error("Failed to close DB: " + dbPath.string() + " : " + e.what());
+        throw std::runtime_error("Failed to close DB: " + dbName + " : " + e.what());
     }
-}
-
-std::string getHomeDirectory() {
-    char* homeDir = nullptr;
-    size_t len = 0;
-
-    // Use _dupenv_s to safely get the HOME environment variable
-    _dupenv_s(&homeDir, &len, "USERPROFILE");
-
-    std::string result;
-    if (homeDir != nullptr) {
-        result = std::string(homeDir);
-        free(homeDir); // Free the memory allocated by _dupenv_s
-    }
-    else {
-        throw std::runtime_error("Failed to get HOME environment variable");
-    }
-
-    return result;
-}
-
-void createDBDirs() {
-    dbDir = fs::path(getHomeDirectory()) / "synclite" / "job1" / "db";
-    fs::create_directories(dbDir);
 }
 
 int main() {
     try {
-        createDBDirs();
-        fs::path dbPath = dbDir / "testCpp.db";
+        std::string dbName = "testCpp";
 
         // Initialize DB
         std::cout << "========================================================\n";
         std::cout << "Executing initialize DB\n";
         std::cout << "========================================================\n";
-        SyncLiteDBResult r = initializeDB(dbPath, "SQLITE", "testCpp", "");
+        SyncLiteDBResult r = initializeDB(dbName, "SQLITE");
         std::cout << "result: " << r.result << "\n";
         std::cout << "message: " << r.message << "\n";
         if (!r.result) {
@@ -458,7 +431,7 @@ int main() {
         std::cout << "========================================================\n";
         std::cout << "Executing begin transaction\n";
         std::cout << "========================================================\n";
-        r = beginTransaction(dbPath);
+        r = beginTransaction(dbName);
         std::string txn_handle = r.txnHandle;
         std::cout << "result: " << r.result << "\n";
         std::cout << "message: " << r.message << "\n";
@@ -471,7 +444,7 @@ int main() {
         std::cout << "========================================================\n";
         std::cout << "Executing create table\n";
         std::cout << "========================================================\n";
-        r = executeSQL(dbPath, txn_handle, "create table if not exists t1(a int, b text)", {});
+        r = executeSQL(dbName, txn_handle, "create table if not exists t1(a int, b text)", {});
         std::cout << "result: " << r.result << "\n";
         std::cout << "message: " << r.message << "\n";
         if (!r.result) {
@@ -483,7 +456,7 @@ int main() {
         std::cout << "Executing insert into table\n";
         std::cout << "========================================================\n";
         json arguments = json::array({ {1, "one"}, {2, "two"} });
-        r = executeSQL(dbPath, txn_handle, "insert into t1 (a, b) values(?, ?)", arguments);
+        r = executeSQL(dbName, txn_handle, "insert into t1 (a, b) values(?, ?)", arguments);
         std::cout << "result: " << r.result << "\n";
         std::cout << "message: " << r.message << "\n";
         if (!r.result) {
@@ -494,7 +467,7 @@ int main() {
         std::cout << "========================================================\n";
         std::cout << "Executing commit transaction\n";
         std::cout << "========================================================\n";
-        r = commitTransaction(dbPath, txn_handle);
+        r = commitTransaction(dbName, txn_handle);
         std::cout << "result: " << r.result << "\n";
         std::cout << "message: " << r.message << "\n";
         if (!r.result) {
@@ -505,7 +478,7 @@ int main() {
         std::cout << "========================================================\n";
         std::cout << "Executing select from table (JSON format)\n";
         std::cout << "========================================================\n";
-        r = executeSQL(dbPath, "", "select * from t1", {});
+        r = executeSQL(dbName, "", "select * from t1", {});
         std::cout << "result: " << r.result << "\n";
         std::cout << "message: " << r.message << "\n";
         if (!r.result) {
@@ -544,7 +517,7 @@ int main() {
         std::cout << "========================================================\n";
         std::cout << "Executing select from table (DB format)\n";
         std::cout << "========================================================\n";
-        r = executeSQL(dbPath, "", "select * from t1", {}, "DB", true);
+        r = executeSQL(dbName, "", "select * from t1", {}, "DB", true);
         std::cout << "result: " << r.result << "\n";
         std::cout << "message: " << r.message << "\n";
         if (!r.columnMetadata.is_null() && r.columnMetadata.is_array()) {
@@ -586,7 +559,7 @@ int main() {
         std::cout << "========================================================\n";
         std::cout << "Executing close DB\n";
         std::cout << "========================================================\n";
-        r = closeDB(dbPath);
+        r = closeDB(dbName);
         std::cout << "result: " << r.result << "\n";
         std::cout << "message: " << r.message << "\n";
         if (!r.result) {

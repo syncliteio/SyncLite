@@ -1,7 +1,6 @@
 require 'net/http'
 require 'json'
 require 'uri'
-require 'fileutils'
 require 'openssl'
 require 'base64'
 require 'securerandom'
@@ -14,12 +13,14 @@ require 'securerandom'
 
 This source file implements following APIs to connect to SyncLiteDB:
 
-1. initializeDB : Initialize the given database/device of specified type (SQLITE, DUCKDB, DERBY, H2, HYPERSQL, SQLITE_APPENDER, DUCKDB_APPENDER, DERBY_APPENDER, H2_APPENDER, HYPERSQL_APPENDER, STREAMING) at the specified path. 
+1. initializeDB : Initialize the given database/device of specified type (SQLITE, DUCKDB, DERBY, H2, HYPERSQL, SQLITE_APPENDER, DUCKDB_APPENDER, DERBY_APPENDER, H2_APPENDER, HYPERSQL_APPENDER, STREAMING) with the specified db-name.
 2. beginTransaction: Begin a transaction on specified database, returning a transaction handle
 3. executeSQL: Execute specified SQL with (optional arguments for batch operations with prepared statements), on the specified database.
 4. commitTransction: Commit the transaction with given transaction handle
 5. rollbackTransaction: Rollback the transaction with given transaction handle
 6. closeDB: Close the given database.
+
+Applications send db-name (not db-path). SyncLite DB resolves the physical database path internally.
 
 You can copy these APIs in your application to get started with SyncLite DB. 
 
@@ -86,7 +87,6 @@ end
 
 class SyncLiteDBClient
   SYNC_LITE_DB_ADDRESS = 'http://localhost:5555'
-  DB_DIR = File.join(Dir.home, 'synclite', 'job1', 'db')
 
   def self.process_request(json_request)
     uri = URI(SYNC_LITE_DB_ADDRESS)
@@ -143,23 +143,22 @@ class SyncLiteDBClient
     result
   end
 
-  def self.initialize_db(db_path, db_type, db_name, sync_lite_logger_config_path = nil)
+  def self.initialize_db(db_name, db_type, logger_options = nil)
     json_request = {
-      'db-path' => db_path.to_s,
       'db-type' => db_type,
       'db-name' => db_name,
       'sql' => 'initialize'
     }
 
-	json_request['synclite-logger-config'] = sync_lite_logger_config_path.to_s unless sync_lite_logger_config_path.nil?
+	json_request['synclite-logger-options'] = logger_options unless logger_options.nil?
 
     json_response = process_request(json_request)
     to_db_result(json_response)
   end
 
-  def self.begin_transaction(db_path)
+  def self.begin_transaction(db_name)
     json_request = {
-      'db-path' => db_path.to_s,
+      'db-name' => db_name,
       'sql' => 'begin'
     }
 
@@ -167,9 +166,9 @@ class SyncLiteDBClient
     to_db_result(json_response)
   end
 
-  def self.commit_transaction(db_path, txn_handle)
+  def self.commit_transaction(db_name, txn_handle)
     json_request = {
-      'db-path' => db_path.to_s,
+      'db-name' => db_name,
       'txn-handle' => txn_handle,
       'sql' => 'commit'
     }
@@ -178,9 +177,9 @@ class SyncLiteDBClient
     to_db_result(json_response)
   end
 
-  def self.rollback_transaction(db_path, txn_handle)
+  def self.rollback_transaction(db_name, txn_handle)
     json_request = {
-      'db-path' => db_path.to_s,
+      'db-name' => db_name,
       'txn-handle' => txn_handle,
       'sql' => 'rollback'
     }
@@ -189,9 +188,9 @@ class SyncLiteDBClient
     to_db_result(json_response)
   end
 
-  def self.execute_sql(db_path, txn_handle, sql, arguments = nil, data_format: nil, include_metadata: nil)
+  def self.execute_sql(db_name, txn_handle, sql, arguments = nil, data_format: nil, include_metadata: nil)
     json_request = {
-      'db-path' => db_path.to_s,
+      'db-name' => db_name,
       'sql' => sql,
       'arguments' => arguments
     }.compact
@@ -217,9 +216,9 @@ class SyncLiteDBClient
     to_db_result(json_response)
   end
 
-  def self.close_db(db_path)
+  def self.close_db(db_name)
     json_request = {
-      'db-path' => db_path.to_s,
+      'db-name' => db_name,
       'sql' => 'close'
     }
 
@@ -227,25 +226,20 @@ class SyncLiteDBClient
     to_db_result(json_response)
   end
 
-  def self.create_db_dirs
-    FileUtils.mkdir_p(DB_DIR)
-  end
-
   def self.run
-    create_db_dirs
-    db_path = File.join(DB_DIR, 'testRuby.db')
+    db_name = 'testRuby'
 
     puts "========================================================"
     puts "Executing initialize DB"
     puts "========================================================"
-    r = initialize_db(db_path, 'SQLITE', 'testRuby')
+    r = initialize_db(db_name, 'SQLITE')
     puts "result: #{r.result}, message: #{r.message}"
     exit(1) unless r.result
 
     puts "========================================================"
     puts "Executing begin transaction"
     puts "========================================================"
-    r = begin_transaction(db_path)
+    r = begin_transaction(db_name)
     puts "result: #{r.result}, message: #{r.message}, txn-handle: #{r.txn_handle}"
     txn_handle = r.txn_handle
     exit(1) unless r.result
@@ -253,7 +247,7 @@ class SyncLiteDBClient
     puts "========================================================"
     puts "Executing create table"
     puts "========================================================"
-    r = execute_sql(db_path, txn_handle, 'create table if not exists t1(a int, b text)')
+    r = execute_sql(db_name, txn_handle, 'create table if not exists t1(a int, b text)')
     puts "result: #{r.result}, message: #{r.message}"
     exit(1) unless r.result
 
@@ -265,21 +259,21 @@ class SyncLiteDBClient
       [2, 'two']
     ]
 
-    r = execute_sql(db_path, txn_handle, 'insert into t1 (a,b) values(?, ?)', arguments)
+    r = execute_sql(db_name, txn_handle, 'insert into t1 (a,b) values(?, ?)', arguments)
     puts "result: #{r.result}, message: #{r.message}"
     exit(1) unless r.result
 
     puts "========================================================"
     puts "Executing commit transaction"
     puts "========================================================"
-    r = commit_transaction(db_path, txn_handle)
+    r = commit_transaction(db_name, txn_handle)
     puts "result: #{r.result}, message: #{r.message}"
     exit(1) unless r.result
 
     puts "========================================================"
     puts "Executing select from table (JSON format)"
     puts "========================================================"
-    r = execute_sql(db_path, nil, 'select a, b from t1')
+    r = execute_sql(db_name, nil, 'select a, b from t1')
     puts "result: #{r.result}, message: #{r.message}"
 
     if r.column_metadata
@@ -300,7 +294,7 @@ class SyncLiteDBClient
     puts "========================================================"
     puts "Executing select from table (DB format)"
     puts "========================================================"
-    r = execute_sql(db_path, nil, 'select a, b from t1', nil, data_format: 'DB', include_metadata: true)
+    r = execute_sql(db_name, nil, 'select a, b from t1', nil, data_format: 'DB', include_metadata: true)
     puts "result: #{r.result}, message: #{r.message}"
 
     if r.column_metadata
@@ -321,13 +315,13 @@ class SyncLiteDBClient
     puts "========================================================"
     puts "Executing drop table"
     puts "========================================================"
-    r = execute_sql(db_path, nil, 'drop table t1')
+    r = execute_sql(db_name, nil, 'drop table t1')
     puts "result: #{r.result}, message: #{r.message}"
 
     puts "========================================================"
     puts "Executing close DB"
     puts "========================================================"
-    r = close_db(db_path)
+    r = close_db(db_name)
     puts "result: #{r.result}, message: #{r.message}"
     puts "========================================================"
   end
