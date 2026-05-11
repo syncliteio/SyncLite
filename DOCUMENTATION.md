@@ -1,8 +1,11 @@
 # SyncLite Platform — Complete Technical Documentation
 
 > **License:** Apache License 2.0  
+
 > **Website:** https://github.com/syncliteio/SyncLite
+
 > **Full Online Docs:** https://github.com/syncliteio/SyncLite/blob/main/DOCUMENTATION.md
+
 > **Community:** See GitHub Issues for support and discussion: https://github.com/syncliteio/SyncLite/issues
 
 ---
@@ -148,95 +151,57 @@ The release is assembled under `SyncLite/target/synclite-platform-oss/`.
 
 ### Build individual components
 
-Notes:
+To build specific SyncLite components individually (useful for development or faster iteration), run the following from the repository root.
 
-- `sql` stores the executed DDL/DML (literal statements or parameterized with `?`).
-- `argN` columns contain parameter values when statements are parameterized; `-` denotes no parameter.
-
-Key points and usage notes:
-
-- Ordered changes: `change_sequence_number` provides a monotonic, replayable sequence for deterministic application.
-- Typed arguments: `argN` columns store bound parameter values as BLOBs; the logger populates `argcnt` to indicate how many `argN` slots are used.
-- Durability: each SQLite file is an ACID-backed segment — consumers can open the file with any SQLite client to inspect or replay changes.
-- Extensibility: if you need more than 16 arguments, add `arg17`, `arg18`, etc., via `ALTER TABLE` when bootstrapping a device; readers should handle missing columns gracefully.
-
-Concurrent transactions and txn-file model:
-
-- For SQL engines that allow concurrent transactions (DuckDB, H2, HyperSQL, Derby, etc.), SyncLite uses a two-part on-disk structuring:
-    - A master/segment sqllog file (named using a sequential prefix such as `0.sqllog`, `1.sqllog`, ...) holds high-level transaction markers and replay directives (for example a `REPLAY_TXN` entry for each published commit). The master file is intended to represent a serialized stream of txn publication events.
-    - Individual transaction files (txn files) are created per-commit and contain the actual `commandlog` rows for that commit in the format described above. Typical txn file names follow the pattern `<segment>.sqllog.<commit_id>.txn` (e.g. `0.sqllog.1778468342490.txn`). These txn files are self-contained SQLite files with their own `commandlog` table.
-
-Log creator responsibilities:
-
-- When multiple transactions commit concurrently, the logger (the component that writes the master sqllog and the per-commit txn files) must ensure a correct serialization of the `REPLAY_TXN` entries written into the master sqllog. In practice this means: write and flush the txn file contents for a commit, then append a single `REPLAY_TXN` record into the master sqllog referencing that `commit_id` (and flush). Consumers replaying the master file will encounter `REPLAY_TXN` entries in a deterministic order and then open the corresponding txn files to apply their contained `commandlog` rows.
-
-Naming conventions:
-
-- Log segment files: sequential numeric prefixes starting at `0` are used for log segments: `0.sqllog`, `1.sqllog`, `2.sqllog`, … Each segment is a SQLite file that can contain multiple `REPLAY_TXN` markers and other control entries.
-- Transaction files: named by combining the segment prefix and the commit id: e.g. `0.sqllog.1778468342490.txn`, `0.sqllog.1778468342582.txn`.
- 
-Each segment will contain `REPLAY_TXN` entries when the producer supports concurrent transactions; otherwise, for single-writer producers the main segment file may directly contain the SQL `commandlog` rows instead of `REPLAY_TXN` markers and separate txn files.
-
-Metadata file format:
-
-- The metadata file is itself a SQLite file. It contains a single `metadata` table with two columns: `key TEXT` and `value TEXT`.
-- Typical keys written by the logger include: `uuid`, `device_name`, `database_name`, `backup_shipped`, `log_segment_sequence_number`, `data_file_sequence_number`, `database_id`, `last_processed_request_id`, `last_processing_request_id`, `last_processing_command`, `device_type`, `allow_concurrent_writers`, and others. See `io.synclite.logger.MetadataManager` for the exact APIs used to read/write properties.
-
-Example `metadata` table (rows):
-
-| key                             | value                  |
-|---------------------------------|------------------------:|
-| uuid                            | f9aa5478-2ed7-4f04-... |
-| device_name                     | h2store                |
-| database_name                   | test-h2-store.db       |
-| backup_shipped                  | 1                      |
-| log_segment_sequence_number     | 0                      |
-| data_file_sequence_number       | -1                     |
-| database_id                     | 0                      |
-| last_processed_request_id       | 0                      |
-| last_processing_request_id      | 0                      |
-| last_processing_command         |                        |
-| device_type                     | H2_STORE               |
-| allow_concurrent_writers        | 1                      |
-
-Inspecting and consuming segments:
-
-- Quick inspect with SQLite CLI: `sqlite3 t1.db 'SELECT * FROM commandlog ORDER BY change_sequence_number;'`.
-- To follow published transactions across concurrent commits: iterate `REPLAY_TXN` entries in the master sqllog (in order), then open the referenced txn file and apply its `commandlog` rows in sequence.
+- Build the Logger module (Java samples and JAR):
 
 ```bash
-# Client
+cd synclite-logger-java/logger
+mvn -Drevision=oss clean install
+```
+
+- Build the Consolidator (server):
+
+```bash
+cd synclite-consolidator
+mvn -Drevision=oss clean install
+```
+
+- Build SyncLite DB server (root module):
+
+```bash
+cd synclite-db/root
+mvn -Drevision=oss clean install
+```
+
+- Build the CLI client:
+
+```bash
 cd synclite-client/client
 mvn -Drevision=oss clean install
+```
 
+- Build the Job Monitor web app:
+
+```bash
 cd synclite-job-monitor/root
 mvn -Drevision=oss clean install
+```
 
-# Validator
-cd synclite-validator/root
+- Build the DBReader, QReader and Validator modules:
+
+```bash
+cd synclite-dbreader/root
 mvn -Drevision=oss clean install
 
-# Sample Web App
+cd synclite-qreader/root
+mvn -Drevision=oss clean install
 
-`operation_id` is not stored in `commandlog`; it is kept in the per-device `synclite_txn` table (described below).
-
-
-Example: application statements and how `synclite-logger` records them
-
-```sql
-CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT);
-INSERT INTO users (id, name) VALUES (1, 'Alice');
-UPDATE users SET name = 'Alice Cooper' WHERE id = 1;
-DELETE FROM users WHERE id = 1;
-ALTER TABLE users ADD COLUMN email TEXT;
-DROP TABLE users;
+cd synclite-validator/root
+mvn -Drevision=oss clean install
 ```
 
-How these operations might appear in `commandlog` as captured by `synclite-logger`:
-How these operations might appear in `commandlog` as captured by `synclite-logger`:
-./deploy.sh      # or deploy.bat on Windows
-./start.sh       # or start.bat on Windows
-```
+When these individual builds complete, their artifacts appear under their respective `target/` directories. The full platform assembly is produced by running `mvn -Drevision=oss clean install` from the repository root.
 
 `deploy.sh` / `deploy.bat` automatically:
 - Downloads Apache Tomcat 9.0.117
@@ -320,18 +285,42 @@ CREATE TABLE commandlog (
 );
 ```
 
--- Example: application statements and how `synclite-logger` records them
--- Application DDL/DML executed against a database:
---
+### Concurrent writers & txn-file model
+
+Some embedded SQL engines allow multiple transactions to commit concurrently. To support that safely while keeping on-disk segments easy to consume, SyncLite separates the concerns of (a) persisting per-commit SQL rows and (b) publishing a deterministic, serialized stream of commit events.
+
+- Per-commit txn files: for each committed transaction the logger stages a self-contained SQLite file that contains a `commandlog` table with all rows from that commit. Typical names: `0.sqllog.1778468342490.txn`, `0.sqllog.1778468342582.txn` (prefix ties the txn to a segment).
+- Master/segment sqllog: the segment file (e.g. `0.sqllog`) acts as the serialized publication log. Instead of embedding concurrent commit rows directly into the master file, the logger writes a small control entry (a `REPLAY_TXN` record) into the master sqllog that references the published txn file's `commit_id`.
+
+This pattern gives consumers a simple iteration model: read `REPLAY_TXN` entries from the master sqllog in order, and for each one open the referenced txn file and apply its `commandlog` rows in sequence. It preserves deterministic ordering of commit publication even when the producer's database engine allowed true concurrency.
+
+Producer responsibilities (summary):
+
+1. Create and fully flush the per-commit txn SQLite file containing that commit's `commandlog` rows.
+2. Append a single `REPLAY_TXN(commit_id, file_name, ...)` control record into the master segment sqllog and flush it.
+
+This ensures that a consumer which encounters the `REPLAY_TXN` entry can safely open and read the corresponding txn file. For single-writer producers (where concurrency is not a concern) the logger may instead write `commandlog` rows directly into the main segment file.
+
+Naming conventions recap:
+
+- Segment (master) sqllog: `0.sqllog`, `1.sqllog`, …
+- Per-commit txn files: `<segment>.sqllog.<commit_id>.txn` (e.g. `0.sqllog.1683840001000.txn`)
+- Metadata file beside a segment: `<segment>.synclite.metadata` (SQLite file with `metadata(key TEXT, value TEXT)`).
+
+**Example: application statements and how `synclite-logger` records them**
+
+Application DDL/DML executed against a database:
+
+```sql
 CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT);
 INSERT INTO users (id, name) VALUES (1, 'Alice');
 UPDATE users SET name = 'Alice Cooper' WHERE id = 1;
 DELETE FROM users WHERE id = 1;
 ALTER TABLE users ADD COLUMN email TEXT;
 DROP TABLE users;
+```
 
--- How these operations might appear in `commandlog` as captured by `synclite-logger`:
-
+How these operations might appear in `commandlog` as captured by `synclite-logger`:
 
 | change_sequence_number | commit_id      | sql                                                           | argcnt | arg1         | arg2 |
 |------------------------:|:---------------|:-------------------------------------------------------------|-------:|:-------------|:-----|
@@ -343,12 +332,14 @@ DROP TABLE users;
 | 6                       | 1683840004000  | ALTER TABLE users ADD COLUMN email TEXT                      | 0      | -            | -    |
 | 7                       | 1683840005000  | DROP TABLE users                                             | 0      | -            | -    |
 
--- Notes:
+Notes:
+
 - `sql` stores the executed DDL/DML (literal statements or parameterized with `?`).
 - `argN` columns contain parameter values when statements are parameterized; `-` denotes no parameter.
 - `operation_id` is NOT a `commandlog` column. The logger maintains an internal `operation_id` counter that is incremented as records are appended, and that value is recorded in the per-device transaction table `synclite_txn` at commit time (single-writer devices update the single `synclite_txn` row; multi-writer devices INSERT a `(commit_id, operation_id)` row per commit). Consumers should read `synclite_txn` if they need the per-commit `operation_id` metadata.
 
 Key points and usage notes:
+
 - Ordered changes: `change_sequence_number` provides a monotonic, replayable
     sequence for deterministic application.
 - Typed arguments: `argN` columns store bound parameter values as BLOBs; the
@@ -359,7 +350,8 @@ Key points and usage notes:
     etc., via `ALTER TABLE` when bootstrapping a device; readers should handle
     missing columns gracefully.
 - Metadata: alongside the segment file (e.g., `t1.db`) SyncLite writes a
-    small JSON metadata file (`t1.db.synclite.metadata`) with keys such as
+    small SQLite metadata file (`t1.db.synclite.metadata`) that contains a
+    `metadata` table (`key TEXT, value TEXT`) with keys such as
     `uuid`, `device-name`, `database-name`, `log-segment-sequence-number`, and
     `status` (e.g., `NEW/READY_TO_APPLY` / `APPLIED`). Consumers should read
     metadata to decide processing semantics.
