@@ -5,8 +5,7 @@ This folder contains the canonical sample set requested for this repository.
 ## Java
 
 - SyncliteDeviceApp.java
-- SyncLiteAppenderDeviceApp.java
-- SyncLiteStoreDeviceApp.java
+- SyncLiteStoreDeviceApp.java (replaces previous Appender sample)
 - SyncLiteStreamingApp.java
 - SyncLiteStoreAPIApp.java
 - SyncLiteStreamAPIApp.java

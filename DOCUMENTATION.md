@@ -1,9 +1,9 @@
 # SyncLite Platform — Complete Technical Documentation
 
 > **License:** Apache License 2.0  
-> **Website:** https://www.synclite.io  
-> **Full Online Docs:** https://www.synclite.io/resources/documentation  
-> **Community Slack:** https://join.slack.com/t/syncliteworkspace/shared_invite/zt-2pz945vva-uuKapsubC9Mu~uYDRKo6Jw
+> **Website:** https://github.com/syncliteio/SyncLite
+> **Full Online Docs:** https://github.com/syncliteio/SyncLite/blob/main/DOCUMENTATION.md
+> **Community:** See GitHub Issues for support and discussion: https://github.com/syncliteio/SyncLite/issues
 
 ---
 
@@ -100,7 +100,7 @@ SyncLite is a **third way**: embed a lightweight logger that transparently captu
                                    │
           ┌────────────────────────┼────────────────────────┐
           ▼                        ▼                        ▼
-  PostgreSQL / MySQL        Snowflake / BigQuery     Apache Parquet /
+    PostgreSQL / MySQL        Amazon Redshift / ClickHouse     Apache Parquet /
   SQL Server / Oracle       Redshift / ClickHouse    Delta Lake / Iceberg
   SQLite / DuckDB …         MongoDB …                CSV on S3 …
 ```
@@ -148,32 +148,67 @@ The release is assembled under `SyncLite/target/synclite-platform-oss/`.
 
 ### Build individual components
 
+Notes:
+
+- `sql` stores the executed DDL/DML (literal statements or parameterized with `?`).
+- `argN` columns contain parameter values when statements are parameterized; `-` denotes no parameter.
+
+Key points and usage notes:
+
+- Ordered changes: `change_sequence_number` provides a monotonic, replayable sequence for deterministic application.
+- Typed arguments: `argN` columns store bound parameter values as BLOBs; the logger populates `argcnt` to indicate how many `argN` slots are used.
+- Durability: each SQLite file is an ACID-backed segment — consumers can open the file with any SQLite client to inspect or replay changes.
+- Extensibility: if you need more than 16 arguments, add `arg17`, `arg18`, etc., via `ALTER TABLE` when bootstrapping a device; readers should handle missing columns gracefully.
+
+Concurrent transactions and txn-file model:
+
+- For SQL engines that allow concurrent transactions (DuckDB, H2, HyperSQL, Derby, etc.), SyncLite uses a two-part on-disk structuring:
+    - A master/segment sqllog file (named using a sequential prefix such as `0.sqllog`, `1.sqllog`, ...) holds high-level transaction markers and replay directives (for example a `REPLAY_TXN` entry for each published commit). The master file is intended to represent a serialized stream of txn publication events.
+    - Individual transaction files (txn files) are created per-commit and contain the actual `commandlog` rows for that commit in the format described above. Typical txn file names follow the pattern `<segment>.sqllog.<commit_id>.txn` (e.g. `0.sqllog.1778468342490.txn`). These txn files are self-contained SQLite files with their own `commandlog` table.
+
+Log creator responsibilities:
+
+- When multiple transactions commit concurrently, the logger (the component that writes the master sqllog and the per-commit txn files) must ensure a correct serialization of the `REPLAY_TXN` entries written into the master sqllog. In practice this means: write and flush the txn file contents for a commit, then append a single `REPLAY_TXN` record into the master sqllog referencing that `commit_id` (and flush). Consumers replaying the master file will encounter `REPLAY_TXN` entries in a deterministic order and then open the corresponding txn files to apply their contained `commandlog` rows.
+
+Naming conventions:
+
+- Log segment files: sequential numeric prefixes starting at `0` are used for log segments: `0.sqllog`, `1.sqllog`, `2.sqllog`, … Each segment is a SQLite file that can contain multiple `REPLAY_TXN` markers and other control entries.
+- Transaction files: named by combining the segment prefix and the commit id: e.g. `0.sqllog.1778468342490.txn`, `0.sqllog.1778468342582.txn`.
+ 
+Each segment will contain `REPLAY_TXN` entries when the producer supports concurrent transactions; otherwise, for single-writer producers the main segment file may directly contain the SQL `commandlog` rows instead of `REPLAY_TXN` markers and separate txn files.
+
+Metadata file format:
+
+- The metadata file is itself a SQLite file. It contains a single `metadata` table with two columns: `key TEXT` and `value TEXT`.
+- Typical keys written by the logger include: `uuid`, `device_name`, `database_name`, `backup_shipped`, `log_segment_sequence_number`, `data_file_sequence_number`, `database_id`, `last_processed_request_id`, `last_processing_request_id`, `last_processing_command`, `device_type`, `allow_concurrent_writers`, and others. See `io.synclite.logger.MetadataManager` for the exact APIs used to read/write properties.
+
+Example `metadata` table (rows):
+
+| key                             | value                  |
+|---------------------------------|------------------------:|
+| uuid                            | f9aa5478-2ed7-4f04-... |
+| device_name                     | h2store                |
+| database_name                   | test-h2-store.db       |
+| backup_shipped                  | 1                      |
+| log_segment_sequence_number     | 0                      |
+| data_file_sequence_number       | -1                     |
+| database_id                     | 0                      |
+| last_processed_request_id       | 0                      |
+| last_processing_request_id      | 0                      |
+| last_processing_command         |                        |
+| device_type                     | H2_STORE               |
+| allow_concurrent_writers        | 1                      |
+
+Inspecting and consuming segments:
+
+- Quick inspect with SQLite CLI: `sqlite3 t1.db 'SELECT * FROM commandlog ORDER BY change_sequence_number;'`.
+- To follow published transactions across concurrent commits: iterate `REPLAY_TXN` entries in the master sqllog (in order), then open the referenced txn file and apply its `commandlog` rows in sequence.
+
 ```bash
-# Logger
-cd synclite-logger-java/logger
-mvn -Drevision=oss clean install
-
-# Consolidator
-cd synclite-consolidator/root
-mvn -Drevision=oss clean install
-
-# DBReader
-cd synclite-dbreader/root
-mvn -Drevision=oss clean install
-
-# QReader
-cd synclite-qreader/root
-mvn -Drevision=oss clean install
-
-# SyncLite DB
-cd synclite-db/root/core
-mvn -Drevision=oss clean install
-
 # Client
 cd synclite-client/client
 mvn -Drevision=oss clean install
 
-# Job Monitor
 cd synclite-job-monitor/root
 mvn -Drevision=oss clean install
 
@@ -182,18 +217,23 @@ cd synclite-validator/root
 mvn -Drevision=oss clean install
 
 # Sample Web App
-cd synclite-sample-web-app/web
-mvn -Drevision=oss clean install
+
+`operation_id` is not stored in `commandlog`; it is kept in the per-device `synclite_txn` table (described below).
+
+
+Example: application statements and how `synclite-logger` records them
+
+```sql
+CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT);
+INSERT INTO users (id, name) VALUES (1, 'Alice');
+UPDATE users SET name = 'Alice Cooper' WHERE id = 1;
+DELETE FROM users WHERE id = 1;
+ALTER TABLE users ADD COLUMN email TEXT;
+DROP TABLE users;
 ```
 
----
-
-## 5. Installation & Quick Start
-
-### Native (Windows / Ubuntu)
-
-```bash
-cd bin/
+How these operations might appear in `commandlog` as captured by `synclite-logger`:
+How these operations might appear in `commandlog` as captured by `synclite-logger`:
 ./deploy.sh      # or deploy.bat on Windows
 ./start.sh       # or start.bat on Windows
 ```
@@ -239,6 +279,124 @@ Your App  +  SyncLite Logger  +  Embedded DB
   Destination DB / Data Warehouse / Data Lake
 ```
 
+### SyncLite Log Format
+
+Although SyncLite writes its log files as a compact binary blob, the on-disk
+format is intentionally simple: each log segment is a SQLite file that hosts a
+single command log table (commonly named `commandlog`). Each row records an
+ordered change and includes fields such as `change_sequence_number` (sequence),
+`commit_id` (epoch ms), `sql` (the statement text), `argcnt` (number of bound
+arguments) and a series of typed argument columns (`arg1`…`arg16`) stored as
+BLOBs (the table can be extended with additional `argN` columns if needed).
+
+Choosing SQLite as the log format gives SyncLite several practical benefits:
+- ACID transactions and durability are provided by the underlying SQLite engine,
+    so log segments represent consistent, replayable units of work.
+- Single-file portability makes device directories easy to stage, upload, and
+    inspect with standard SQLite tools across languages and platforms.
+- Wide language and tooling support reduces connector complexity — consumers
+    can read SQL + typed args directly instead of parsing proprietary binary
+    encodings.
+- High insert performance and compact storage make SQLite a good fit for both
+    store-style CRUD logs and SQL-style command logs used by ORF (Open Replication
+    Format).
+
+The `commandlog` is the canonical replication unit inside each SQLite log
+segment. Below is a concise description of the on-disk layout and how tools
+should treat it when implementing cross-tool portability.
+
+Schema (recommended canonical layout):
+
+```sql
+CREATE TABLE commandlog (
+    change_sequence_number INTEGER PRIMARY KEY,
+    commit_id             INTEGER, -- epoch millis
+    sql                   TEXT,
+    argcnt                INTEGER,
+    arg1                  BLOB,
+    arg2                  BLOB,
+    -- ... up to arg16; add more argN columns as needed with ALTER TABLE
+    arg16                 BLOB
+);
+```
+
+-- Example: application statements and how `synclite-logger` records them
+-- Application DDL/DML executed against a database:
+--
+CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT);
+INSERT INTO users (id, name) VALUES (1, 'Alice');
+UPDATE users SET name = 'Alice Cooper' WHERE id = 1;
+DELETE FROM users WHERE id = 1;
+ALTER TABLE users ADD COLUMN email TEXT;
+DROP TABLE users;
+
+-- How these operations might appear in `commandlog` as captured by `synclite-logger`:
+
+
+| change_sequence_number | commit_id      | sql                                                           | argcnt | arg1         | arg2 |
+|------------------------:|:---------------|:-------------------------------------------------------------|-------:|:-------------|:-----|
+| 1                       | 1683840000000  | CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT)        | 0      | -            | -    |
+| 2                       | 1683840001000  | INSERT INTO users (id, name) VALUES (?, ?)                   | 2      | 1            | Alice|
+| 3                       | 1683840001000  |                                                              | 2      | 2            | Bob  |
+| 4                       | 1683840002000  | UPDATE users SET name = ? WHERE id = ?                      | 2      | Alice Cooper | 1    |
+| 5                       | 1683840003000  | DELETE FROM users WHERE id = ?                               | 1      | 1            | -    |
+| 6                       | 1683840004000  | ALTER TABLE users ADD COLUMN email TEXT                      | 0      | -            | -    |
+| 7                       | 1683840005000  | DROP TABLE users                                             | 0      | -            | -    |
+
+-- Notes:
+- `sql` stores the executed DDL/DML (literal statements or parameterized with `?`).
+- `argN` columns contain parameter values when statements are parameterized; `-` denotes no parameter.
+- `operation_id` is NOT a `commandlog` column. The logger maintains an internal `operation_id` counter that is incremented as records are appended, and that value is recorded in the per-device transaction table `synclite_txn` at commit time (single-writer devices update the single `synclite_txn` row; multi-writer devices INSERT a `(commit_id, operation_id)` row per commit). Consumers should read `synclite_txn` if they need the per-commit `operation_id` metadata.
+
+Key points and usage notes:
+- Ordered changes: `change_sequence_number` provides a monotonic, replayable
+    sequence for deterministic application.
+- Typed arguments: `argN` columns store bound parameter values as BLOBs; the
+    logger populates `argcnt` to indicate how many `argN` slots are used.
+- Durability: each SQLite file is an ACID-backed segment — consumers can open
+    the file with any SQLite client to inspect or replay changes.
+- Extensibility: if you need more than 16 arguments, add `arg17`, `arg18`,
+    etc., via `ALTER TABLE` when bootstrapping a device; readers should handle
+    missing columns gracefully.
+- Metadata: alongside the segment file (e.g., `t1.db`) SyncLite writes a
+    small JSON metadata file (`t1.db.synclite.metadata`) with keys such as
+    `uuid`, `device-name`, `database-name`, `log-segment-sequence-number`, and
+    `status` (e.g., `NEW/READY_TO_APPLY` / `APPLIED`). Consumers should read
+    metadata to decide processing semantics.
+
+Inspecting and consuming segments:
+- Quick inspect with SQLite CLI: `sqlite3 t1.db 'SELECT * FROM commandlog ORDER BY change_sequence_number;'`.
+- Consumers that reapply changes should use `change_sequence_number` and
+    `commit_id` for ordering and idempotency checks.
+
+Why this works well as an Open Replication Format:
+- Files are single-file, portable, and language-agnostic — any tool with a
+    SQLite reader can access the data without a proprietary decoder.
+- The combination of SQL text plus typed bound parameters allows downstream
+    systems to choose between applying the raw SQL or interpreting it as CDC-style
+    operations.
+
+Together, these characteristics make SyncLite's SQLite-based `commandlog`
+segments a practical, lightweight Open Replication Format for cross-tool
+portability and integrations.
+
+### Device Types
+
+SyncLite devices are grouped into three user-facing categories:
+
+- **SQL Devices**: Full SQL-compatible embedded databases (SQLite, DuckDB, Apache Derby, H2, HyperSQL). These provide complete SQL semantics and are well suited when applications need to run arbitrary queries or DDL locally. For replication, SyncLite captures SQL/command logs produced by these devices; the Consolidator then deduces CDC-style operations from those logs before applying them to destinations.
+
+- **Store Devices**: CRUD-oriented store variants (`*_STORE`) that expose the `SyncLiteStore` API (`insert`, `update`, `delete`, `selectAll`) instead of a free-form SQL surface. Store devices:
+  - Offer a typed, simpler CRUD API with automatic schema evolution (auto-adding missing columns).
+  - Produce logs that the Consolidator applies directly to destinations — they do not require a separate two-step deduce-and-apply processing used for SQL devices.
+  - Are preferable for applications that need deterministic CRUD semantics and straightforward replication.
+
+- **Streaming Device**: The `STREAMING` device implements append-only ingestion and exposes `SyncLiteStream` APIs (`insert`, `insertBatch`). It's optimized for high-throughput event capture and does not provide UPDATE/DELETE semantics.
+
+Notes:
+- Appender and DBLogger device types are internal implementation variants and are intentionally not documented as primary device types.
+
+
 ### Adding SyncLite Logger to your project
 
 **Maven:**
@@ -257,43 +415,21 @@ Your App  +  SyncLite Logger  +  Embedded DB
 
 ### 6.1 Device Types
 
-SyncLite Logger supports multiple **device types**, each targeting a different use case:
+SyncLite devices are grouped into three user-facing categories. Documentation and examples should use this three-way classification when describing device behavior and choosing a device for a workload.
 
-#### Transactional Devices (full CRUD — INSERT / UPDATE / DELETE)
+- **SQL Devices** — Full SQL-compatible embedded databases (SQLite, DuckDB, Apache Derby, H2, HyperSQL). Use these when applications require the full SQL surface (arbitrary queries, DDL, DML). Replication for SQL devices captures SQL/command logs which the Consolidator later processes into CDC-style operations before applying them to destinations.
 
-| Device Type | JDBC URL Prefix | Embedded DB | Best For |
-|---|---|---|---|
-| `SQLITE` | `jdbc:synclite_sqlite:` | SQLite | Edge/desktop apps, offline-first, GenAI/RAG |
-| `DUCKDB` | `jdbc:synclite_duckdb:` | DuckDB | Analytical edge workloads, columnar data |
-| `DERBY` | `jdbc:synclite_derby:` | Apache Derby | Embedded Java enterprise apps |
-| `H2` | `jdbc:synclite_h2:` | H2 | Test environments, Spring Boot apps |
-| `HYPERSQL` | `jdbc:synclite_hsqldb:` | HyperSQL | Lightweight in-process SQL apps |
+- **Store Devices** — CRUD-oriented store variants (`*_STORE`) that expose the `SyncLiteStore` API (`insert`, `update`, `delete`, `selectAll`) instead of a free-form SQL surface. Store devices:
+    - Provide a typed, simpler CRUD API with automatic schema evolution (auto-adding missing columns).
+    - Produce logs that the Consolidator applies directly to destinations — they do not require a separate two-step deduce-and-apply processing used for SQL devices.
+    - Are ideal for deterministic CRUD semantics and lower application complexity.
 
-#### Appender Devices (INSERT / append-only — high throughput)
+- **Streaming Device** — The `STREAMING` device models append-only ingestion and exposes `SyncLiteStream` APIs (`insert`, `insertBatch`). It's optimized for high-throughput event capture and intentionally does not provide UPDATE/DELETE semantics.
 
-| Device Type | JDBC URL Prefix | Embedded DB |
-|---|---|---|
-| `SQLITE_APPENDER` | `jdbc:synclite_sqlite_appender:` | SQLite |
-| `DUCKDB_APPENDER` | `jdbc:synclite_duckdb_appender:` | DuckDB |
-| `DERBY_APPENDER` | `jdbc:synclite_derby_appender:` | Apache Derby |
-| `H2_APPENDER` | `jdbc:synclite_h2_appender:` | H2 |
-| `HYPERSQL_APPENDER` | `jdbc:synclite_hsqldb_appender:` | HyperSQL |
+Examples (common device identifiers): `SQLITE`, `DUCKDB`, `DERBY`, `H2`, `HYPERSQL`, `SQLITE_STORE`, `DUCKDB_STORE`, `DERBY_STORE`, `H2_STORE`, `HYPERSQL_STORE`, `STREAMING`.
 
-#### Store Devices (CRUD via SyncLiteStore API / Jedis API)
-
-| Device Type | JDBC URL Prefix | Embedded DB |
-|---|---|---|
-| `SQLITE_STORE` | `jdbc:synclite_sqlite_store:` | SQLite |
-| `DUCKDB_STORE` | `jdbc:synclite_duckdb_store:` | DuckDB |
-| `DERBY_STORE` | `jdbc:synclite_derby_store:` | Apache Derby |
-| `H2_STORE` | `jdbc:synclite_h2_store:` | H2 |
-| `HYPERSQL_STORE` | `jdbc:synclite_hsqldb_store:` | HyperSQL |
-
-#### Streaming Device (pure log streaming — no embedded DB)
-
-| Device Type | JDBC URL Prefix | Notes |
-|---|---|---|
-| `STREAMING` | `jdbc:synclite_streaming:` | In-memory, Kafka Producer / SyncLiteStream API |
+Notes:
+- Appender and DBLogger device types are internal implementation variants and are intentionally omitted from user-facing documentation. If you need to tune or use an appender-style device, treat it as an advanced/internal option and consult implementation notes or the codebase directly.
 
 ---
 
@@ -398,7 +534,7 @@ use-precreated-data-backup=false
 # Whether to VACUUM the backup database to reduce its size
 vacuum-data-backup=true
 
-# Skip restart recovery for non-transactional devices
+# Skip restart recovery for non-SQL devices
 skip-restart-recovery=false
 ```
 
@@ -419,13 +555,14 @@ external-command-handler=synclite_command_processor.sh <COMMAND> <COMMAND_FILE>
 command-handler-frequency-ms=10000
 ```
 
-#### Transactional vs. Appender Device Tuning
+#### SQL vs. Store Device Tuning
 
 ```properties
-# For transactional devices: disable async logging (synchronous mode, maximum durability)
+# For SQL devices: disable async logging (synchronous mode, maximum durability)
 disable-async-logging-for-transactional-device=false
 
-# For appender devices: enable async logging (maximum throughput)
+# For Store devices: enable async logging (maximum throughput)
+# NOTE: config key remains `enable-async-logging-for-appender-device` for backward compatibility
 enable-async-logging-for-appender-device=false
 ```
 
@@ -1406,7 +1543,7 @@ SyncLite QReader ─┘
 | Category | Systems |
 |---|---|
 | Relational (OLTP) | PostgreSQL, MySQL, MariaDB, Microsoft SQL Server, Oracle, SQLite, DuckDB, Apache Derby, H2, HyperSQL |
-| Data Warehouses | Snowflake, Google BigQuery, Amazon Redshift, ClickHouse |
+| Data Warehouses | Amazon Redshift, ClickHouse |
 | Data Lakes | Apache Iceberg, Delta Lake, Apache Hudi |
 | NoSQL | MongoDB |
 | File / Object Storage | Apache Parquet, CSV on S3 / MinIO / local file system |
@@ -1437,7 +1574,7 @@ Key configuration options set through the web UI (stored internally by Consolida
 |---|---|
 | **Staging storage type** | Local FS, SFTP, S3, MinIO, Kafka, OneDrive, Google Drive |
 | **Staging directory / bucket** | Where to read device log files from |
-| **Destination type** | PostgreSQL, MySQL, Snowflake, BigQuery, etc. |
+| **Destination type** | PostgreSQL, MySQL, Amazon Redshift, ClickHouse, etc. |
 | **Destination JDBC URL** | Connection string for the destination |
 | **Write mode** | `INSERT` / `UPSERT` / `REPLACE` / `APPEND` per table |
 | **Include / exclude tables** | Filter which tables to consolidate |
@@ -1829,7 +1966,7 @@ synclite-platform-oss/
 
 **License:** SyncLite is licensed under the [Apache License 2.0](LICENSE).
 
-**Patent:** SyncLite is backed by patented technology. More info: https://www.synclite.io/resources/patent
+**Patent:** SyncLite is backed by patented technology. More info: https://www.synclite.io/about
 
 ---
 

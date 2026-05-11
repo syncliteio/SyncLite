@@ -282,7 +282,7 @@
     <a href="#how-it-works">How It Works</a>
     <a href="#components">Components</a>
     <a href="#code">Code</a>
-    <a href="https://www.synclite.io/resources/documentation" target="_blank">Docs</a>
+    <a href="https://github.com/syncliteio/SyncLite/blob/main/DOCUMENTATION.md" target="_blank">Docs</a>
     <a href="about.html">About</a>
     <a href="#contact">Contact</a>
   </div>
@@ -300,10 +300,10 @@
     The <span class="grad">Sync Layer</span><br/>Your App Has Been Missing
   </h1>
   <p class="hero-sub">
-    Embed SQLite, DuckDB, or Derby in your app. SyncLite captures every transaction and replicates it in real time to PostgreSQL, Snowflake, BigQuery, Kafka, and more — with zero custom replication code.
+    Embed SQLite, DuckDB, or Derby in your app. SyncLite captures every transaction and replicates it in real time to PostgreSQL, Amazon Redshift, Kafka, and more — with zero custom replication code.
   </p>
   <div class="hero-actions">
-    <a class="btn btn-primary btn-lg" href="https://www.synclite.io/resources/documentation" target="_blank">Read the Docs →</a>
+    <a class="btn btn-primary btn-lg" href="https://github.com/syncliteio/SyncLite/blob/main/DOCUMENTATION.md" target="_blank">Read the Docs →</a>
     <a class="btn btn-outline btn-lg" href="https://github.com/syncliteio/SyncLite" target="_blank">View on GitHub</a>
   </div>
   <div class="hero-pills">
@@ -335,9 +335,9 @@
       <div class="name">SyncLite Consolidator</div>
     </div>
     <div class="pipe-arrow">──▶</div>
-    <div class="pipe-node">
+      <div class="pipe-node">
       <div class="label">Your Destination</div>
-      <div class="name">PostgreSQL · Snowflake<br/><small style="color:var(--muted);font-size:.7rem">BigQuery · Iceberg · MongoDB…</small></div>
+      <div class="name">PostgreSQL · Amazon Redshift<br/><small style="color:var(--muted);font-size:.7rem">ClickHouse · Apache Iceberg · MongoDB…</small></div>
     </div>
   </div>
   <p style="text-align:center;color:var(--muted);font-size:.85rem;margin-top:1.5rem;">
@@ -605,8 +605,8 @@ requests.post(BASE, json={<span class="str">"db-name"</span>: <span class="str">
     </div>
     <p style="font-size:.82rem;color:var(--muted);margin-bottom:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;">Data Warehouses &amp; Lakes</p>
     <div class="dest-grid" style="margin-bottom:1.5rem;">
-      <span class="dest-tag">Snowflake</span><span class="dest-tag">Google BigQuery</span><span class="dest-tag">Amazon Redshift</span>
-      <span class="dest-tag">ClickHouse</span><span class="dest-tag">Apache Iceberg</span><span class="dest-tag">Delta Lake</span>
+      <span class="dest-tag">Amazon Redshift</span><span class="dest-tag">ClickHouse</span>
+      <span class="dest-tag">Apache Iceberg</span><span class="dest-tag">Delta Lake</span>
       <span class="dest-tag">Apache Hudi</span><span class="dest-tag">Apache Parquet</span>
     </div>
     <p style="font-size:.82rem;color:var(--muted);margin-bottom:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;">NoSQL &amp; Streaming</p>
@@ -692,9 +692,9 @@ requests.post(BASE, json={<span class="str">"db-name"</span>: <span class="str">
       </div>
       <div class="contact-card">
         <div class="cc-icon">💬</div>
-        <div class="cc-title">Slack Community</div>
-        <div class="cc-detail">Ask questions, share projects, get help from the community.</div>
-        <a href="https://join.slack.com/t/syncliteworkspace/shared_invite/zt-2pz945vva-uuKapsubC9Mu~uYDRKo6Jw" target="_blank">Join SyncLite Slack →</a>
+        <div class="cc-title">Community</div>
+        <div class="cc-detail">Report issues or ask questions on GitHub.</div>
+        <a href="https://github.com/syncliteio/SyncLite/issues" target="_blank">Open GitHub Issue →</a>
       </div>
       <div class="contact-card">
         <div class="cc-icon">🐙</div>
@@ -706,7 +706,7 @@ requests.post(BASE, json={<span class="str">"db-name"</span>: <span class="str">
         <div class="cc-icon">📖</div>
         <div class="cc-title">Documentation</div>
         <div class="cc-detail">Full platform docs, quickstarts, config reference, and API guides.</div>
-        <a href="https://www.synclite.io/resources/documentation" target="_blank">Read the Docs →</a>
+        <a href="https://github.com/syncliteio/SyncLite/blob/main/DOCUMENTATION.md" target="_blank">Read the Docs →</a>
       </div>
       <div class="contact-card">
         <div class="cc-icon">🤝</div>
@@ -731,9 +731,9 @@ requests.post(BASE, json={<span class="str">"db-name"</span>: <span class="str">
   <h2>Ship Your First Sync in Under 5 Minutes</h2>
   <p>One command deploys Tomcat, downloads OpenJDK 25, and starts all SyncLite apps. No cloud account. No signup. Fully local.</p>
   <div class="cta-actions">
-    <a class="btn btn-primary btn-lg" href="https://www.synclite.io/resources/documentation" target="_blank">Read the Docs →</a>
+    <a class="btn btn-primary btn-lg" href="https://github.com/syncliteio/SyncLite/blob/main/DOCUMENTATION.md" target="_blank">Read the Docs →</a>
     <a class="btn btn-outline btn-lg" href="https://github.com/syncliteio/SyncLite" target="_blank">★ Star on GitHub</a>
-    <a class="btn btn-outline btn-lg" href="https://join.slack.com/t/syncliteworkspace/shared_invite/zt-2pz945vva-uuKapsubC9Mu~uYDRKo6Jw" target="_blank">Join Slack</a>
+    <a class="btn btn-outline btn-lg" href="https://github.com/syncliteio/SyncLite/issues" target="_blank">Open Issue</a>
   </div>
   <div style="margin-top:2rem;background:var(--code-bg);border:1px solid var(--border);border-radius:10px;padding:1rem 1.5rem;display:inline-block;text-align:left;">
     <code style="font-family:'JetBrains Mono',monospace;font-size:.82rem;color:#a5d6ff;">
@@ -747,15 +747,15 @@ requests.post(BASE, json={<span class="str">"db-name"</span>: <span class="str">
 <footer>
   <div>
     <strong style="color:#fff;">SyncLite</strong> &nbsp;·&nbsp; Apache License 2.0
-    &nbsp;·&nbsp; Backed by <a href="https://www.synclite.io/resources/patent" target="_blank">patented technology</a>
+    &nbsp;·&nbsp; Backed by <a href="https://www.synclite.io/about" target="_blank">patented technology</a>
   </div>
   <div class="footer-links">
-    <a href="https://www.synclite.io/resources/documentation" target="_blank">Documentation</a>
+    <a href="https://github.com/syncliteio/SyncLite/blob/main/DOCUMENTATION.md" target="_blank">Documentation</a>
     <a href="about.html">About</a>
     <a href="#contact">Contact</a>
     <a href="https://github.com/syncliteio/SyncLite" target="_blank">GitHub</a>
-    <a href="https://join.slack.com/t/syncliteworkspace/shared_invite/zt-2pz945vva-uuKapsubC9Mu~uYDRKo6Jw" target="_blank">Slack</a>
-    <a href="https://www.synclite.io/resources/patent" target="_blank">Patent</a>
+    <a href="https://github.com/syncliteio/SyncLite/issues" target="_blank">Community</a>
+    <a href="https://www.synclite.io/about" target="_blank">Patent</a>
   </div>
 </footer>
 
