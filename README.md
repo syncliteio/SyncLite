@@ -49,7 +49,6 @@ Most data integration problems at the edge are solved today by one of two approa
 | **SyncLite QReader** | IoT MQTT connector | [→](https://github.com/syncliteio/synclite-qreader/blob/main/README.md) |
 | **SyncLite Job Monitor** | Unified job management and scheduling UI | [→](https://github.com/syncliteio/synclite-job-monitor/blob/main/README.md) |
 | **SyncLite Validator** | End-to-end integration testing tool | [→](https://github.com/syncliteio/synclite-validator/blob/main/README.md) |
-
 | **Sample Web App** | JSP/Servlet demo showing SyncLite Logger in action | [→](https://github.com/syncliteio/synclite-sample-web-app/blob/main/README.md) |
 
 
