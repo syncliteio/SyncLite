@@ -6,7 +6,7 @@
   <p align="center">
     <a href="https://www.synclite.io">Website</a>
     ·
-    <a href="https://www.synclite.io/resources/documentation">Documentation</a>
+    <a href="https://github.com/syncliteio/SyncLite/blob/main/DOCUMENTATION.md">Documentation</a>
     ·
   </p>
 </p>
@@ -30,6 +30,7 @@ All of this flows through a unified pipeline architecture: sources produce compa
 
 ---
 
+
 ## Why SyncLite?
 
 Most data integration problems at the edge are solved today by one of two approaches: ship everything to the cloud and query there (high latency, no offline resilience), or write custom replication code (brittle, expensive, operationally painful). SyncLite is a third way.
@@ -48,7 +49,26 @@ Most data integration problems at the edge are solved today by one of two approa
 | **SyncLite QReader** | IoT MQTT connector | [→](https://github.com/syncliteio/synclite-qreader/blob/main/README.md) |
 | **SyncLite Job Monitor** | Unified job management and scheduling UI | [→](https://github.com/syncliteio/synclite-job-monitor/blob/main/README.md) |
 | **SyncLite Validator** | End-to-end integration testing tool | [→](https://github.com/syncliteio/synclite-validator/blob/main/README.md) |
+
 | **Sample Web App** | JSP/Servlet demo showing SyncLite Logger in action | [→](https://github.com/syncliteio/synclite-sample-web-app/blob/main/README.md) |
+
+
+## SyncLite Devices
+
+When we talk about SyncLite "devices" there are three high-level device categories you should expect across the product documentation and examples:
+
+- **SQL Devices:** Full SQL-compatible embedded database devices (SQLite, DuckDB, Apache Derby, H2, HyperSQL). These devices expose the full SQL surface (CREATE/ALTER/SELECT/INSERT/UPDATE/DELETE) and are ideal when applications must run arbitrary SQL locally. Replication for SQL devices relies on SyncLite capturing SQL/command logs which are later processed by the Consolidator to generate CDC-style records for destinations.
+
+- **Store Devices:** Lightweight CRUD-oriented devices (SQLite_STORE, DUCKDB_STORE, DERBY_STORE, H2_STORE, HYPERSQL_STORE) that expose the `SyncLiteStore` API (typed `insert` / `update` / `delete` / `selectAll`) rather than a raw SQL surface. Store devices:
+    - Provide a simpler, typed CRUD API that automatically handles schema evolution (auto-add columns) and reduces application boilerplate.
+    - Produce logs that are applied directly to destinations by the Consolidator — they do not require a separate two-step deduce-and-apply flow used for general SQL devices.
+    - Are ideal when your application needs stable CRUD semantics, lower cognitive overhead, and deterministic replication to destinations.
+
+- **Streaming Device:** The `STREAMING` device models append-only ingestion and exposes `SyncLiteStream` semantics (fluent `insert` / `insertBatch`). It is optimized for high-throughput event capture where UPDATE/DELETE semantics are not required.
+
+Notes:
+- Appender and DBLogger device types exist internally but are intentionally left undocumented in user-facing docs and examples.
+- When reading the docs, prefer the three-category mental model above — it simplifies architecture discussions and helps choose the right device for your workload.
 
 
 ---
@@ -160,7 +180,7 @@ SQLite.closeAll();
 
 For other embedded databases replace `SQLite` / `synclite_sqlite` with `DuckDB` / `synclite_duckdb`, `Derby` / `synclite_derby`, `H2` / `synclite_h2`, or `HyperSQL` / `synclite_hsqldb`.
 
-Full configuration reference: `lib/logger/synclite_logger.conf` · [Documentation](https://www.synclite.io/resources/documentation)
+Full configuration reference: `lib/logger/synclite_logger.conf` · [Documentation](https://github.com/syncliteio/SyncLite/blob/main/DOCUMENTATION.md)
 
 ### SyncLiteStore API — CRUD without raw SQL
 
@@ -283,14 +303,14 @@ bin/stage/minio/docker-deploy.sh   # MinIO object storage
 
 | Resource | Link |
 |---|---|
-| Full Documentation | https://www.synclite.io/resources/documentation |
+| Full Documentation | https://github.com/syncliteio/SyncLite/blob/main/DOCUMENTATION.md |
 | Website | https://www.synclite.io |
 
 ---
 
 ## Patent
 
-SyncLite is backed by patented technology, more info: https://www.synclite.io/resources/patent
+SyncLite is backed by patented technology, more info: https://www.synclite.io/about
 
 ---
 

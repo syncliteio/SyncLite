@@ -3,7 +3,7 @@
 > **Build Anything, Sync Anywhere** — open-source, low-code relational data synchronization and consolidation platform.
 >
 > Full interactive guide: https://www.synclite.io/resources/get-started  
-> Full documentation: https://www.synclite.io/resources/documentation
+> Full documentation: https://github.com/syncliteio/SyncLite/blob/main/DOCUMENTATION.md
 
 ---
 
@@ -306,7 +306,7 @@ QReader subscribes to MQTT topics and lands data in your destination database in
 Open **http://localhost:8080/synclite-consolidator** and:
 
 1. **Configure Job** — set the staging storage path (or SFTP/S3/MinIO/Kafka URL).
-2. Add a **Destination** — choose from PostgreSQL, MySQL, MariaDB, SQL Server, Oracle, Snowflake, BigQuery, Redshift, ClickHouse, MongoDB, Apache Iceberg, Delta Lake, Apache Hudi, Parquet/CSV.
+2. Add a **Destination** — choose from PostgreSQL, MySQL, MariaDB, SQL Server, Oracle, Amazon Redshift, ClickHouse, MongoDB, Apache Iceberg, Delta Lake, Apache Hudi, Parquet/CSV.
 3. Start the job. The dashboard shows per-device replication lag, throughput, and errors in real time.
 
 ---
@@ -332,7 +332,7 @@ For remote staging, set the appropriate properties in the same config file:
 | Category | Systems |
 |---|---|
 | Relational (OLTP) | PostgreSQL, MySQL, MariaDB, Microsoft SQL Server, Oracle, SQLite, DuckDB, Derby, H2, HyperSQL |
-| Data Warehouses | Snowflake, Google BigQuery, Amazon Redshift, ClickHouse |
+| Data Warehouses | Amazon Redshift, ClickHouse |
 | Data Lakes | Apache Iceberg, Delta Lake, Apache Hudi |
 | NoSQL | MongoDB |
 | File / Object | Apache Parquet, CSV |
@@ -343,9 +343,9 @@ For remote staging, set the appropriate properties in the same config file:
 
 | Resource | Link |
 |---|---|
-| Interactive Get Started guide | https://www.synclite.io/resources/get-started |
-| Full platform documentation | https://www.synclite.io/resources/documentation |
-| Website | https://www.synclite.io |
+| Interactive Get Started guide | https://github.com/syncliteio/SyncLite/blob/main/DOCUMENTATION.md#getting-started |
+| Full platform documentation | https://github.com/syncliteio/SyncLite/blob/main/DOCUMENTATION.md |
+| Website | https://github.com/syncliteio/SyncLite |
 | GitHub repository | https://github.com/syncliteio/SyncLite |
 | Support email | support@synclite.io |
 | Patent | about.html#patent |
