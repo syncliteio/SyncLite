@@ -2,7 +2,6 @@
 
 > **Build Anything, Sync Anywhere** — open-source, low-code relational data synchronization and consolidation platform.
 >
-> Full interactive guide: https://github.com/syncliteio/SyncLite/blob/main/DOCUMENTATION.md#getting-started  
 > Full documentation: https://github.com/syncliteio/SyncLite/blob/main/DOCUMENTATION.md
 
 ---
@@ -37,8 +36,8 @@ Edge Sources (SyncLite Logger / DB / DBReader / QReader)
 
 | Component | What It Does |
 |---|---|
-| **SyncLite Logger** | Embeddable JDBC driver for Java/Python edge apps — wraps SQLite, DuckDB, Derby, H2, HyperSQL |
-| **SyncLite DB** | Standalone HTTP/JSON database server for any language |
+| **SyncLite Logger** | Local-first, embeddable JDBC driver for Java/Python edge apps — wraps SQLite, DuckDB, Derby, H2, HyperSQL for robust offline and sync-ready operation |
+| **SyncLite DB** | Local-first, sync-enabled database server. Optimized for localhost/edge, exposes embedded DBs over HTTP/JSON for any language |
 | **SyncLite Client** | Interactive CLI for managing SyncLite devices |
 | **SyncLite Consolidator** | Central real-time consolidation engine — delivers data to destinations |
 | **SyncLite DBReader** | Database ETL / replication / migration tool |
@@ -132,7 +131,24 @@ bin/dst/mysql/docker-deploy.sh      # MySQL destination
 
 ---
 
-## Step 3 — Choose Your Use Case
+
+---
+
+
+
+## Step 3 — Try the Sample App (Recommended)
+
+The fastest way to see SyncLite in action is to launch the sample web app. **Note:** The sample app requires the SyncLite Consolidator to be running and configured as a destination for sync to work.
+
+If you used the platform's `deploy.sh`/`start.sh` or Docker scripts, the Consolidator and Sample App are already running and accessible at the URLs below.
+
+1. Open [http://localhost:8080/synclite-consolidator](http://localhost:8080/synclite-consolidator) and configure a destination database (e.g., PostgreSQL, MySQL, etc.).
+2. Open [http://localhost:8080/synclite-sample-app](http://localhost:8080/synclite-sample-app)
+3. In the sample app, create a device, run SQL workloads, and watch live sync to your configured destination — all from your browser.
+
+---
+
+## Step 4 — Choose Your Use Case
 
 ### A. Edge / Desktop App with Embedded Database (Java)
 
@@ -231,17 +247,36 @@ try (SyncLiteStream stream = SyncLiteStream.open(dbPath)) {
 
 ---
 
-### D. SyncLite DB — Any Language via HTTP/JSON
 
-Start the server, then send plain HTTP POST requests — no SDK needed.
+---
+
+### G. SyncLite DB — Local-First HTTP/JSON Database (Any Language)
+
+SyncLite DB is a local-first, sync-enabled database server. The recommended way to run it is as a web application (WAR) with a browser-based GUI:
+
+1. **Deploy the WAR:**  
+   - Copy `synclite-db-oss.war` (from `tools/synclite-db/` or `root/web/target/`) into the `webapps/` directory of your Apache Tomcat server.
+   - Start Tomcat (see platform or Tomcat documentation).
+
+2. **Access the Web UI:**  
+   - Open your browser and go to:  
+     `http://localhost:8080/synclite-db`  
+     (Adjust port if your Tomcat uses a different one.)
+
+3. **Configure & Start:**  
+   - Use the web interface to configure databases, logger options, and start/stop the SyncLite DB server.
+   - All management, monitoring, and job setup is now available via the GUI.
+
+> **Note:** The legacy CLI scripts (`synclite-db.sh` / `.bat`) are still available for advanced/manual use:
 
 ```bash
-# Start
-./tools/synclite-db/synclite-db.sh --config synclite_db.conf   # Linux/macOS
-tools\synclite-db\synclite-db.bat --config synclite_db.conf    # Windows
+# Linux / macOS
+./tools/synclite-db/synclite-db.sh --config synclite_db.conf
+# Windows
+tools\synclite-db\synclite-db.bat --config synclite_db.conf
 ```
 
-**Python example:**
+Once running, you can send plain HTTP POST requests — no SDK needed. Example (Python):
 
 ```python
 import requests
@@ -300,29 +335,39 @@ QReader subscribes to MQTT topics and lands data in your destination database in
 
 ---
 
-## Step 4 — Configure the Consolidator
-
-Open **http://localhost:8080/synclite-consolidator** and:
-
-1. **Configure Job** — set the staging storage path (or SFTP/S3/MinIO/Kafka URL).
-2. Add a **Destination** — choose from PostgreSQL, MySQL, MariaDB, SQL Server, Oracle, Amazon Redshift, ClickHouse, MongoDB, Apache Iceberg, Delta Lake, Apache Hudi, Parquet/CSV.
-3. Start the job. The dashboard shows per-device replication lag, throughput, and errors in real time.
 
 ---
 
-## Step 5 — Staging Storage Options
+## Configure the Consolidator
 
-Configure `local-data-stage-directory` in `synclite_logger.conf` for local or NFS staging.  
-For remote staging, set the appropriate properties in the same config file:
+To enable sync from the sample app or any SyncLite device, you must configure the SyncLite Consolidator:
 
-| Staging Backend | Docker helper |
-|---|---|
-| SFTP | `bin/stage/sftp/docker-deploy.sh` |
-| MinIO | `bin/stage/minio/docker-deploy.sh` |
-| Amazon S3 | configure `s3-*` properties in conf |
-| Apache Kafka | configure `kafka-*` properties in conf |
-| Microsoft OneDrive | configure `onedrive-*` properties in conf |
-| Google Drive | configure `gdrive-*` properties in conf |
+1. Open [http://localhost:8080/synclite-consolidator](http://localhost:8080/synclite-consolidator)
+2. Click **Configure Job** and set the staging storage path (e.g., a local directory, or SFTP/S3/MinIO/Kafka URL).
+3. Add a **Destination** — choose from PostgreSQL, MySQL, MariaDB, SQL Server, Oracle, Amazon Redshift, ClickHouse, MongoDB, Apache Iceberg, Delta Lake, Apache Hudi, Parquet/CSV, and more.
+4. Start the job. The dashboard will show per-device replication lag, throughput, and errors in real time.
+
+---
+
+## Staging Storage Options
+
+SyncLite supports a variety of staging backends for log shipping:
+
+- **Local/NFS:** Set `local-data-stage-directory` in your `synclite_logger.conf` or SyncLite DB configuration.
+- **SFTP:** Use the provided helper script:  
+    `bin/stage/sftp/docker-deploy.sh`
+- **MinIO:**  
+    `bin/stage/minio/docker-deploy.sh`
+- **Amazon S3:**  
+    Configure `s3-*` properties in your config file.
+- **Apache Kafka:**  
+    Configure `kafka-*` properties in your config file.
+- **Microsoft OneDrive:**  
+    Configure `onedrive-*` properties in your config file.
+- **Google Drive:**  
+    Configure `gdrive-*` properties in your config file.
+
+> See the [full documentation](https://github.com/syncliteio/SyncLite/blob/main/DOCUMENTATION.md) for advanced staging and destination configuration.
 
 ---
 
@@ -342,7 +387,6 @@ For remote staging, set the appropriate properties in the same config file:
 
 | Resource | Link |
 |---|---|
-| Interactive Get Started guide | https://www.synclite.io/resources/get-started |
 | Full platform documentation | https://github.com/syncliteio/SyncLite/blob/main/DOCUMENTATION.md |
 | Website | https://www.synclite.io |
 | GitHub repository | https://github.com/syncliteio/SyncLite |

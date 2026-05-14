@@ -42,7 +42,7 @@ Most data integration problems at the edge are solved today by one of two approa
 | Component | Description | README |
 |---|---|---|
 | **SyncLite Logger** | Embeddable JDBC driver for Java/Python edge apps | [→](https://github.com/syncliteio/synclite-logger-java/blob/main/README.md) |
-| **SyncLite DB** | Standalone HTTP/JSON database server for any language | [→](https://github.com/syncliteio/synclite-db/blob/main/README.md) |
+| **SyncLite DB** | Local-first, sync-enabled database server. Optimized for localhost/edge, exposes embedded DBs over HTTP/JSON for any language. | [→](https://github.com/syncliteio/synclite-db/blob/main/README.md) |
 | **SyncLite Client** | Interactive CLI for SyncLite devices | [→](https://github.com/syncliteio/synclite-client/blob/main/README.md) |
 | **SyncLite Consolidator** | Central real-time consolidation engine | [→](https://github.com/syncliteio/synclite-consolidator/blob/main/README.md) |
 | **SyncLite DBReader** | Database ETL / replication / migration tool | [→](https://github.com/syncliteio/synclite-dbreader/blob/main/README.md) |
