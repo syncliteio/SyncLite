@@ -77,7 +77,7 @@ Notes:
 **Prerequisites:** Java 25, Apache Maven 3.8.6+
 
 ```bash
-git clone --recurse-submodules git@github.com:syncliteio/SyncLite.git SyncLite
+git clone --recurse-submodules https://github.com/syncliteio/SyncLite.git SyncLite
 cd SyncLite
 mvn -Drevision=oss clean install
 ```
