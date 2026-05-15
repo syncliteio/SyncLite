@@ -22,6 +22,39 @@ set JDK_VER=25
 set TOMCAT_DIR=apache-tomcat-%TOMCAT_VER%
 set JDK_DIR=jdk-%JDK_VER%
 
+goto :after_extract_helper
+
+REM --- Helper: extract ZIP archives using available tools (pwsh, powershell, tar, unzip)
+:extract_zip
+set "ZIP_PATH=%~1"
+set "DEST_PATH=%~2"
+where pwsh >nul 2>&1
+if %errorlevel%==0 (
+	pwsh -NoProfile -Command "Expand-Archive -Force -Path '%ZIP_PATH%' -DestinationPath '%DEST_PATH%'; exit $LASTEXITCODE"
+	exit /b %ERRORLEVEL%
+)
+where powershell >nul 2>&1
+if %errorlevel%==0 (
+		  if defined SystemRoot (set "PS_EXE=%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe") else set "PS_EXE=powershell"
+		  !PS_EXE! -NoProfile -Command "Expand-Archive -Force -Path '%ZIP_PATH%' -DestinationPath '%DEST_PATH%'; exit $LASTEXITCODE"
+		  exit /b !ERRORLEVEL!
+)
+where tar >nul 2>&1
+if %errorlevel%==0 (
+		  tar -xf "%ZIP_PATH%" -C "%DEST_PATH%"
+		  exit /b !ERRORLEVEL!
+)
+where unzip >nul 2>&1
+if %errorlevel%==0 (
+		  unzip -o "%ZIP_PATH%" -d "%DEST_PATH%"
+		  exit /b !ERRORLEVEL!
+)
+echo !ERR!ERROR: No archive extractor found (pwsh/powershell/tar/unzip).!RESET!
+exit /b 1
+
+:after_extract_helper
+
+
 REM ── Download and extract Tomcat ───────────────────────────────────────────────
 set TOMCAT_ZIP=apache-tomcat-%TOMCAT_VER%-windows-x64.zip
 set TOMCAT_URL=https://dlcdn.apache.org/tomcat/tomcat-9/v%TOMCAT_VER%/bin/%TOMCAT_ZIP%
@@ -44,7 +77,7 @@ if defined TOMCAT_READY (
 
 	echo !STEP![2/7] Extracting Apache Tomcat...!RESET!
 	if exist "%TOMCAT_DIR%" rmdir /s /q "%TOMCAT_DIR%"
-	powershell -Command "Expand-Archive -Force -Path '%TOMCAT_ZIP%' -DestinationPath '.'"
+	call :extract_zip "%TOMCAT_ZIP%" "."
 	if errorlevel 1 (echo !ERR!ERROR: Failed to extract Tomcat.!RESET! & pause & exit /b 1)
 	echo !OK![2/7] Tomcat extraction complete.!RESET!
 )
@@ -81,7 +114,7 @@ if defined JDK_READY (
 
 	echo !STEP![5/7] Extracting OpenJDK %JDK_VER%...!RESET!
 	if exist jdk_tmp rmdir /s /q jdk_tmp
-	powershell -Command "Expand-Archive -Force -Path '%JDK_ZIP%' -DestinationPath 'jdk_tmp'"
+	call :extract_zip "%JDK_ZIP%" "jdk_tmp"
 	if errorlevel 1 (echo !ERR!ERROR: Failed to extract OpenJDK.!RESET! & pause & exit /b 1)
 	echo !OK![5/7] OpenJDK extraction complete.!RESET!
 
