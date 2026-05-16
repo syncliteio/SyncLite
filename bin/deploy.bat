@@ -76,7 +76,7 @@ if defined TOMCAT_READY (
 
 	echo !STEP![2/7] Extracting Apache Tomcat...!RESET!
 	if exist "%TOMCAT_DIR%" rmdir /s /q "%TOMCAT_DIR%"
-	powershell -Command "Expand-Archive -Force -Path '%TOMCAT_ZIP%' -DestinationPath '.'"
+	call :extract_zip "%TOMCAT_ZIP%" "."
 	if errorlevel 1 (echo !ERR!ERROR: Failed to extract Tomcat.!RESET! & pause & exit /b 1)
 	echo !OK![2/7] Tomcat extraction complete.!RESET!
 )
