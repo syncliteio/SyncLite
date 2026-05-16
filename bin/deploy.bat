@@ -31,7 +31,7 @@ set "DEST_PATH=%~2"
 where pwsh >nul 2>&1
 if %errorlevel%==0 (
 	pwsh -NoProfile -Command "Expand-Archive -Force -Path '%ZIP_PATH%' -DestinationPath '%DEST_PATH%'; exit $LASTEXITCODE"
-	exit /b %ERRORLEVEL%
+	exit /b !ERRORLEVEL!
 )
 where powershell >nul 2>&1
 if %errorlevel%==0 (
@@ -114,6 +114,7 @@ if defined JDK_READY (
 
 	echo !STEP![5/7] Extracting OpenJDK %JDK_VER%...!RESET!
 	if exist jdk_tmp rmdir /s /q jdk_tmp
+	mkdir jdk_tmp
 	call :extract_zip "%JDK_ZIP%" "jdk_tmp"
 	if errorlevel 1 (echo !ERR!ERROR: Failed to extract OpenJDK.!RESET! & pause & exit /b 1)
 	echo !OK![5/7] OpenJDK extraction complete.!RESET!
