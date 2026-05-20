@@ -60,7 +60,7 @@ if defined WAR_SOURCE (
     call :copy_file "!WAR_SOURCE!" "%CATALINA_WEBAPPS%\!WAR_TARGET!.war"
     if errorlevel 1 (
         echo !ERR!ERROR: Failed to refresh !WAR_LABEL! WAR before startup.!RESET!
-        call :hold_window failure
+		call :hold_window failure
         exit /b 1
     )
     echo !OK!  - !WAR_LABEL! WAR refreshed.!RESET!
@@ -77,7 +77,7 @@ set "JRE_HOME=%JAVA_HOME%"
 echo !STEP![1/4] Checking JDK installation...!RESET!
 if not exist "%JAVA_HOME%\bin\java.exe" (
     echo !ERR!ERROR: JDK not found at %JAVA_HOME% - run deploy.bat first.!RESET!
-    call :hold_window failure
+	call :hold_window failure
     exit /b 1
 )
 echo !OK![1/4] JDK found.!RESET!
@@ -86,22 +86,22 @@ REM ── Locate Tomcat ──────────────────�
 echo !STEP![2/4] Checking Tomcat installation...!RESET!
 if not exist "%CATALINA_HOME%" (
     echo !ERR!ERROR: %TOMCAT_DIR% not found - run deploy.bat first.!RESET!
-    call :hold_window failure
+	call :hold_window failure
     exit /b 1
 )
 if not exist "%CATALINA_STARTUP%" (
     echo !ERR!ERROR: Tomcat startup script missing at %CATALINA_STARTUP%.!RESET!
-    call :hold_window failure
+	call :hold_window failure
     exit /b 1
 )
 if not exist "%CATALINA_CTL%" (
     echo !ERR!ERROR: Tomcat control script missing at %CATALINA_CTL%.!RESET!
-    call :hold_window failure
+	call :hold_window failure
     exit /b 1
 )
 if not exist "%CATALINA_WEBAPPS%" (
     echo !ERR!ERROR: Tomcat webapps directory missing at %CATALINA_WEBAPPS%.!RESET!
-    call :hold_window failure
+	call :hold_window failure
     exit /b 1
 )
 echo !OK![2/4] Tomcat found.!RESET!
@@ -111,17 +111,17 @@ echo !INFO!Using JRE_HOME=%JRE_HOME%!RESET!
 echo !INFO!Using Tomcat: %TOMCAT_DIR%!RESET!
 
 echo !STEP![3/4] Refreshing WAR deployments...!RESET!
-call :refresh_war "SyncLite Consolidator" "synclite-consolidator" "..\lib\consolidator\synclite-consolidator-*.war" "..\target\synclite-platform-oss\lib\consolidator\synclite-consolidator-*.war" "..\synclite-consolidator\root\web\target\synclite-consolidator-*.war" "..\synclite-consolidator\root\web\target\*.war"
+call :refresh_war "SyncLite Consolidator" "synclite-consolidator" "..\lib\consolidator\synclite-consolidator-*.war" "..\..\lib\consolidator\synclite-consolidator-*.war" "..\..\synclite-consolidator\root\web\target\synclite-consolidator-*.war" "..\..\synclite-consolidator\root\web\target\*.war"
 if errorlevel 1 exit /b 1
-call :refresh_war "SyncLite Sample App" "synclite-sample-app" "..\sample-apps\synclite-logger\jsp-servlet\web\target\*.war" "..\synclite-sample-web-app\web\target\*.war"
+call :refresh_war "SyncLite Sample App" "synclite-sample-app" "..\sample-apps\synclite-logger\jsp-servlet\web\target\*.war" "..\..\synclite-sample-web-app\web\target\*.war"
 if errorlevel 1 exit /b 1
-call :refresh_war "SyncLite DB" "synclite-db" "..\tools\synclite-db\*.war" "..\target\synclite-platform-oss\tools\synclite-db\*.war" "..\synclite-db\root\web\target\synclite-db-*.war" "..\synclite-db\root\web\target\*.war"
+call :refresh_war "SyncLite DB" "synclite-db" "..\tools\synclite-db\*.war" "..\..\synclite-db\root\web\target\synclite-db-*.war" "..\..\synclite-db\root\web\target\*.war"
 if errorlevel 1 exit /b 1
-call :refresh_war "SyncLite DBReader" "synclite-dbreader" "..\tools\synclite-dbreader\*.war" "..\target\synclite-platform-oss\tools\synclite-dbreader\*.war" "..\synclite-dbreader\root\web\target\synclite-dbreader-*.war" "..\synclite-dbreader\root\web\target\*.war"
+call :refresh_war "SyncLite DBReader" "synclite-dbreader" "..\tools\synclite-dbreader\*.war" "..\..\synclite-dbreader\root\web\target\synclite-dbreader-*.war" "..\..\synclite-dbreader\root\web\target\*.war"
 if errorlevel 1 exit /b 1
-call :refresh_war "SyncLite QReader" "synclite-qreader" "..\tools\synclite-qreader\*.war" "..\target\synclite-platform-oss\tools\synclite-qreader\*.war" "..\synclite-qreader\root\web\target\synclite-qreader-*.war" "..\synclite-qreader\root\web\target\*.war"
+call :refresh_war "SyncLite QReader" "synclite-qreader" "..\tools\synclite-qreader\*.war" "..\..\synclite-qreader\root\web\target\synclite-qreader-*.war" "..\..\synclite-qreader\root\web\target\*.war"
 if errorlevel 1 exit /b 1
-call :refresh_war "SyncLite Job Monitor" "synclite-jobmonitor" "..\tools\synclite-jobmonitor\*.war" "..\target\synclite-platform-oss\tools\synclite-jobmonitor\*.war" "..\synclite-job-monitor\root\web\target\synclite-jobmonitor-*.war" "..\synclite-job-monitor\root\web\target\*.war"
+call :refresh_war "SyncLite Job Monitor" "synclite-jobmonitor" "..\tools\synclite-jobmonitor\*.war" "..\..\synclite-job-monitor\root\web\target\synclite-jobmonitor-*.war" "..\..\synclite-job-monitor\root\web\target\*.war"
 if errorlevel 1 exit /b 1
 echo !OK![3/4] WAR refresh completed.!RESET!
 
@@ -129,7 +129,7 @@ echo !STEP![4/4] Starting Tomcat...!RESET!
 call "%CATALINA_STARTUP%"
 if errorlevel 1 (
     echo !ERR!ERROR: Tomcat startup command failed.!RESET!
-    call :hold_window failure
+	call :hold_window failure
     exit /b 1
 )
 echo !OK![4/4] Tomcat startup command completed.!RESET!
