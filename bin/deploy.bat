@@ -55,13 +55,13 @@ set "OUT=%~2"
 
 if defined PWSH_EXE (
 	"!PWSH_EXE!" -NoProfile -Command ^
-		"$ProgressPreference='SilentlyContinue'; try { Invoke-WebRequest -Uri '%URL%' -OutFile '%OUT%' -UseBasicParsing; exit 0 } catch { exit 1 }"
+		"try { Invoke-WebRequest -Uri '%URL%' -OutFile '%OUT%' -UseBasicParsing; exit 0 } catch { exit 1 }"
 	exit /b !ERRORLEVEL!
 )
 
 if defined PS_EXE (
 	"!PS_EXE!" -NoProfile -Command ^
-		"$ProgressPreference='SilentlyContinue'; try { Invoke-WebRequest -Uri '%URL%' -OutFile '%OUT%' -UseBasicParsing; exit 0 } catch { exit 1 }"
+		"try { Invoke-WebRequest -Uri '%URL%' -OutFile '%OUT%' -UseBasicParsing; exit 0 } catch { exit 1 }"
 	exit /b !ERRORLEVEL!
 )
 

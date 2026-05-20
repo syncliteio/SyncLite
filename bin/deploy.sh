@@ -53,7 +53,7 @@ download_file() {
 	local out="$2"
 
 	if command -v curl >/dev/null 2>&1; then
-		curl -fsSL -o "${out}" "${url}"
+		curl -fL --progress-bar -o "${out}" "${url}"
 		return
 	fi
 
