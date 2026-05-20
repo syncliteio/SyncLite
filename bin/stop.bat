@@ -15,6 +15,20 @@ echo !INFO!SyncLite Platform Stop!RESET!
 echo !INFO!========================================!RESET!
 echo.
 
+goto :after_helpers
+
+:hold_window
+echo.
+if /I "%~1"=="failure" (
+    echo !WARN!Stop completed with warnings. Review the messages above, then press any key to close this window.!RESET!
+) else (
+    echo !OK!Stop completed successfully. Review the messages above, then press any key to close this window.!RESET!
+)
+pause >nul
+exit /b 0
+
+:after_helpers
+
 set "TOMCAT_VER=9.0.117"
 set "TOMCAT_DIR=apache-tomcat-%TOMCAT_VER%"
 
@@ -31,7 +45,7 @@ set "JAVA_HOME=%~dp0jdk-25"
 echo !STEP![2/3] Checking JDK tools...!RESET!
 if not exist "%JAVA_HOME%\bin\jps.exe" (
     echo !WARN!WARNING: jps not found at %JAVA_HOME% - skipping process termination.!RESET!
-    pause
+	call :hold_window failure
     goto :eof
 )
 echo !OK![2/3] JDK tools found.!RESET!
@@ -52,6 +66,6 @@ for %%C in (
 echo !OK![3/3] Process termination pass complete.!RESET!
 echo.
 echo !OK!Stop script finished.!RESET!
-pause
+call :hold_window success
 endlocal
 
