@@ -54,6 +54,12 @@ set "URL=%~1"
 set "OUT=%~2"
 
 if defined PWSH_EXE (
+if defined CURL_EXE (
+	"!CURL_EXE!" -fL --ssl-no-revoke -o "%OUT%" "%URL%"
+	exit /b !ERRORLEVEL!
+)
+
+if defined PWSH_EXE (
 	"!PWSH_EXE!" -NoProfile -Command ^
 		"try { Invoke-WebRequest -Uri '%URL%' -OutFile '%OUT%' -UseBasicParsing; exit 0 } catch { exit 1 }"
 	exit /b !ERRORLEVEL!
@@ -62,11 +68,6 @@ if defined PWSH_EXE (
 if defined PS_EXE (
 	"!PS_EXE!" -NoProfile -Command ^
 		"try { Invoke-WebRequest -Uri '%URL%' -OutFile '%OUT%' -UseBasicParsing; exit 0 } catch { exit 1 }"
-	exit /b !ERRORLEVEL!
-)
-
-if defined CURL_EXE (
-	"!CURL_EXE!" -fL --ssl-no-revoke -o "%OUT%" "%URL%"
 	exit /b !ERRORLEVEL!
 )
 
