@@ -1,8 +1,8 @@
 ## Title
-Harden Unix lifecycle scripts and align operator messaging
+Harden lifecycle scripts on Windows and Unix, and align operator messaging
 
 ## Summary
-This change improves reliability and usability of the Unix deployment lifecycle scripts by adding tool prechecks, fallback behavior for downloads and WAR discovery, and consistent progress/error messaging.
+This change improves reliability and usability of SyncLite deployment lifecycle scripts across both Windows (`.bat`) and Unix (`.sh`) by adding stronger prechecks, fallback behavior for tool availability and WAR discovery, and consistent progress/error messaging.
 
 ## Why
 - Existing Unix scripts were less robust than the Windows scripts in several edge cases.
@@ -10,6 +10,22 @@ This change improves reliability and usability of the Unix deployment lifecycle 
 - User-facing logs were inconsistent across deploy/start/stop/docker flows.
 
 ## What Changed
+- Updated `bin/deploy.bat`
+  - Added robust tool detection using absolute system paths where possible.
+  - Added resilient download/extract fallback handling.
+  - Added WAR source fallback resolution for all deployed apps.
+  - Added explicit success/failure close-window prompts for better operator clarity.
+
+- Updated `bin/start.bat`
+  - Added startup prechecks for Tomcat/JDK paths.
+  - Expanded WAR refresh from DB-only to all deployable apps.
+  - Added fallback WAR source resolution.
+  - Added clearer success/failure completion messaging.
+
+- Updated `bin/stop.bat`
+  - Added clearer completion messaging and close-window behavior.
+  - Improved control-flow safety around helper labels.
+
 - Updated `bin/deploy.sh`
   - Added required tool checks.
   - Added download fallback (`curl` -> `wget`).
@@ -32,6 +48,9 @@ This change improves reliability and usability of the Unix deployment lifecycle 
   - Standardized step-based progress messages and clearer docker-daemon error guidance.
 
 ## Validation
+- Windows batch script validation:
+  - `& "c:\work\synclite\repos\SyncLite\bin\deploy.bat"` completed successfully.
+
 - Syntax-checked all updated shell scripts with:
   - `bash -n ./bin/deploy.sh`
   - `bash -n ./bin/start.sh`
@@ -41,7 +60,7 @@ This change improves reliability and usability of the Unix deployment lifecycle 
 ## Impact
 - No Java source or runtime behavior changes outside script orchestration.
 - No API or schema changes.
-- Linux/macOS operational experience becomes more predictable for first-time users.
+- Operator experience is more predictable for first-time users on both Windows and Linux/macOS.
 
 ## Checklist
 - [x] Backward-compatible script updates
