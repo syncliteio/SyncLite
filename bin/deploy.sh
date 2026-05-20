@@ -58,7 +58,7 @@ download_file() {
 	fi
 
 	if command -v wget >/dev/null 2>&1; then
-		wget -q -O "${out}" "${url}"
+		wget --progress=bar:force:noscroll -O "${out}" "${url}"
 		return
 	fi
 
