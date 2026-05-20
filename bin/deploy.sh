@@ -35,19 +35,63 @@ log_error() {
 	printf "%b\n" "${RED}$1${RESET}" >&2
 }
 
-copy_war() {
-	local source_pattern="$1"
-	local target_path="$2"
-	local label="$3"
-	local matches=( ${source_pattern} )
+log_warn() {
+	printf "%b\n" "${YELLOW}$1${RESET}"
+}
 
-	if (( ${#matches[@]} == 0 )); then
-		log_error "ERROR: ${label} WAR not found: ${source_pattern}"
+require_tool() {
+	local tool="$1"
+	local label="$2"
+	if ! command -v "${tool}" >/dev/null 2>&1; then
+		log_error "ERROR: Required tool not found for ${label}: ${tool}"
+		exit 1
+	fi
+}
+
+download_file() {
+	local url="$1"
+	local out="$2"
+
+	if command -v curl >/dev/null 2>&1; then
+		curl -fsSL -o "${out}" "${url}"
+		return
+	fi
+
+	if command -v wget >/dev/null 2>&1; then
+		wget -q -O "${out}" "${url}"
+		return
+	fi
+
+	log_error "ERROR: No supported download tool found (curl or wget)."
+	exit 1
+}
+
+resolve_war() {
+	local pattern
+	local matches=()
+	for pattern in "$@"; do
+		matches=( ${pattern} )
+		if (( ${#matches[@]} > 0 )); then
+			printf '%s\n' "${matches[0]}"
+			return 0
+		fi
+	done
+	return 1
+}
+
+copy_war() {
+	local label="$1"
+	local target_path="$2"
+	shift 2
+	local source_path
+
+	if ! source_path="$(resolve_war "$@")"; then
+		log_error "ERROR: ${label} WAR not found in packaged or module build output."
 		exit 1
 	fi
 
-	log_info "  - Deploying ${label} WAR from ${matches[0]}"
-	cp -f "${matches[0]}" "${target_path}"
+	log_info "  - Deploying ${label} WAR from ${source_path}"
+	cp -f "${source_path}" "${target_path}"
 	log_ok "  - ${label} WAR deployed."
 }
 
@@ -61,6 +105,8 @@ TOMCAT_VER="9.0.117"
 JDK_VER="25"
 TOMCAT_DIR="apache-tomcat-${TOMCAT_VER}"
 JDK_DIR="jdk-${JDK_VER}"
+
+require_tool tar "archive extraction"
 
 is_tomcat_ready() {
 	[[ -f "${TOMCAT_DIR}/conf/server.xml" && -f "${TOMCAT_DIR}/bin/catalina.sh" ]]
@@ -82,7 +128,7 @@ else
 		log_ok "[1/7] Reusing downloaded Apache Tomcat archive ${TOMCAT_TGZ}."
 	else
 		log_step "[1/7] Downloading Apache Tomcat ${TOMCAT_VER}..."
-		curl -fsSL -o "${TOMCAT_TGZ}" "${TOMCAT_URL}"
+		download_file "${TOMCAT_URL}" "${TOMCAT_TGZ}"
 		log_ok "[1/7] Tomcat download complete."
 	fi
 
@@ -110,7 +156,7 @@ else
 		log_ok "[4/7] Reusing downloaded OpenJDK archive ${JDK_TGZ}."
 	else
 		log_step "[4/7] Downloading OpenJDK ${JDK_VER}..."
-		curl -fsSL -o "${JDK_TGZ}" "${JDK_URL}"
+		download_file "${JDK_URL}" "${JDK_TGZ}"
 		log_ok "[4/7] OpenJDK download complete."
 	fi
 
@@ -165,12 +211,34 @@ fi
 # ── Deploy WAR files ──────────────────────────────────────────────────────────
 WEBAPPS="apache-tomcat-${TOMCAT_VER}/webapps"
 log_step "[7/7] Deploying WAR files to Tomcat..."
-copy_war "../lib/consolidator/synclite-consolidator-*.war" "${WEBAPPS}/synclite-consolidator.war" "SyncLite Consolidator"
-copy_war "../sample-apps/synclite-logger/jsp-servlet/web/target/*.war" "${WEBAPPS}/synclite-sample-app.war" "SyncLite Sample App"
-copy_war "../tools/synclite-db/*.war" "${WEBAPPS}/synclite-db.war" "SyncLite DB"
-copy_war "../tools/synclite-dbreader/*.war" "${WEBAPPS}/synclite-dbreader.war" "SyncLite DBReader"
-copy_war "../tools/synclite-qreader/*.war" "${WEBAPPS}/synclite-qreader.war" "SyncLite QReader"
-copy_war "../tools/synclite-jobmonitor/*.war" "${WEBAPPS}/synclite-jobmonitor.war" "SyncLite Job Monitor"
+copy_war "SyncLite Consolidator" "${WEBAPPS}/synclite-consolidator.war" \
+	"../lib/consolidator/synclite-consolidator-*.war" \
+	"../target/synclite-platform-oss/lib/consolidator/synclite-consolidator-*.war" \
+	"../synclite-consolidator/root/web/target/synclite-consolidator-*.war" \
+	"../synclite-consolidator/root/web/target/*.war"
+copy_war "SyncLite Sample App" "${WEBAPPS}/synclite-sample-app.war" \
+	"../sample-apps/synclite-logger/jsp-servlet/web/target/*.war" \
+	"../synclite-sample-web-app/web/target/*.war"
+copy_war "SyncLite DB" "${WEBAPPS}/synclite-db.war" \
+	"../tools/synclite-db/*.war" \
+	"../target/synclite-platform-oss/tools/synclite-db/*.war" \
+	"../synclite-db/root/web/target/synclite-db-*.war" \
+	"../synclite-db/root/web/target/*.war"
+copy_war "SyncLite DBReader" "${WEBAPPS}/synclite-dbreader.war" \
+	"../tools/synclite-dbreader/*.war" \
+	"../target/synclite-platform-oss/tools/synclite-dbreader/*.war" \
+	"../synclite-dbreader/root/web/target/synclite-dbreader-*.war" \
+	"../synclite-dbreader/root/web/target/*.war"
+copy_war "SyncLite QReader" "${WEBAPPS}/synclite-qreader.war" \
+	"../tools/synclite-qreader/*.war" \
+	"../target/synclite-platform-oss/tools/synclite-qreader/*.war" \
+	"../synclite-qreader/root/web/target/synclite-qreader-*.war" \
+	"../synclite-qreader/root/web/target/*.war"
+copy_war "SyncLite Job Monitor" "${WEBAPPS}/synclite-jobmonitor.war" \
+	"../tools/synclite-jobmonitor/*.war" \
+	"../target/synclite-platform-oss/tools/synclite-jobmonitor/*.war" \
+	"../synclite-job-monitor/root/web/target/synclite-jobmonitor-*.war" \
+	"../synclite-job-monitor/root/web/target/*.war"
 log_ok "[7/7] WAR deployment complete."
 
 echo

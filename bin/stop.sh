@@ -35,12 +35,17 @@ log_warn() {
     printf "%b\n" "${YELLOW}$1${RESET}"
 }
 
+log_error() {
+    printf "%b\n" "${RED}$1${RESET}" >&2
+}
+
 log_info "========================================"
 log_info "SyncLite Platform Stop"
 log_info "========================================"
 echo
 
 export JAVA_HOME="${SCRIPT_DIR}/jdk-25"
+export JRE_HOME="${JAVA_HOME}"
 TOMCAT_VER="9.0.117"
 TOMCAT_DIR="apache-tomcat-${TOMCAT_VER}"
 
@@ -53,6 +58,15 @@ if [[ -x "${TOMCAT_DIR}/bin/shutdown.sh" ]]; then
     log_ok "[1/3] Shutdown signal sent to Tomcat."
 else
     log_warn "[1/3] Tomcat shutdown script not found. Skipping graceful shutdown."
+fi
+
+if ! command -v pgrep >/dev/null 2>&1; then
+    log_warn "[2/3] pgrep not found. Skipping process termination pass."
+    log_step "[3/3] Finalizing stop workflow..."
+    log_warn "[3/3] Stop workflow completed with warnings."
+    echo
+    log_warn "Stop script finished with warnings."
+    exit 0
 fi
 
 # ── Kill any remaining Java processes by class name ──────────────────────────────
