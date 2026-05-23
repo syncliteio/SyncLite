@@ -39,6 +39,34 @@
 			<outputDirectory>lib/logger/java</outputDirectory>
 		</fileSet>
 		<fileSet>
+			<directory>${project.basedir}/synclite-logger-rust/target/release</directory>
+			<includes>
+				<include>${rust.logger.include.dll}</include>
+				<include>${rust.logger.include.lib}</include>
+			</includes>
+			<fileMode>755</fileMode>
+			<directoryMode>755</directoryMode>
+			<outputDirectory>lib/logger/rust/windows</outputDirectory>
+		</fileSet>
+		<fileSet>
+			<directory>${project.basedir}/synclite-logger-rust/target/release</directory>
+			<includes>
+				<include>${rust.logger.include.so}</include>
+			</includes>
+			<fileMode>755</fileMode>
+			<directoryMode>755</directoryMode>
+			<outputDirectory>lib/logger/rust/linux</outputDirectory>
+		</fileSet>
+		<fileSet>
+			<directory>${project.basedir}/synclite-logger-rust/target/release</directory>
+			<includes>
+				<include>${rust.logger.include.dylib}</include>
+			</includes>
+			<fileMode>755</fileMode>
+			<directoryMode>755</directoryMode>
+			<outputDirectory>lib/logger/rust/macos</outputDirectory>
+		</fileSet>
+		<fileSet>
 			<directory>${project.basedir}/synclite-code-samples</directory>
 			<outputDirectory>/sample-apps/</outputDirectory>
 		</fileSet>

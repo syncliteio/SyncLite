@@ -4,6 +4,17 @@
   <artifactId>synclite-platform</artifactId>
   <version>${revision}</version>
   <packaging>pom</packaging>
+
+	<properties>
+		<!-- Set -DskipNonJavaLoggers=true to skip non-Java logger build and packaging. -->
+		<skipNonJavaLoggers>false</skipNonJavaLoggers>
+		<!-- Rust logger native deps: keep DuckDB prebuilt/downloaded to avoid heavy native builds. -->
+		<duckdbDownloadLib>true</duckdbDownloadLib>
+		<rust.logger.include.dll>synclite-logger-${revision}.dll</rust.logger.include.dll>
+		<rust.logger.include.lib>synclite-logger-${revision}.lib</rust.logger.include.lib>
+		<rust.logger.include.so>libsynclite-logger-${revision}.so</rust.logger.include.so>
+		<rust.logger.include.dylib>libsynclite-logger-${revision}.dylib</rust.logger.include.dylib>
+	</properties>
   
   	<!-- sub modules -->
 	<modules>
@@ -20,6 +31,96 @@
 	
 	<build>
 		<plugins>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>exec-maven-plugin</artifactId>
+				<version>3.5.0</version>
+				<executions>
+					<execution>
+						<id>build-rust-logger</id>
+						<phase>package</phase>
+						<goals>
+							<goal>exec</goal>
+						</goals>
+						<configuration>
+							<skip>${skipNonJavaLoggers}</skip>
+							<workingDirectory>${project.basedir}/synclite-logger-rust</workingDirectory>
+							<executable>cargo</executable>
+							<environmentVariables>
+								<SYNCLITE_RUST_ARTIFACT_VERSION>${revision}</SYNCLITE_RUST_ARTIFACT_VERSION>
+								<DUCKDB_DOWNLOAD_LIB>${duckdbDownloadLib}</DUCKDB_DOWNLOAD_LIB>
+							</environmentVariables>
+							<arguments>
+								<argument>build</argument>
+								<argument>--release</argument>
+								<argument>-p</argument>
+								<argument>synclite-bindings-c</argument>
+							</arguments>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-antrun-plugin</artifactId>
+				<version>3.1.0</version>
+				<executions>
+					<execution>
+						<id>version-rust-logger-artifacts</id>
+						<phase>package</phase>
+						<goals>
+							<goal>run</goal>
+						</goals>
+						<configuration>
+							<target>
+								<copy file="${project.basedir}/synclite-logger-rust/target/release/synclite_bindings_c.dll"
+								      tofile="${project.basedir}/synclite-logger-rust/target/release/synclite-logger-${revision}.dll"
+								      overwrite="true"
+								      quiet="true"
+								      failonerror="false"/>
+								<copy file="${project.basedir}/synclite-logger-rust/target/release/deps/synclite_bindings_c.dll"
+								      tofile="${project.basedir}/synclite-logger-rust/target/release/synclite-logger-${revision}.dll"
+								      overwrite="true"
+								      quiet="true"
+								      failonerror="false"/>
+
+								<copy file="${project.basedir}/synclite-logger-rust/target/release/synclite_bindings_c.lib"
+								      tofile="${project.basedir}/synclite-logger-rust/target/release/synclite-logger-${revision}.lib"
+								      overwrite="true"
+								      quiet="true"
+								      failonerror="false"/>
+								<copy file="${project.basedir}/synclite-logger-rust/target/release/deps/synclite_bindings_c.lib"
+								      tofile="${project.basedir}/synclite-logger-rust/target/release/synclite-logger-${revision}.lib"
+								      overwrite="true"
+								      quiet="true"
+								      failonerror="false"/>
+
+								<copy file="${project.basedir}/synclite-logger-rust/target/release/libsynclite_bindings_c.so"
+								      tofile="${project.basedir}/synclite-logger-rust/target/release/libsynclite-logger-${revision}.so"
+								      overwrite="true"
+								      quiet="true"
+								      failonerror="false"/>
+								<copy file="${project.basedir}/synclite-logger-rust/target/release/deps/libsynclite_bindings_c.so"
+								      tofile="${project.basedir}/synclite-logger-rust/target/release/libsynclite-logger-${revision}.so"
+								      overwrite="true"
+								      quiet="true"
+								      failonerror="false"/>
+
+								<copy file="${project.basedir}/synclite-logger-rust/target/release/libsynclite_bindings_c.dylib"
+								      tofile="${project.basedir}/synclite-logger-rust/target/release/libsynclite-logger-${revision}.dylib"
+								      overwrite="true"
+								      quiet="true"
+								      failonerror="false"/>
+								<copy file="${project.basedir}/synclite-logger-rust/target/release/deps/libsynclite_bindings_c.dylib"
+								      tofile="${project.basedir}/synclite-logger-rust/target/release/libsynclite-logger-${revision}.dylib"
+								      overwrite="true"
+								      quiet="true"
+								      failonerror="false"/>
+							</target>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-assembly-plugin</artifactId>
@@ -56,6 +157,24 @@
 			</plugin>
 		</plugins>
 	</build>
+
+	<profiles>
+		<profile>
+			<id>skip-nonjava-loggers</id>
+			<activation>
+				<property>
+					<name>skipNonJavaLoggers</name>
+					<value>true</value>
+				</property>
+			</activation>
+			<properties>
+				<rust.logger.include.dll>__skip_nonjava__</rust.logger.include.dll>
+				<rust.logger.include.lib>__skip_nonjava__</rust.logger.include.lib>
+				<rust.logger.include.so>__skip_nonjava__</rust.logger.include.so>
+				<rust.logger.include.dylib>__skip_nonjava__</rust.logger.include.dylib>
+			</properties>
+		</profile>
+	</profiles>
 	
   
 </project>

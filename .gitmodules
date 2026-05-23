@@ -34,3 +34,6 @@
 	path = synclite-validator
 	url = https://github.com/syncliteio/synclite-validator
 	branch = main
+[submodule "synclite-logger-rust"]
+	path = synclite-logger-rust
+	url = https://github.com/syncliteio/synclite-logger-rust.git

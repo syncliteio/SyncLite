@@ -74,12 +74,27 @@ Notes:
 
 ## Build SyncLite
 
-**Prerequisites:** Java 25, Apache Maven 3.8.6+
+**Prerequisites (Java-only build):** Java 25, Apache Maven 3.8.6+
+
+**Additional prerequisites (build all loggers including Rust):**
+- Rust toolchain 1.86.0
+- Cargo 1.86.0 (bundled with Rust 1.86.0)
 
 ```bash
 git clone --recurse-submodules https://github.com/syncliteio/SyncLite.git SyncLite
 cd SyncLite
+```
+
+Build all components (including non-Java loggers):
+
+```bash
 mvn -Drevision=oss clean install
+```
+
+Build Java components only (skip non-Java logger build and packaging):
+
+```bash
+mvn -Drevision=oss -DskipNonJavaLoggers=true clean install
 ```
 
 The release is assembled under `SyncLite/target/synclite-platform-oss/`.
@@ -103,6 +118,9 @@ synclite-platform-oss/
 │
 ├── lib/
 │   ├── logger/java/synclite-logger-<version>.jar   # Add to your edge app classpath
+│   ├── logger/rust/windows/                         # Windows native artifacts
+│   ├── logger/rust/linux/                           # Linux native artifacts
+│   └── logger/rust/macos/                           # macOS native artifacts
 │   └── consolidator/synclite-consolidator-<version>.war
 │
 ├── tools/
