@@ -313,6 +313,10 @@ Alternatively, supply a pre-opened `SyncLiteStore` via `Jedis.builder(store)` wh
 
 ## Using SyncLite DB (any language)
 
+SyncLite DB is a local-first HTTP/JSON database service that wraps embedded databases with built-in SyncLite logging and replication (by coupling it with SyncLite Consolidator), so any language can call it over HTTP.
+
+The sample below uses Python for brevity; the same HTTP calls work from Go (`net/http`) and Node.js (`fetch` / `axios`).
+
 ```bash
 # Start the server
 cd tools/synclite-db
@@ -334,6 +338,59 @@ requests.post(BASE, json={"db-name": "myapp",
 
 requests.post(BASE, json={"db-name": "myapp",
     "sql": "INSERT INTO t1 VALUES(?, ?)", "arguments": [[1, "hello"], [2, "world"]]})
+```
+
+```go
+// Go client (plain HTTP — no SDK needed)
+package main
+
+import (
+        "bytes"
+        "net/http"
+)
+
+func postJSON(url string, body string) error {
+        _, err := http.Post(url, "application/json", bytes.NewBufferString(body))
+        return err
+}
+
+func main() {
+        base := "http://localhost:5555/synclite"
+        _ = postJSON(base, `{"db-type":"SQLITE","db-name":"myapp","synclite-logger-options":{"local-data-stage-directory":"/tmp/stage"},"sql":"initialize"}`)
+        _ = postJSON(base, `{"db-name":"myapp","sql":"CREATE TABLE IF NOT EXISTS t1(a INT, b TEXT)"}`)
+        _ = postJSON(base, `{"db-name":"myapp","sql":"INSERT INTO t1 VALUES(?, ?)","arguments":[[1,"hello"],[2,"world"]]}`)
+}
+```
+
+```javascript
+// Node.js client (plain HTTP — no SDK needed)
+const BASE = "http://localhost:5555/synclite";
+
+async function post(body) {
+    await fetch(BASE, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+    });
+}
+
+await post({
+    "db-type": "SQLITE",
+    "db-name": "myapp",
+    "synclite-logger-options": { "local-data-stage-directory": "/tmp/stage" },
+    sql: "initialize",
+});
+
+await post({
+    "db-name": "myapp",
+    sql: "CREATE TABLE IF NOT EXISTS t1(a INT, b TEXT)",
+});
+
+await post({
+    "db-name": "myapp",
+    sql: "INSERT INTO t1 VALUES(?, ?)",
+    arguments: [[1, "hello"], [2, "world"]],
+});
 ```
 
 SDK samples for Java, Python, C#, C++, Go, Rust, Ruby, Node.js: [synclite-db/sdk-source/](synclite-db/sdk-source/)
