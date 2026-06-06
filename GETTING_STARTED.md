@@ -55,6 +55,9 @@ Edge Sources (SyncLite Logger / DB / DBReader / QReader)
 |---|---|
 | Java | 25 |
 | Apache Maven | 3.8.6+ |
+| Rust toolchain (`rustup`, `cargo`) | stable |
+| Zig compiler (for cross-arch Rust runtime packaging) | latest stable |
+| cargo-zigbuild (for Linux cross-compiled cdylibs) | latest |
 | Git | any recent version |
 
 > The `deploy.sh` / `deploy.bat` scripts download **Apache Tomcat 9.0.117** and **OpenJDK 25** automatically — no manual JDK installation required for a quick start.
@@ -69,14 +72,40 @@ cd SyncLite
 mvn -Drevision=oss clean install
 ```
 
+Build accelerators for Maven:
+
+```bash
+# Skip tests (faster local iteration)
+mvn -Drevision=oss -DskipTests clean install
+
+# Build Java modules only (skip non-Java loggers / Rust runtime)
+mvn -Drevision=oss -DskipNonJavaLoggers -DskipTests clean install
+```
+
+If you only want to use the Rust runtime (without deploying the full Tomcat web stack), build the Rust workspace directly:
+
+```bash
+cd synclite-logger-rust
+cargo build --workspace
+```
+
+If you are packaging multi-arch Rust runtime natives (Linux x86_64 / aarch64 from a non-Linux host), install the cross-build prerequisites first:
+
+```bash
+cargo install cargo-zigbuild
+rustup target add x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu
+# Ensure zig is installed and available on PATH
+zig version
+```
+
 The full platform release is assembled under:
 
 ```
 SyncLite/target/synclite-platform-oss/
-├─ bin/          # deploy / start / stop scripts, Docker helpers
-├─ lib/          # synclite-logger JAR, consolidator WAR
-├─ tools/        # synclite-db, dbreader, qreader, job-monitor, validator
-└─ sample-apps/  # Java, Python, and JSP/Servlet samples
++-- bin/          # deploy / start / stop scripts, Docker helpers
++-- lib/          # synclite-logger JAR, consolidator WAR
++-- tools/        # synclite-db, dbreader, qreader, job-monitor, validator
++-- sample-apps/  # Java, Python, and JSP/Servlet samples
 ```
 
 ---
@@ -118,6 +147,8 @@ bin/dst/mysql/docker-deploy.sh      # MySQL destination
 ```
 
 > ⚠️ Docker helper scripts use default credentials. Change usernames, passwords, and enable TLS before any production use.
+
+If your use case is the embedded Rust runtime (`synclite` crate), you do not need `deploy.sh` / `start.sh` or the platform Docker scripts. Those scripts are for deploying the SyncLite web applications (Consolidator, DBReader, QReader, Job Monitor, Sample App). For Rust runtime apps, use Cargo directly from `synclite-code-samples/synclite-logger/rust` or your own Rust project.
 
 ### App URLs (after start)
 
@@ -200,7 +231,8 @@ fn main() -> Result<()> {
         println!("[READ FROM LOCAL DB] {:?}", row);
     }
 
-    // Roll the active log segment + wait for PostgreSQL apply.
+    // Demo only: await_sync is used here to make the sample deterministic.
+    // In production, sync runs in the background after commit/flush.
     conn.flush()?;
     match synclite::await_sync(DB_PATH, std::time::Duration::from_secs(30)) {
         Ok(()) => {
@@ -217,6 +249,11 @@ fn main() -> Result<()> {
         }
         Err(e) => println!("[SYNC] await_sync failed: {e}"),
     }
+
+    // Optional runtime controls:
+    // synclite::pause_sync(DB_PATH)?;
+    // synclite::resume_sync(DB_PATH)?;
+
     conn.close()?;
     Ok(())
 }
@@ -224,6 +261,8 @@ fn main() -> Result<()> {
 
 **Supported devices:** `Sqlite` (SQL + STORE + STREAMING), `Duckdb` (SQL + STORE).
 **Supported destinations:** `Sqlite`, `Duckdb`, `Postgres`.
+
+**Device encryption:** not supported in the Rust runtime yet.
 
 **Need to reset a device?** `synclite::reinitialize(db_path, clean_destination)`
 wipes per-device local state and the device's destination metadata so the next
