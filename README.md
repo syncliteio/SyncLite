@@ -89,11 +89,7 @@ payload. Install the cross-compile toolchain once on the build host:
 
 ```bash
 cargo install cargo-zigbuild
-winget install zig.zig
-rustup target add x86_64-unknown-linux-gnu
-rustup target add aarch64-unknown-linux-gnu
-rustup target add x86_64-unknown-linux-musl
-rustup target add aarch64-unknown-linux-musl
+rustup target add x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu
 # zig must be on PATH — download from https://ziglang.org/download/
 ```
 
@@ -129,42 +125,41 @@ The release is assembled under `SyncLite/target/synclite-platform-oss/`.
 
 ```
 synclite-platform-oss/
-├─ bin/
-│   ├─ deploy.sh / deploy.bat        # One-command setup: downloads Tomcat + JDK, deploys WARs
-│   ├─ start.sh / start.bat          # Start Tomcat + all SyncLite apps
-│   ├─ stop.sh / stop.bat            # Graceful shutdown
-│   ├─ docker-deploy.sh              # Docker image build + deploy
-│   ├─ docker-start.sh / docker-stop.sh
-│   ├─ stage/sftp/                   # Docker scripts for SFTP staging server
-│   ├─ stage/minio/                  # Docker scripts for MinIO staging server
-│   ├─ dst/postgresql/               # Docker scripts for PostgreSQL destination
-│   └─ dst/mysql/                    # Docker scripts for MySQL destination
-│
-├─ lib/
-│   ├─ java/
-│   │   ├─ synclite-<version>.jar     # Add to your edge app classpath
-│   │   └─ synclite.conf
-│   └─ rust/                                        # Multi-arch native cdylibs
-│       ├─ libsynclite_<version>.dll                 # Windows host build
-│       ├─ libsynclite_<version>.lib                 # Windows import library
-│       ├─ libsynclite_<version>_linux_x86_64.so     # cross-compiled
-│       ├─ libsynclite_<version>_linux_aarch64.so    # cross-compiled
-│       ├─ libsynclite_<version>.dylib               # only if built on macOS
-│       └─ synclite.conf
-│
-├─ tools/
-│   ├─ synclite-consolidator/        # Consolidator WAR + runtime config
-│   ├─ synclite-client/              # CLI client
-│   ├─ synclite-db/                  # SyncLite DB server
-│   ├─ synclite-dbreader/            # DBReader WAR + launcher
-│   ├─ synclite-qreader/             # QReader WAR + launcher
-│   ├─ synclite-job-monitor/         # Job Monitor WAR
-│   └─ synclite-validator/           # Validator WAR
-│
-└─ sample-apps/
-    ├─ synclite-logger/java/         # Java sample apps
-    ├─ synclite-logger/python/       # Python sample apps
-    └─ synclite-logger/jsp-servlet/  # Sample web app WAR
++-- bin/
+|   +-- deploy.sh / deploy.bat        # One-command setup: downloads Tomcat + JDK, deploys WARs
+|   +-- start.sh / start.bat          # Start Tomcat + all SyncLite apps
+|   +-- stop.sh / stop.bat            # Graceful shutdown
+|   +-- docker-deploy.sh              # Docker image build + deploy
+|   +-- docker-start.sh / docker-stop.sh
+|   +-- stage/sftp/                   # Docker scripts for SFTP staging server
+|   +-- stage/minio/                  # Docker scripts for MinIO staging server
+|   +-- dst/postgresql/               # Docker scripts for PostgreSQL destination
+|   +-- dst/mysql/                    # Docker scripts for MySQL destination
+|
++-- lib/
+|   +-- java/
+|   |   +-- logger/synclite-<version>.jar     # Add to your edge app classpath
+|   |   +-- consolidator/synclite-consolidator-<version>.war
+|   +-- rust/                                  # Multi-arch native cdylibs
+|       +-- libsynclite_<version>.dll                 # Windows host build
+|       +-- libsynclite_<version>.lib                 # Windows import library
+|       +-- libsynclite_<version>_linux_x86_64.so     # cross-compiled
+|       +-- libsynclite_<version>_linux_aarch64.so    # cross-compiled
+|       +-- libsynclite_<version>.dylib               # only if built on macOS
+|       +-- synclite.conf
+|
++-- tools/
+|   +-- synclite-client/              # CLI client
+|   +-- synclite-db/                  # SyncLite DB server
+|   +-- synclite-dbreader/            # DBReader WAR + launcher
+|   +-- synclite-qreader/             # QReader WAR + launcher
+|   +-- synclite-job-monitor/         # Job Monitor WAR
+|   +-- synclite-validator/           # Validator WAR
+|
++-- sample-apps/
+    +-- synclite-logger/java/         # Java sample apps
+    +-- synclite-logger/python/       # Python sample apps
+    +-- synclite-logger/jsp-servlet/  # Sample web app WAR
 ```
 
 ---
@@ -197,6 +192,20 @@ cd bin/
 ./docker-start.sh      # Starts synclite-platform container and optional helpers
 ./docker-stop.sh       # Stops synclite-platform container and optional helpers
 ```
+
+### Rust runtime (embedded, no Tomcat)
+
+```bash
+# Build the Rust runtime and run a sample directly
+cd synclite-code-samples/synclite-logger/rust
+cargo run --example synclite_rusqlite
+
+# For PostgreSQL destination demo:
+# cargo run --example synclite_rusqlite_postgres
+```
+
+For Rust/Python/C++ embedding via SyncLite Runtime, you do not need
+`deploy.sh` / `start.sh` or platform Docker scripts.
 
 ---
 
