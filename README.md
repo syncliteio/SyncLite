@@ -193,7 +193,7 @@ cd bin/
 ./docker-stop.sh       # Stops synclite-platform container and optional helpers
 ```
 
-### Rust runtime (embedded, no Tomcat)
+### Rust runtime (embedded, no installation)
 
 ```bash
 # Build the Rust runtime and run a sample directly
