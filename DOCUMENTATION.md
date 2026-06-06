@@ -89,7 +89,7 @@ Data Producers (Edge/App Layer)
 Staging Storage (Local FS / SFTP / S3 / MinIO / Kafka / OneDrive / Google Drive / NFS)
                                  |
                                  v
-SyncLite Consolidator (central always-on sink)
+SyncLite Consolidator (central always-on sink) / Embedded Consolidator
                                  |
                                  +--> PostgreSQL / MySQL / SQL Server / Oracle / SQLite / DuckDB
                                  +--> Amazon Redshift / ClickHouse / MongoDB
