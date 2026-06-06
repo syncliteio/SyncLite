@@ -13,15 +13,15 @@ script_dir=$(dirname "$(readlink -f "$0")")
 mkdir -p "$HOME"/synclite/${JOB_NAME}/workDir
 mkdir -p "$HOME"/synclite/${JOB_NAME}/stageDir
 
-echo -e "\n=====Starting synclite-consolidator docker container=====\n"
+echo -e "\n=====Starting synclite-platform docker container=====\n"
 docker run \
     -p 8080:8080 \
     -v "$HOME"/synclite:/home/root/synclite \
     --net=host \
     -d \
-    --name synclite-consolidator \
+    --name synclite-platform \
     -e "JAVA_TOOL_OPTIONS=-Duser.home=/home/root" \
-    synclite-consolidator:latest sh -c "./start.sh && tail -f /dev/null"
+    synclite-platform:latest sh -c "./start.sh && tail -f /dev/null"
 
 if [ "$STAGE" = "SFTP" ]; then
     cd "$script_dir/stage/sftp"

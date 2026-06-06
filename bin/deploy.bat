@@ -374,7 +374,7 @@ set WEBAPPS=%TOMCAT_DIR%\webapps
 
 echo !STEP![7/7] Deploying WAR files to Tomcat...!RESET!
 
-call :deploy_war "SyncLite Consolidator" "synclite-consolidator" "Consolidator WAR not found in packaged or module build output." "..\lib\consolidator\synclite-consolidator-*.war" "..\target\synclite-platform-oss\lib\consolidator\synclite-consolidator-*.war" "..\synclite-consolidator\root\web\target\synclite-consolidator-*.war" "..\synclite-consolidator\root\web\target\*.war"
+call :deploy_war "SyncLite Consolidator" "synclite-consolidator" "Consolidator WAR not found in packaged or module build output." "..\tools\synclite-consolidator\synclite-consolidator-*.war" "..\tools\synclite-consolidator\*.war" "..\target\synclite-platform-oss\tools\synclite-consolidator\synclite-consolidator-*.war" "..\synclite-consolidator\root\web\target\synclite-consolidator-*.war" "..\synclite-consolidator\root\web\target\*.war"
 if errorlevel 1 exit /b 1
 
 call :deploy_war "SyncLite Sample App" "synclite-sample-app" "Sample app WAR not found in packaged or module build output." "..\sample-apps\synclite-logger\jsp-servlet\web\target\*.war" "..\synclite-sample-web-app\web\target\*.war"

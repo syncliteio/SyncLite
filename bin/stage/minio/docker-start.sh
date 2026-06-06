@@ -41,7 +41,7 @@ echo "#4. For upload user and download users, it is strongly recommended to open
 echo "#5. Setup additional security machanisms as needed."
 echo "#==========================================================================================="
 echo ""
-echo "#==============MinIO Configuration to use in synclite_logger.conf for SyncLite applications=="
+echo "#==============MinIO Configuration to use in synclite.conf for SyncLite applications=="
 echo "#minio:endpoint=${ENDPOINT}"
 echo "#minio:bucket-name=${BUCKET_NAME}"
 echo "#minio:access-key=${UPLOAD_USER}"

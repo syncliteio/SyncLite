@@ -111,7 +111,7 @@ echo !INFO!Using JRE_HOME=%JRE_HOME%!RESET!
 echo !INFO!Using Tomcat: %TOMCAT_DIR%!RESET!
 
 echo !STEP![3/4] Refreshing WAR deployments...!RESET!
-call :refresh_war "SyncLite Consolidator" "synclite-consolidator" "..\lib\consolidator\synclite-consolidator-*.war" "..\target\synclite-platform-oss\lib\consolidator\synclite-consolidator-*.war" "..\synclite-consolidator\root\web\target\synclite-consolidator-*.war" "..\synclite-consolidator\root\web\target\*.war"
+call :refresh_war "SyncLite Consolidator" "synclite-consolidator" "..\tools\synclite-consolidator\synclite-consolidator-*.war" "..\tools\synclite-consolidator\*.war" "..\target\synclite-platform-oss\tools\synclite-consolidator\synclite-consolidator-*.war" "..\synclite-consolidator\root\web\target\synclite-consolidator-*.war" "..\synclite-consolidator\root\web\target\*.war"
 if errorlevel 1 exit /b 1
 call :refresh_war "SyncLite Sample App" "synclite-sample-app" "..\sample-apps\synclite-logger\jsp-servlet\web\target\*.war" "..\synclite-sample-web-app\web\target\*.war"
 if errorlevel 1 exit /b 1

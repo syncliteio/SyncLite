@@ -82,8 +82,8 @@ if ! docker info >/dev/null 2>&1; then
     fi
 fi
 
-log_step "[2/4] Building synclite-consolidator Docker image..."
-$docker_cmd build -t synclite-consolidator .
+log_step "[2/4] Building synclite-platform Docker image..."
+$docker_cmd build -t synclite-platform .
 log_ok "[2/4] Docker image build completed."
 
 rm -f "$archive_path"

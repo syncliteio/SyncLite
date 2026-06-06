@@ -18,7 +18,7 @@
 			</includes>
 			<fileMode>755</fileMode>
 			<directoryMode>755</directoryMode>
-			<outputDirectory>lib/consolidator</outputDirectory>
+			<outputDirectory>tools/synclite-consolidator</outputDirectory>
 		</fileSet>
 		<fileSet>
 			<directory>${project.basedir}/synclite-logger-java/logger/target
@@ -28,7 +28,7 @@
 			</includes>
 			<fileMode>755</fileMode>
 			<directoryMode>755</directoryMode>
-			<outputDirectory>lib/logger/java</outputDirectory>
+			<outputDirectory>lib/java</outputDirectory>
 		</fileSet>
 		<fileSet>
 			<directory>${project.basedir}/synclite-logger-java/logger/src/main/resources
@@ -36,7 +36,27 @@
 			<includes>
 				<include>*.conf</include>
 			</includes>
-			<outputDirectory>lib/logger/java</outputDirectory>
+			<outputDirectory>lib/java</outputDirectory>
+		</fileSet>
+		<fileSet>
+			<directory>${project.basedir}/synclite-logger-rust/target/release</directory>
+			<includes>
+				<include>${rust.logger.include.dll}</include>
+				<include>${rust.logger.include.lib}</include>
+				<include>${rust.logger.include.so}</include>
+				<include>${rust.logger.include.dylib}</include>
+			</includes>
+			<fileMode>755</fileMode>
+			<directoryMode>755</directoryMode>
+			<outputDirectory>lib/native</outputDirectory>
+		</fileSet>
+		<fileSet>
+			<directory>${project.build.directory}</directory>
+			<includes>
+				<include>synclite.conf</include>
+			</includes>
+			<fileMode>644</fileMode>
+			<outputDirectory>lib/native</outputDirectory>
 		</fileSet>
 		<fileSet>
 			<directory>${project.basedir}/synclite-code-samples</directory>
@@ -55,7 +75,7 @@
 			<includes>
 				<include>*.jar</include>
 				<include>synclite-client.*</include>
-				<include>synclite_logger.conf</include>
+				<include>*.conf</include>
 			</includes>
 			<fileMode>755</fileMode>
 			<directoryMode>755</directoryMode>			

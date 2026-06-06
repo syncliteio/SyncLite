@@ -114,8 +114,9 @@ log_info "Using Tomcat: ${TOMCAT_DIR}"
 export CATALINA_HOME
 log_step "[3/4] Refreshing WAR deployments..."
 refresh_war "SyncLite Consolidator" "synclite-consolidator" \
-    "../lib/consolidator/synclite-consolidator-*.war" \
-    "../target/synclite-platform-oss/lib/consolidator/synclite-consolidator-*.war" \
+    "../tools/synclite-consolidator/synclite-consolidator-*.war" \
+    "../tools/synclite-consolidator/*.war" \
+    "../target/synclite-platform-oss/tools/synclite-consolidator/synclite-consolidator-*.war" \
     "../synclite-consolidator/root/web/target/synclite-consolidator-*.war" \
     "../synclite-consolidator/root/web/target/*.war"
 refresh_war "SyncLite Sample App" "synclite-sample-app" \

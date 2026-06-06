@@ -212,8 +212,9 @@ fi
 WEBAPPS="apache-tomcat-${TOMCAT_VER}/webapps"
 log_step "[7/7] Deploying WAR files to Tomcat..."
 copy_war "SyncLite Consolidator" "${WEBAPPS}/synclite-consolidator.war" \
-	"../lib/consolidator/synclite-consolidator-*.war" \
-	"../target/synclite-platform-oss/lib/consolidator/synclite-consolidator-*.war" \
+	"../tools/synclite-consolidator/synclite-consolidator-*.war" \
+	"../tools/synclite-consolidator/*.war" \
+	"../target/synclite-platform-oss/tools/synclite-consolidator/synclite-consolidator-*.war" \
 	"../synclite-consolidator/root/web/target/synclite-consolidator-*.war" \
 	"../synclite-consolidator/root/web/target/*.war"
 copy_war "SyncLite Sample App" "${WEBAPPS}/synclite-sample-app.war" \

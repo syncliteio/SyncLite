@@ -32,7 +32,7 @@ synclite-db.sh --config synclite_db.conf
   "db-name": "test",
   "synclite-logger-options": {
     "local-data-stage-directory": "C:\\synclite\\users\\bob\\synclite\\job1\\stageDir",
-    "destination-type": "FS"
+    "device-stage-type": "FS"
   },
   "sql": "initialize"
 }

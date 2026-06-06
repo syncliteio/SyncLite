@@ -8,10 +8,10 @@ DST=""
 
 script_dir=$(dirname "$(readlink -f "$0")")
 
-echo -e "\n=======Stopping and removing synclite-consolidator docker container=====\n"
+echo -e "\n=======Stopping and removing synclite-platform docker container=====\n"
 
-docker stop synclite-consolidator
-docker rm synclite-consolidator
+docker stop synclite-platform
+docker rm synclite-platform
 
 if [ "$STAGE" = "SFTP" ]; then
     cd "$script_dir/stage/sftp"

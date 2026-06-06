@@ -4,6 +4,19 @@
   <artifactId>synclite-platform</artifactId>
   <version>${revision}</version>
   <packaging>pom</packaging>
+
+	<properties>
+		<revision>oss</revision>
+		<!-- Set -DskipNonJavaLoggers=true to skip non-Java logger build and packaging. -->
+		<skipNonJavaLoggers>false</skipNonJavaLoggers>
+		<!-- Rust logger native deps: keep DuckDB prebuilt/downloaded to avoid heavy native builds. -->
+		<duckdbDownloadLib>true</duckdbDownloadLib>
+		<!-- Globs so per-arch variants (e.g. libsynclite_<rev>_linux_x86_64.so) coexist. -->
+		<rust.logger.include.dll>libsynclite_${revision}*.dll</rust.logger.include.dll>
+		<rust.logger.include.lib>libsynclite_${revision}*.lib</rust.logger.include.lib>
+		<rust.logger.include.so>libsynclite_${revision}*.so</rust.logger.include.so>
+		<rust.logger.include.dylib>libsynclite_${revision}*.dylib</rust.logger.include.dylib>
+	</properties>
   
   	<!-- sub modules -->
 	<modules>
@@ -20,6 +33,196 @@
 	
 	<build>
 		<plugins>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>exec-maven-plugin</artifactId>
+				<version>3.5.0</version>
+				<executions>
+					<execution>
+						<id>build-rust-synclite</id>
+						<phase>package</phase>
+						<goals>
+							<goal>exec</goal>
+						</goals>
+						<configuration>
+							<skip>${skipNonJavaLoggers}</skip>
+							<workingDirectory>${project.basedir}/synclite-logger-rust</workingDirectory>
+							<executable>cargo</executable>
+							<environmentVariables>
+								<SYNCLITE_RUST_ARTIFACT_VERSION>${revision}</SYNCLITE_RUST_ARTIFACT_VERSION>
+								<DUCKDB_DOWNLOAD_LIB>${duckdbDownloadLib}</DUCKDB_DOWNLOAD_LIB>
+							</environmentVariables>
+							<arguments>
+								<argument>build</argument>
+								<argument>--release</argument>
+								<argument>-p</argument>
+								<argument>synclite-c</argument>
+							</arguments>
+						</configuration>
+					</execution>
+					<!--
+					  Cross-compile Linux x86_64 + aarch64 cdylibs by default so
+					  every build of synclite-platform-<rev>.zip contains all three
+					  shared libraries (Windows host + Linux x86_64 + Linux aarch64)
+					  under lib/native/. macOS (.dylib) still requires building on a
+					  macOS host because the Apple SDK isn't redistributable.
+
+					  Prerequisites (one-time, on the build host):
+					    cargo install cargo-zigbuild
+					    rustup target add x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu
+					    # zig must be on PATH (https://ziglang.org/download/)
+					-->
+					<execution>
+						<id>build-rust-synclite-linux-x86_64</id>
+						<phase>package</phase>
+						<goals>
+							<goal>exec</goal>
+						</goals>
+						<configuration>
+							<skip>${skipNonJavaLoggers}</skip>
+							<workingDirectory>${project.basedir}/synclite-logger-rust</workingDirectory>
+							<executable>cargo</executable>
+							<environmentVariables>
+								<SYNCLITE_RUST_ARTIFACT_VERSION>${revision}</SYNCLITE_RUST_ARTIFACT_VERSION>
+								<DUCKDB_DOWNLOAD_LIB>${duckdbDownloadLib}</DUCKDB_DOWNLOAD_LIB>
+							</environmentVariables>
+							<arguments>
+								<argument>zigbuild</argument>
+								<argument>--release</argument>
+								<argument>-p</argument>
+								<argument>synclite-c</argument>
+								<argument>--target</argument>
+								<argument>x86_64-unknown-linux-gnu</argument>
+							</arguments>
+						</configuration>
+					</execution>
+					<execution>
+						<id>build-rust-synclite-linux-aarch64</id>
+						<phase>package</phase>
+						<goals>
+							<goal>exec</goal>
+						</goals>
+						<configuration>
+							<skip>${skipNonJavaLoggers}</skip>
+							<workingDirectory>${project.basedir}/synclite-logger-rust</workingDirectory>
+							<executable>cargo</executable>
+							<environmentVariables>
+								<SYNCLITE_RUST_ARTIFACT_VERSION>${revision}</SYNCLITE_RUST_ARTIFACT_VERSION>
+								<DUCKDB_DOWNLOAD_LIB>${duckdbDownloadLib}</DUCKDB_DOWNLOAD_LIB>
+							</environmentVariables>
+							<arguments>
+								<argument>zigbuild</argument>
+								<argument>--release</argument>
+								<argument>-p</argument>
+								<argument>synclite-c</argument>
+								<argument>--target</argument>
+								<argument>aarch64-unknown-linux-gnu</argument>
+							</arguments>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-antrun-plugin</artifactId>
+				<version>3.1.0</version>
+				<executions>
+					<execution>
+						<id>version-rust-logger-artifacts</id>
+						<phase>package</phase>
+						<goals>
+							<goal>run</goal>
+						</goals>
+						<configuration>
+							<target>
+								<copy file="${project.basedir}/synclite-logger-rust/target/release/synclite_c.dll"
+								      tofile="${project.basedir}/synclite-logger-rust/target/release/libsynclite_${revision}.dll"
+								      overwrite="true"
+								      quiet="true"
+								      failonerror="false"/>
+								<copy file="${project.basedir}/synclite-logger-rust/target/release/deps/synclite_c.dll"
+								      tofile="${project.basedir}/synclite-logger-rust/target/release/libsynclite_${revision}.dll"
+								      overwrite="true"
+								      quiet="true"
+								      failonerror="false"/>
+
+								<copy file="${project.basedir}/synclite-logger-rust/target/release/synclite_c.lib"
+								      tofile="${project.basedir}/synclite-logger-rust/target/release/libsynclite_${revision}.lib"
+								      overwrite="true"
+								      quiet="true"
+								      failonerror="false"/>
+								<copy file="${project.basedir}/synclite-logger-rust/target/release/deps/synclite_c.lib"
+								      tofile="${project.basedir}/synclite-logger-rust/target/release/libsynclite_${revision}.lib"
+								      overwrite="true"
+								      quiet="true"
+								      failonerror="false"/>
+								<copy file="${project.basedir}/synclite-logger-rust/target/release/synclite_c.dll.lib"
+								      tofile="${project.basedir}/synclite-logger-rust/target/release/libsynclite_${revision}.lib"
+								      overwrite="true"
+								      quiet="true"
+								      failonerror="false"/>
+
+								<copy file="${project.basedir}/synclite-logger-rust/target/release/libsynclite_c.so"
+								      tofile="${project.basedir}/synclite-logger-rust/target/release/libsynclite_${revision}.so"
+								      overwrite="true"
+								      quiet="true"
+								      failonerror="false"/>
+								<copy file="${project.basedir}/synclite-logger-rust/target/release/deps/libsynclite_c.so"
+								      tofile="${project.basedir}/synclite-logger-rust/target/release/libsynclite_${revision}.so"
+								      overwrite="true"
+								      quiet="true"
+								      failonerror="false"/>
+
+								<copy file="${project.basedir}/synclite-logger-rust/target/release/libsynclite_c.dylib"
+								      tofile="${project.basedir}/synclite-logger-rust/target/release/libsynclite_${revision}.dylib"
+								      overwrite="true"
+								      quiet="true"
+								      failonerror="false"/>
+								<copy file="${project.basedir}/synclite-logger-rust/target/release/deps/libsynclite_c.dylib"
+								      tofile="${project.basedir}/synclite-logger-rust/target/release/libsynclite_${revision}.dylib"
+								      overwrite="true"
+								      quiet="true"
+								      failonerror="false"/>
+								<!-- Cross-compiled Linux outputs (cargo-zigbuild). -->
+								<copy file="${project.basedir}/synclite-logger-rust/target/x86_64-unknown-linux-gnu/release/libsynclite_c.so"
+								      tofile="${project.basedir}/synclite-logger-rust/target/release/libsynclite_${revision}_linux_x86_64.so"
+								      overwrite="true"
+								      quiet="true"
+								      failonerror="false"/>
+								<copy file="${project.basedir}/synclite-logger-rust/target/aarch64-unknown-linux-gnu/release/libsynclite_c.so"
+								      tofile="${project.basedir}/synclite-logger-rust/target/release/libsynclite_${revision}_linux_aarch64.so"
+								      overwrite="true"
+								      quiet="true"
+								      failonerror="false"/>
+								<!-- Build unified Rust synclite.conf = logger conf + consolidator conf -->
+								<mkdir dir="${project.build.directory}"/>
+								<concat destfile="${project.build.directory}/synclite.conf" force="yes" fixlastline="yes">
+									<header trimleading="yes">
+#========================================================================
+# SyncLite unified configuration (Rust logger + consolidator)
+# This file is the combined sample used by the Rust facade
+# (crates/synclite). It contains both logger-side keys (used when
+# embedded in an application via the C bindings) and consolidator-side
+# keys (used when driving the consolidator engine).
+# Uncomment and edit the keys you need.
+#========================================================================
+
+# ---------------- LOGGER CONFIGURATION ----------------
+									</header>
+									<fileset file="${project.basedir}/synclite-logger-java/logger/src/main/resources/synclite.conf"/>
+									<footer trimleading="yes">
+
+# ---------------- CONSOLIDATOR CONFIGURATION ----------------
+									</footer>
+								</concat>
+								<concat destfile="${project.build.directory}/synclite.conf" append="yes" fixlastline="yes">
+									<fileset file="${project.basedir}/assembly/synclite_consolidator.conf"/>
+								</concat>
+							</target>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-assembly-plugin</artifactId>
@@ -56,6 +259,25 @@
 			</plugin>
 		</plugins>
 	</build>
+
+	<profiles>
+		<profile>
+			<id>skip-nonjava-loggers</id>
+			<activation>
+				<property>
+					<name>skipNonJavaLoggers</name>
+					<value>true</value>
+				</property>
+			</activation>
+			<properties>
+		<revision>oss</revision>
+				<rust.logger.include.dll>__skip_nonjava__</rust.logger.include.dll>
+				<rust.logger.include.lib>__skip_nonjava__</rust.logger.include.lib>
+				<rust.logger.include.so>__skip_nonjava__</rust.logger.include.so>
+				<rust.logger.include.dylib>__skip_nonjava__</rust.logger.include.dylib>
+			</properties>
+		</profile>
+	</profiles>
 	
   
 </project>
