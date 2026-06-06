@@ -495,24 +495,64 @@
 <section id="code" class="code-section">
   <div class="tabs-wrap">
     <h2>Start Syncing in Minutes</h2>
-    <p class="sub">Add the jar, write standard JDBC or use a high-level API — SyncLite handles the rest.</p>
+    <p class="sub">Native libraries for Rust, Python, and C++ — plus the Java JDBC driver and a language-agnostic HTTP API. Pick your stack, SyncLite handles the rest.</p>
     <div class="tabs">
-      <button class="tab-btn active" onclick="showTab('jdbc')">JDBC (SQLite)</button>
+      <button class="tab-btn active" onclick="showTab('rust')">Rust <span style="font-size:.65rem;padding:.1em .45em;margin-left:.3em;border-radius:99px;background:var(--green);color:#0a0e1a;font-weight:800;letter-spacing:.04em;">NEW</span></button>
+      <button class="tab-btn" onclick="showTab('python')">Python <span style="font-size:.65rem;padding:.1em .45em;margin-left:.3em;border-radius:99px;background:var(--green);color:#0a0e1a;font-weight:800;letter-spacing:.04em;">NEW</span></button>
+      <button class="tab-btn" onclick="showTab('cpp')">C++ <span style="font-size:.65rem;padding:.1em .45em;margin-left:.3em;border-radius:99px;background:var(--green);color:#0a0e1a;font-weight:800;letter-spacing:.04em;">NEW</span></button>
+      <button class="tab-btn" onclick="showTab('jdbc')">Java (JDBC)</button>
       <button class="tab-btn" onclick="showTab('store')">SyncLiteStore</button>
       <button class="tab-btn" onclick="showTab('stream')">SyncLiteStream</button>
-      <button class="tab-btn" onclick="showTab('python')">Python</button>
-      <button class="tab-btn" onclick="showTab('http')">HTTP / Any Language</button>
-      <button class="tab-btn" onclick="showTab('jedis')">Jedis API</button>
-      <button class="tab-btn" onclick="showTab('kafka')">Kafka API</button>
+      <button class="tab-btn" onclick="showTab('jedis')">Jedis</button>
+      <button class="tab-btn" onclick="showTab('kafka')">Kafka</button>
+      <button class="tab-btn" onclick="showTab('http')">SyncLite DB (HTTP)</button>
       <button class="tab-btn" onclick="showTab('dbreader')">DBReader ETL</button>
       <button class="tab-btn" onclick="showTab('qreader')">QReader MQTT</button>
     </div>
 
+    <!-- Rust -->
+    <div id="tab-rust" class="tab-pane active">
+<pre><span class="cmt">// Pure-Rust SyncLite — no JVM, no JAR. Offline-first SQLite syncing to PostgreSQL.</span>
+<span class="kw">use</span> synclite::{SyncLiteOptions, DestinationOptions, DstType, DstSyncMode, DeviceType, Value};
+<span class="kw">use</span> synclite::rusqlite::Connection;
+
+<span class="kw">fn</span> <span class="fn">main</span>() -&gt; <span class="cls">Result</span>&lt;(), <span class="cls">Box</span>&lt;<span class="kw">dyn</span> std::error::Error&gt;&gt; {
+    <span class="cmt">// Wire up logger + shipper + embedded consolidator in one call.</span>
+    synclite::<span class="fn">initialize</span>(
+        <span class="cls">DeviceType</span>::Sqlite,
+        <span class="str">"orders-device"</span>,                 <span class="cmt">// device name</span>
+        <span class="str">"orders.db"</span>,                       <span class="cmt">// local SQLite path</span>
+        <span class="cls">Some</span>(<span class="cls">DestinationOptions</span> {
+            dst_type: <span class="cls">DstType</span>::Postgres,
+            dst_connection_string: <span class="str">"postgresql://postgres:postgres@localhost:5432/syncdb"</span>.into(),
+            dst_database: <span class="cls">Some</span>(<span class="str">"syncdb"</span>.into()),
+            dst_schema:   <span class="cls">Some</span>(<span class="str">"syncschema"</span>.into()),
+            dst_sync_mode: <span class="cls">DstSyncMode</span>::Consolidation,
+        }),
+        <span class="cls">SyncLiteOptions</span>::default(),
+    )?;
+
+    <span class="cmt">// From here on the app talks to a plain local SQLite database.</span>
+    <span class="kw">let</span> <span class="kw">mut</span> conn = <span class="cls">Connection</span>::<span class="fn">open</span>(<span class="str">"orders.db"</span>)?;
+    conn.<span class="fn">execute</span>(<span class="str">"CREATE TABLE IF NOT EXISTS orders(id INTEGER, item TEXT, qty INTEGER)"</span>, &amp;[])?;
+    conn.<span class="fn">execute</span>(<span class="str">"INSERT INTO orders VALUES(?, ?, ?)"</span>,
+        &amp;[<span class="cls">Value</span>::<span class="fn">Int</span>(1), <span class="cls">Value</span>::<span class="fn">Text</span>(<span class="str">"widget"</span>.into()), <span class="cls">Value</span>::<span class="fn">Int</span>(100)])?;
+    conn.<span class="fn">commit</span>()?;
+
+    <span class="cmt">// Roll the active log segment + block until it has been applied to PostgreSQL.</span>
+    conn.<span class="fn">flush</span>()?;
+    synclite::<span class="fn">await_sync</span>(<span class="str">"orders.db"</span>, std::time::Duration::<span class="fn">from_secs</span>(30))?;
+    conn.<span class="fn">close</span>()?;
+    <span class="cmt">// ↑ logged + shipped + consolidated into PostgreSQL — no Java in the loop.</span>
+    <span class="cls">Ok</span>(())
+}</pre>
+    </div>
+
     <!-- JDBC -->
-    <div id="tab-jdbc" class="tab-pane active">
+    <div id="tab-jdbc" class="tab-pane">
 <pre><span class="cmt">// Standard JDBC — SyncLite captures every transaction transparently</span>
 <span class="cls">Class</span>.<span class="fn">forName</span>(<span class="str">"io.synclite.logger.SQLite"</span>);
-<span class="cls">SQLite</span>.<span class="fn">initialize</span>(dbPath, conf);   <span class="cmt">// reads synclite_logger.conf</span>
+<span class="cls">SQLite</span>.<span class="fn">initialize</span>(dbPath, conf);   <span class="cmt">// reads synclite.conf</span>
 <span class="cmt">// To switch to DuckDB/Derby/H2/HyperSQL, change driver class + JDBC URL only.</span>
 
 <span class="kw">try</span> (<span class="cls">Connection</span> c = <span class="cls">DriverManager</span>.<span class="fn">getConnection</span>(<span class="str">"jdbc:synclite_sqlite:"</span> + dbPath);
@@ -607,38 +647,64 @@ field.event_time = <span class="str">$.ts</span>
 
     <!-- Python -->
     <div id="tab-python" class="tab-pane">
-<pre><span class="cmt"># Python via JayDeBeApi — standard SQL, same JDBC driver</span>
-<span class="kw">import</span> jaydebeapi, jpype
+<pre><span class="cmt"># Pure-Python (PyO3 bindings) — no JVM, no JAR. Offline-first SQLite syncing to PostgreSQL.</span>
+<span class="kw">import</span> synclite <span class="kw">as</span> sl
 
-jar = <span class="str">"/path/to/synclite-logger-&lt;version&gt;.jar"</span>
-jpype.startJVM(jpype.getDefaultJVMPath(), f<span class="str">"-Djava.class.path={jar}"</span>, convertStrings=<span class="cls">True</span>)
-
-conn = jaydebeapi.connect(
-    <span class="str">"io.synclite.logger.SQLite"</span>,
-    <span class="str">"jdbc:synclite_sqlite:/home/alice/synclite/db/myapp.db"</span>,
-    {<span class="str">"config"</span>: <span class="str">"/home/alice/synclite/synclite_logger.conf"</span>},
-    jar
+sl.initialize(
+    device_type=<span class="str">"SQLITE"</span>,
+    device_name=<span class="str">"orders-device"</span>,
+    db_path=<span class="str">"orders.db"</span>,
+    destination=sl.DestinationOptions(
+        dst_type=<span class="str">"POSTGRES"</span>,
+        dst_connection_string=<span class="str">"postgresql://postgres:postgres@localhost:5432/syncdb"</span>,
+        dst_database=<span class="str">"syncdb"</span>,
+        dst_schema=<span class="str">"syncschema"</span>,
+        dst_sync_mode=<span class="str">"CONSOLIDATION"</span>,
+    ),
 )
-cur = conn.cursor()
-cur.execute(<span class="str">"CREATE TABLE IF NOT EXISTS events(id INT, payload TEXT)"</span>)
-cur.execute(<span class="str">"INSERT INTO events VALUES(1, 'hello from Python')"</span>)
+
+<span class="cmt"># From here on the app talks to a plain local SQLite database.</span>
+conn = sl.Connection.open(<span class="str">"orders.db"</span>)
+conn.execute(<span class="str">"CREATE TABLE IF NOT EXISTS orders(id INTEGER, item TEXT, qty INTEGER)"</span>)
+conn.execute(<span class="str">"INSERT INTO orders VALUES(?, ?, ?)"</span>, [<span class="num">1</span>, <span class="str">"widget"</span>, <span class="num">100</span>])
 conn.commit()
+
+<span class="cmt"># Roll the active log segment + block until it has been applied to PostgreSQL.</span>
+conn.flush()
+sl.await_sync(<span class="str">"orders.db"</span>, <span class="num">30.0</span>)
 conn.close()
+<span class="cmt"># ↑ logged + shipped + consolidated into PostgreSQL — no Java in the loop.</span></pre>
+    </div>
 
+    <!-- C++ -->
+    <div id="tab-cpp" class="tab-pane">
+<pre><span class="cmt">// Header-only RAII wrapper over the synclite C ABI (synclite.hpp, C++17).</span>
+<span class="cmt">// No JVM, no JAR. Offline-first SQLite syncing to PostgreSQL.</span>
+<span class="pre">#include</span> <span class="str">"synclite.hpp"</span>
 
-<span class="cmt"># SyncLiteStore via JPype</span>
-<span class="kw">from</span> io.synclite.logger <span class="kw">import</span> SQLiteStore, SyncLiteStore
-<span class="kw">from</span> java.nio.file <span class="kw">import</span> Paths
-<span class="kw">from</span> java.util <span class="kw">import</span> LinkedHashMap
+<span class="kw">int</span> <span class="fn">main</span>() {
+    synclite::DestinationOptions dst;
+    dst.dst_type              = SYNCLITE_DST_POSTGRES;
+    dst.dst_connection_string = <span class="str">"postgresql://postgres:postgres@localhost:5432/syncdb"</span>;
+    dst.dst_database          = <span class="str">"syncdb"</span>;
+    dst.dst_schema            = <span class="str">"syncschema"</span>;
+    dst.dst_sync_mode         = SYNCLITE_SYNC_CONSOLIDATION;
 
-db = Paths.get(<span class="str">"/home/alice/synclite/db/mystore.db"</span>)
-SQLiteStore.initialize(db, Paths.get(<span class="str">"synclite_logger.conf"</span>))
-<span class="kw">with</span> SyncLiteStore.open(db) <span class="kw">as</span> store:
-    cols = LinkedHashMap()
-    cols.put(<span class="str">"id"</span>, <span class="str">"INTEGER PRIMARY KEY"</span>); cols.put(<span class="str">"name"</span>, <span class="str">"TEXT"</span>)
-    store.createTable(<span class="str">"users"</span>, cols)
-    store.insert(<span class="str">"users"</span>, {<span class="str">"id"</span>: <span class="num">1</span>, <span class="str">"name"</span>: <span class="str">"Alice"</span>})
-SQLiteStore.closeDevice(db)</pre>
+    synclite::initialize(SYNCLITE_DEVICE_SQLITE, <span class="str">"orders-device"</span>, <span class="str">"orders.db"</span>, &amp;dst);
+
+    <span class="cmt">// From here on the app talks to a plain local SQLite database.</span>
+    synclite::Connection conn(<span class="str">"orders.db"</span>);
+    conn.<span class="fn">execute</span>(<span class="str">"CREATE TABLE IF NOT EXISTS orders(id INTEGER, item TEXT, qty INTEGER)"</span>);
+    conn.<span class="fn">execute</span>(<span class="str">"INSERT INTO orders VALUES(?, ?, ?)"</span>,
+                  { synclite::Value(<span class="num">1</span>), synclite::Value(<span class="str">"widget"</span>), synclite::Value(<span class="num">100</span>) });
+    conn.<span class="fn">commit</span>();
+
+    <span class="cmt">// Roll the active log segment + block until it has been applied to PostgreSQL.</span>
+    conn.<span class="fn">flush</span>();
+    synclite::<span class="fn">await_sync</span>(<span class="str">"orders.db"</span>, <span class="num">30.0</span>);
+    <span class="cmt">// ↑ logged + shipped + consolidated into PostgreSQL — no Java in the loop.</span>
+    <span class="kw">return</span> <span class="num">0</span>;
+}</pre>
     </div>
 
     <!-- HTTP -->

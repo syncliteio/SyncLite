@@ -21,13 +21,13 @@ All flows follow one unified architecture:
 ```
 Edge Sources (SyncLite Logger / DB / DBReader / QReader)
      │
-     ▼  compact binary log files
+      v  compact binary log files
   Staging Storage  (local dir / SFTP / S3 / MinIO / Kafka / OneDrive / Google Drive)
      │
-     ▼
+      v
   SyncLite Consolidator  (always-on sink)
      │
-     ▼
+      v
   Destination DB / Data Warehouse / Data Lake
 ```
 
@@ -37,7 +37,8 @@ Edge Sources (SyncLite Logger / DB / DBReader / QReader)
 
 | Component | What It Does |
 |---|---|
-| **SyncLite Logger** | Embeddable JDBC driver for Java/Python edge apps — wraps SQLite, DuckDB, Derby, H2, HyperSQL |
+| **SyncLite Logger** | Embeddable JDBC driver for Java edge apps — wraps SQLite, DuckDB, Derby, H2, HyperSQL |
+| **SyncLite Runtime** | Full SyncLite runtime in Rust (logger + consolidator), consumable from Rust, Python, and C++ |
 | **SyncLite DB** | Standalone HTTP/JSON database server for any language |
 | **SyncLite Client** | Interactive CLI for managing SyncLite devices |
 | **SyncLite Consolidator** | Central real-time consolidation engine — delivers data to destinations |
@@ -73,10 +74,10 @@ The full platform release is assembled under:
 
 ```
 SyncLite/target/synclite-platform-oss/
-├── bin/          # deploy / start / stop scripts, Docker helpers
-├── lib/          # synclite-logger JAR, consolidator WAR
-├── tools/        # synclite-db, dbreader, qreader, job-monitor, validator
-└── sample-apps/  # Java, Python, and JSP/Servlet samples
+├─ bin/          # deploy / start / stop scripts, Docker helpers
+├─ lib/          # synclite-logger JAR, consolidator WAR
+├─ tools/        # synclite-db, dbreader, qreader, job-monitor, validator
+└─ sample-apps/  # Java, Python, and JSP/Servlet samples
 ```
 
 ---
@@ -103,9 +104,9 @@ start.bat            # Windows
 cd target/synclite-platform-oss/bin/
 
 # Edit STAGE and DST variables at the top of docker-deploy.sh first
-./docker-deploy.sh   # Builds image + starts containers
-./docker-start.sh    # Start containers
-./docker-stop.sh     # Stop containers
+./docker-deploy.sh   # Builds synclite-platform image + starts containers
+./docker-start.sh    # Start synclite-platform container (+ optional helpers)
+./docker-stop.sh     # Stop synclite-platform container (+ optional helpers)
 ```
 
 Docker staging and destination helpers are also available:
@@ -134,9 +135,111 @@ bin/dst/mysql/docker-deploy.sh      # MySQL destination
 
 ## Step 3 — Choose Your Use Case
 
+### 🦀 Rust — Pure Native Library (NEW)
+
+The entire SyncLite runtime is now packaged as a single embeddable Rust
+crate, [`synclite`](https://github.com/syncliteio/SyncLite/tree/main/synclite-logger-rust).
+No JVM, no JAR — just `cargo add synclite` and ship a single binary.
+
+The crate embeds the `synclitecdc` native CDC helper (extracted on first
+use) so SQL devices work out of the box for Linux x86_64/x86 and
+Windows x86_64/x86.
+
+```rust
+use synclite::rusqlite::Connection;
+use synclite::{DestinationOptions, DeviceType, DstSyncMode, DstType, Result, SyncLiteOptions, Value};
+use postgres::{Client, NoTls};
+
+fn main() -> Result<()> {
+    const DB_PATH: &str = "orders.db";
+    const DEVICE_NAME: &str = "orders-device";
+
+    // Wire up logger + shipper + embedded consolidator in one call.
+    synclite::initialize(
+        DeviceType::Sqlite,
+        DEVICE_NAME,
+        DB_PATH,
+        Some(DestinationOptions {
+            dst_type: DstType::Postgres,
+            dst_connection_string:
+                "postgresql://postgres:postgres@localhost:5432/syncdb".into(),
+            dst_database: Some("syncdb".into()),
+            dst_schema:   Some("syncschema".into()),
+            dst_sync_mode: DstSyncMode::Consolidation,
+        }),
+        SyncLiteOptions::default(),
+    )?;
+
+    let mut conn = Connection::open(DB_PATH)?;
+    conn.execute("CREATE TABLE IF NOT EXISTS orders(id INTEGER, item TEXT, qty INTEGER)", &[])?;
+    conn.execute(
+        "INSERT INTO orders VALUES(?, ?, ?)",
+        &[Value::Int(1), Value::Text("widget".into()), Value::Int(100)],
+    )?;
+    conn.commit()?;
+
+    // Read back from local SQLite before forcing sync.
+    let local_rows = conn.query("SELECT id, item, qty FROM orders WHERE id = 1", &[])?;
+    if let Some(row) = local_rows.first() {
+        println!("[READ FROM LOCAL DB] {:?}", row);
+    }
+
+    // Roll the active log segment + wait for PostgreSQL apply.
+    conn.flush()?;
+    match synclite::await_sync(DB_PATH, std::time::Duration::from_secs(30)) {
+        Ok(()) => {
+            println!("[SYNC] await_sync succeeded");
+            let mut pg = Client::connect(
+                "postgresql://postgres:postgres@localhost:5432/syncdb",
+                NoTls,
+            )?;
+            let pg_row = pg.query_opt(
+                "SELECT row_to_json(t)::text FROM (SELECT * FROM syncschema.orders WHERE id = $1) t",
+                &[&1_i64],
+            )?;
+            println!("[READ FROM POSTGRESQL POST SYNC] {:?}", pg_row);
+        }
+        Err(e) => println!("[SYNC] await_sync failed: {e}"),
+    }
+    conn.close()?;
+    Ok(())
+}
+```
+
+**Supported devices:** `Sqlite` (SQL + STORE + STREAMING), `Duckdb` (SQL + STORE).
+**Supported destinations:** `Sqlite`, `Duckdb`, `Postgres`.
+
+**Reset a device** with `synclite::reinitialize(db_path, clean_destination)` —
+wipes per-device local state and the device's destination metadata so the next
+`synclite::initialize` re-seeds from scratch. `clean_destination=true` drops
+this device's user tables on the destination in `REPLICATION` mode and is a
+safe no-op in `CONSOLIDATION` mode. A trigger-file protocol
+(`reinitialize.<device-name>` / `reinitialize_with_clean_destination.<device-name>`)
+lets out-of-process tooling force a reinit on the next bring-up.
+
+**Pause sync** with `synclite::pause_sync(db_path)` — halts only the
+consolidator's apply step; the logger keeps appending segments and the shipper
+keeps publishing them locally. `synclite::resume_sync(db_path)` drains the
+queue. A `pause_sync.<device-name>` / `resume_sync.<device-name>` trigger-file
+pair toggles state on the next `initialize`.
+
+**Inspect sync state.** `synclite::sync_status(db_path)` reports the run state
+(`NotInitialized` / `Paused` / `Running`) plus the consolidator's last
+heartbeat. `synclite::sync_statistics(db_path)` returns segments-applied / ops /
+txns / bytes / last consolidated commit id. `synclite::sync_latency(db_path)`
+returns the wall-clock lag in milliseconds (`source − applied`); `-1` when the
+applied side is unknown.
+
+Runnable samples live under `synclite-code-samples/synclite-logger/rust/` —
+`cargo run --example synclite_rusqlite` from that folder gets you the
+rusqlite-style example, with `synclite_duckdb_store` and
+`synclite_streaming` covering the other device shapes.
+
+---
+
 ### A. Edge / Desktop App with Embedded Database (Java)
 
-Add `synclite-logger-<version>.jar` to your classpath, then:
+Add `synclite-<version>.jar` to your classpath, then:
 
 ```java
 import io.synclite.logger.*;
@@ -145,7 +248,7 @@ import java.sql.*;
 
 Path dbDir  = Path.of(System.getProperty("user.home"), "synclite", "db");
 Path dbPath = dbDir.resolve("myapp.db");
-Path conf   = dbDir.resolve("synclite_logger.conf");
+Path conf   = dbDir.resolve("synclite.conf");
 
 // Initialize with SQLite (replace SQLite / synclite_sqlite with DuckDB, Derby, H2, HyperSQL as needed)
 Class.forName("io.synclite.logger.SQLite");
@@ -254,7 +357,7 @@ requests.post(BASE, json={
     "db-name": "myapp",
     "synclite-logger-options": {
         "local-data-stage-directory": "/tmp/synclite/stageDir",
-        "destination-type": "FS"
+        "device-stage-type": "FS"
     },
     "sql": "initialize"
 })
@@ -313,7 +416,7 @@ Open **http://localhost:8080/synclite-consolidator** and:
 
 ## Step 5 — Staging Storage Options
 
-Configure `local-data-stage-directory` in `synclite_logger.conf` for local or NFS staging.  
+Configure `local-data-stage-directory` in `synclite.conf` for local or NFS staging.  
 For remote staging, set the appropriate properties in the same config file:
 
 | Staging Backend | Docker helper |

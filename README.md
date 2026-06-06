@@ -41,7 +41,8 @@ Most data integration problems at the edge are solved today by one of two approa
 
 | Component | Description | README |
 |---|---|---|
-| **SyncLite Logger** | Embeddable JDBC driver for Java/Python edge apps | [→](https://github.com/syncliteio/synclite-logger-java/blob/main/README.md) |
+| **SyncLite Logger** | Embeddable JDBC driver for Java edge apps | [→](https://github.com/syncliteio/synclite-logger-java/blob/main/README.md) |
+| **SyncLite Runtime** | Full SyncLite runtime in Rust (logger + consolidator), consumable from Rust, Python, and C++ | [→](https://github.com/syncliteio/SyncLite/tree/main/synclite-logger-rust) |
 | **SyncLite DB** | Local-first, sync-enabled database server. Optimized for localhost/edge, exposes embedded DBs over HTTP/JSON for any language. | [→](https://github.com/syncliteio/synclite-db/blob/main/README.md) |
 | **SyncLite Client** | Interactive CLI for SyncLite devices | [→](https://github.com/syncliteio/synclite-client/blob/main/README.md) |
 | **SyncLite Consolidator** | Central real-time consolidation engine | [→](https://github.com/syncliteio/synclite-consolidator/blob/main/README.md) |
@@ -79,6 +80,29 @@ Notes:
 **Additional prerequisites (build all loggers including Rust):**
 - Rust toolchain 1.86.0
 - Cargo 1.86.0 (bundled with Rust 1.86.0)
+- [`cargo-zigbuild`](https://github.com/rust-cross/cargo-zigbuild) and the [Zig](https://ziglang.org/download/) compiler on `PATH`
+- Rust standard libraries for Linux x86_64 and aarch64
+
+The Rust cdylibs for **Linux x86_64 and aarch64** are cross-compiled on every
+host so a single `mvn package` produces a complete, multi-arch `lib/native/`
+payload. Install the cross-compile toolchain once on the build host:
+
+```bash
+cargo install cargo-zigbuild
+winget install zig.zig
+rustup target add x86_64-unknown-linux-gnu
+rustup target add aarch64-unknown-linux-gnu
+rustup target add x86_64-unknown-linux-musl
+rustup target add aarch64-unknown-linux-musl
+# zig must be on PATH — download from https://ziglang.org/download/
+```
+
+> If `mvn package` fails with `error: no such command: zigbuild`, you are
+> missing `cargo-zigbuild` — run `cargo install cargo-zigbuild` and retry.
+
+macOS (`libsynclite_<rev>.dylib`) still requires running the build on a
+macOS host — the Apple SDK isn't redistributable so it cannot be
+cross-compiled from Windows or Linux.
 
 ```bash
 git clone --recurse-submodules https://github.com/syncliteio/SyncLite.git SyncLite
@@ -105,36 +129,42 @@ The release is assembled under `SyncLite/target/synclite-platform-oss/`.
 
 ```
 synclite-platform-oss/
-├── bin/
-│   ├── deploy.sh / deploy.bat        # One-command setup: downloads Tomcat + JDK, deploys WARs
-│   ├── start.sh / start.bat          # Start Tomcat + all SyncLite apps
-│   ├── stop.sh / stop.bat            # Graceful shutdown
-│   ├── docker-deploy.sh              # Docker image build + deploy
-│   ├── docker-start.sh / docker-stop.sh
-│   ├── stage/sftp/                   # Docker scripts for SFTP staging server
-│   ├── stage/minio/                  # Docker scripts for MinIO staging server
-│   ├── dst/postgresql/               # Docker scripts for PostgreSQL destination
-│   └── dst/mysql/                    # Docker scripts for MySQL destination
+├─ bin/
+│   ├─ deploy.sh / deploy.bat        # One-command setup: downloads Tomcat + JDK, deploys WARs
+│   ├─ start.sh / start.bat          # Start Tomcat + all SyncLite apps
+│   ├─ stop.sh / stop.bat            # Graceful shutdown
+│   ├─ docker-deploy.sh              # Docker image build + deploy
+│   ├─ docker-start.sh / docker-stop.sh
+│   ├─ stage/sftp/                   # Docker scripts for SFTP staging server
+│   ├─ stage/minio/                  # Docker scripts for MinIO staging server
+│   ├─ dst/postgresql/               # Docker scripts for PostgreSQL destination
+│   └─ dst/mysql/                    # Docker scripts for MySQL destination
 │
-├── lib/
-│   ├── logger/java/synclite-logger-<version>.jar   # Add to your edge app classpath
-│   ├── logger/rust/windows/                         # Windows native artifacts
-│   ├── logger/rust/linux/                           # Linux native artifacts
-│   └── logger/rust/macos/                           # macOS native artifacts
-│   └── consolidator/synclite-consolidator-<version>.war
+├─ lib/
+│   ├─ java/
+│   │   ├─ synclite-<version>.jar     # Add to your edge app classpath
+│   │   └─ synclite.conf
+│   └─ rust/                                        # Multi-arch native cdylibs
+│       ├─ libsynclite_<version>.dll                 # Windows host build
+│       ├─ libsynclite_<version>.lib                 # Windows import library
+│       ├─ libsynclite_<version>_linux_x86_64.so     # cross-compiled
+│       ├─ libsynclite_<version>_linux_aarch64.so    # cross-compiled
+│       ├─ libsynclite_<version>.dylib               # only if built on macOS
+│       └─ synclite.conf
 │
-├── tools/
-│   ├── synclite-client/              # CLI client
-│   ├── synclite-db/                  # SyncLite DB server
-│   ├── synclite-dbreader/            # DBReader WAR + launcher
-│   ├── synclite-qreader/             # QReader WAR + launcher
-│   ├── synclite-job-monitor/         # Job Monitor WAR
-│   └── synclite-validator/           # Validator WAR
+├─ tools/
+│   ├─ synclite-consolidator/        # Consolidator WAR + runtime config
+│   ├─ synclite-client/              # CLI client
+│   ├─ synclite-db/                  # SyncLite DB server
+│   ├─ synclite-dbreader/            # DBReader WAR + launcher
+│   ├─ synclite-qreader/             # QReader WAR + launcher
+│   ├─ synclite-job-monitor/         # Job Monitor WAR
+│   └─ synclite-validator/           # Validator WAR
 │
-└── sample-apps/
-    ├── synclite-logger/java/         # Java sample apps
-    ├── synclite-logger/python/       # Python sample apps
-    └── synclite-logger/jsp-servlet/  # Sample web app WAR
+└─ sample-apps/
+    ├─ synclite-logger/java/         # Java sample apps
+    ├─ synclite-logger/python/       # Python sample apps
+    └─ synclite-logger/jsp-servlet/  # Sample web app WAR
 ```
 
 ---
@@ -163,16 +193,16 @@ cd bin/
 ```bash
 # Edit STAGE and DST at the top of docker-deploy.sh, then:
 cd bin/
-./docker-deploy.sh     # Builds SyncLite container (+ optional SFTP/MinIO + PostgreSQL/MySQL)
-./docker-start.sh      # Starts everything
-./docker-stop.sh       # Stops everything
+./docker-deploy.sh     # Builds synclite-platform image (+ optional SFTP/MinIO + PostgreSQL/MySQL)
+./docker-start.sh      # Starts synclite-platform container and optional helpers
+./docker-stop.sh       # Stops synclite-platform container and optional helpers
 ```
 
 ---
 
 ## Using SyncLite Logger (Java)
 
-Add `synclite-logger-<version>.jar` to your project, then:
+Add `synclite-<version>.jar` to your project, then:
 
 ```java
 import io.synclite.logger.*;
@@ -181,7 +211,7 @@ import java.sql.*;
 
 Path dbDir  = Path.of(System.getProperty("user.home"), "synclite", "db");
 Path dbPath = dbDir.resolve("myapp.db");
-Path conf   = dbDir.resolve("synclite_logger.conf");
+Path conf   = dbDir.resolve("synclite.conf");
 
 Class.forName("io.synclite.logger.SQLite");
 SQLite.initialize(dbPath, conf);
@@ -197,7 +227,7 @@ SQLite.closeAll();
 
 For other embedded databases replace `SQLite` / `synclite_sqlite` with `DuckDB` / `synclite_duckdb`, `Derby` / `synclite_derby`, `H2` / `synclite_h2`, or `HyperSQL` / `synclite_hsqldb`.
 
-Full configuration reference: `lib/logger/synclite_logger.conf` · [Documentation](https://github.com/syncliteio/SyncLite/blob/main/DOCUMENTATION.md)
+Full configuration reference: `lib/logger/synclite.conf` · [Documentation](https://github.com/syncliteio/SyncLite/blob/main/DOCUMENTATION.md)
 
 ### SyncLiteStore API — CRUD without raw SQL
 
@@ -303,7 +333,7 @@ SDK samples for Java, Python, C#, C++, Go, Rust, Ruby, Node.js: [synclite-db/sdk
 
 ## Staging Storage Setup
 
-Configure `local-data-stage-directory` in `synclite_logger.conf` for local/NFS staging. For remote staging (SFTP, S3, MinIO, Kafka, OneDrive, Google Drive) configure the appropriate properties and use the matching Docker helper scripts in `bin/stage/`.
+Configure `local-data-stage-directory` in `synclite.conf` for local/NFS staging. For remote staging (SFTP, S3, MinIO, Kafka, OneDrive, Google Drive) configure the appropriate properties and use the matching Docker helper scripts in `bin/stage/`.
 
 Docker staging helpers:
 

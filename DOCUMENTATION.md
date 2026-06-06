@@ -17,9 +17,9 @@
 3. [Components](#3-components)
 4. [Prerequisites & Build](#4-prerequisites--build)
 5. [Installation & Quick Start](#5-installation--quick-start)
-6. [SyncLite Logger (Java / Python)](#6-synclite-logger-java--python)
+6. [SyncLite Logger (Java JDBC) + SyncLite Runtime (Rust/Python/C++)](#6-synclite-logger-java-jdbc--synclite-runtime-rustpythonc)
    - [Device Types](#61-device-types)
-   - [Configuration Reference](#62-configuration-reference-synclite_loggerconf)
+   - [Configuration Reference](#62-configuration-reference-syncliteconf)
    - [Java JDBC API](#63-java-jdbc-api)
    - [SyncLiteStore API](#64-synclitestore-api)
    - [SyncLiteStream API](#65-synclitestream-api)
@@ -28,6 +28,7 @@
    - [Python Usage](#68-python-usage)
    - [Device Encryption](#69-device-encryption)
    - [Command Handler](#610-command-handler)
+   - [Rust Library](#611-rust-library)
 7. [SyncLite DB (HTTP/JSON Server)](#7-synclite-db-httpjson-server)
    - [Starting the Server](#71-starting-the-server)
    - [HTTP/JSON API Reference](#72-httpjson-api-reference)
@@ -78,34 +79,21 @@ SyncLite is a **third way**: embed a lightweight logger that transparently captu
 ## 2. Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  Data Producers (Edge / App Layer)                                          │
-│                                                                             │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐   │
-│  │SyncLite      │  │SyncLite DB   │  │SyncLite      │  │SyncLite      │   │
-│  │Logger (Java/ │  │(HTTP/JSON    │  │DBReader      │  │QReader       │   │
-│  │Python)       │  │server)       │  │(ETL source)  │  │(MQTT IoT)    │   │
-│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘   │
-│         │                 │                  │                  │           │
-└─────────┼─────────────────┼──────────────────┼──────────────────┼───────────┘
-          │                 │                  │                  │
-          ▼                 ▼                  ▼                  ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  Staging Storage                                                            │
-│  (Local FS / SFTP / Amazon S3 / MinIO / Apache Kafka /                     │
-│   Microsoft OneDrive / Google Drive / NFS)                                  │
-└──────────────────────────────────┬──────────────────────────────────────────┘
-                                   │ compact binary log files / streams
-                                   ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  SyncLite Consolidator (central always-on sink)                             │
-└──────────────────────────────────┬──────────────────────────────────────────┘
-                                   │
-          ┌────────────────────────┼────────────────────────┐
-          ▼                        ▼                        ▼
-    PostgreSQL / MySQL        Amazon Redshift / ClickHouse     Apache Parquet /
-  SQL Server / Oracle       Redshift / ClickHouse    Delta Lake / Iceberg
-  SQLite / DuckDB …         MongoDB …                CSV on S3 …
+Data Producers (Edge/App Layer)
+    - SyncLite Logger (Java JDBC)
+    - SyncLite DB (HTTP/JSON server)
+    - SyncLite DBReader (ETL source)
+    - SyncLite QReader (MQTT IoT)
+                                 |
+                                 v
+Staging Storage (Local FS / SFTP / S3 / MinIO / Kafka / OneDrive / Google Drive / NFS)
+                                 |
+                                 v
+SyncLite Consolidator (central always-on sink)
+                                 |
+                                 +--> PostgreSQL / MySQL / SQL Server / Oracle / SQLite / DuckDB
+                                 +--> Amazon Redshift / ClickHouse / MongoDB
+                                 +--> Apache Parquet / Delta Lake / Iceberg / CSV on S3
 ```
 
 **Flow:** sources produce compact binary log files → files are shipped to staging storage → SyncLite Consolidator delivers them to one or more destinations in real time.
@@ -116,7 +104,8 @@ SyncLite is a **third way**: embed a lightweight logger that transparently captu
 
 | Component | Description | Port / URL |
 |---|---|---|
-| **SyncLite Logger** | Embeddable JDBC driver for Java/Python edge apps | (embedded library — no port) |
+| **SyncLite Logger** | Embeddable JDBC driver for Java edge apps | (embedded library — no port) |
+| **SyncLite Runtime** | Full SyncLite runtime in Rust (`synclite` crate) — logger + shipper + embedded consolidator, consumable from Rust, Python, and C++ | (embedded library — no port) |
 | **SyncLite DB** | Standalone HTTP/JSON database server for any language | Configurable (default `5555`) |
 | **SyncLite Client** | Interactive CLI for SyncLite devices | (CLI tool — no port) |
 | **SyncLite Consolidator** | Central real-time consolidation engine (WAR) | `http://localhost:8080/synclite-consolidator` |
@@ -227,20 +216,27 @@ To stop:
 
 ---
 
-## 6. SyncLite Logger (Java / Python)
+## 6. SyncLite Logger (Java JDBC) + SyncLite Runtime (Rust/Python/C++)
 
-**SyncLite Logger** is an embeddable Java library (JDBC driver) that makes any Java or Python application sync-ready with minimal code changes. It wraps popular embedded databases and transparently captures every SQL transaction into compact binary log files.
+**SyncLite Logger** is an embeddable Java library (JDBC driver) that makes Java applications sync-ready with minimal code changes. It wraps popular embedded databases and transparently captures every SQL transaction into compact binary log files.
+
+> **SyncLite Runtime is the language bridge.** The same pipeline is also
+> shipped as the [`synclite`](https://github.com/syncliteio/SyncLite/tree/main/synclite-logger-rust)
+> Rust runtime (logger + consolidator), consumable from Rust directly and from
+> Python/C++ via bindings. See [section 6.11](#611-rust-library) for runtime APIs.
+> The rest of section 6 (config keys, log format, device categories) applies to
+> both the Java logger and the Rust runtime.
 
 ```
 Your App  +  SyncLite Logger  +  Embedded DB
      │
-     ▼  (SQL log files)
+      v  (SQL log files)
   Staging Storage  (local / SFTP / S3 / MinIO / Kafka / OneDrive / …)
      │
-     ▼
+      v
   SyncLite Consolidator
      │
-     ▼
+      v
   Destination DB / Data Warehouse / Data Lake
 ```
 
@@ -323,7 +319,7 @@ DROP TABLE users;
 How these operations might appear in `commandlog` as captured by `synclite-logger`:
 
 | change_sequence_number | commit_id      | sql                                                           | argcnt | arg1         | arg2 |
-|------------------------:|:---------------|:-------------------------------------------------------------|-------:|:-------------|:-----|
+|---:|:---------------|:---|-------:|:-------------|:-----|
 | 1                       | 1683840000000  | CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT)        | 0      | -            | -    |
 | 2                       | 1683840001000  | INSERT INTO users (id, name) VALUES (?, ?)                   | 2      | 1            | Alice|
 | 3                       | 1683840001000  |                                                              | 2      | 2            | Bob  |
@@ -401,7 +397,7 @@ Notes:
 </dependency>
 ```
 
-**Jar:** Copy `synclite-logger-<version>.jar` from `lib/logger/java/` in the platform release into your project classpath.
+**Jar:** Copy `synclite-<version>.jar` from `lib/java/` in the platform release into your project classpath.
 
 ---
 
@@ -425,16 +421,16 @@ Notes:
 
 ---
 
-### 6.2 Configuration Reference (`synclite_logger.conf`)
+### 6.2 Configuration Reference (`synclite.conf`)
 
-A full sample configuration file is at `synclite-logger-java/logger/src/main/resources/synclite_logger.conf`. All properties are optional unless noted otherwise.
+A full sample configuration file is at `synclite-logger-java/logger/src/main/resources/synclite.conf`. All properties are optional unless noted otherwise.
 
 #### Device Stage Configuration
 
 ```properties
 # Staging storage type (required)
 # Options: FS | SFTP | S3 | MINIO | MS_ONEDRIVE | GOOGLE_DRIVE | KAFKA
-destination-type=FS
+device-stage-type=FS
 
 # Local directory where SyncLite writes log files before shipping to the stage (required)
 local-data-stage-directory=/path/to/local/stage
@@ -580,7 +576,7 @@ public class MyEdgeApp {
     public static void main(String[] args) throws Exception {
         Path dbDir  = Path.of(System.getProperty("user.home"), "synclite", "db");
         Path dbPath = dbDir.resolve("myapp.db");
-        Path conf   = dbDir.resolve("synclite_logger.conf");
+        Path conf   = dbDir.resolve("synclite.conf");
 
         // Load the SyncLite JDBC driver for SQLite
         Class.forName("io.synclite.logger.SQLite");
@@ -656,7 +652,7 @@ import java.nio.file.Path;
 
 Class.forName("io.synclite.logger.SQLiteStore");
 Path dbPath = Path.of("mystore.db");
-SQLiteStore.initialize(dbPath, Path.of("synclite_logger.conf"));
+SQLiteStore.initialize(dbPath, Path.of("synclite.conf"));
 
 try (SyncLiteStore store = SQLiteStore.open(dbPath)) {
 
@@ -708,7 +704,7 @@ import java.nio.file.Path;
 
 Class.forName("io.synclite.logger.Streaming");
 Path dbPath = Path.of("events.db");
-Streaming.initialize(dbPath, Path.of("synclite_logger.conf"));
+Streaming.initialize(dbPath, Path.of("synclite.conf"));
 
 try (SyncLiteStream stream = SyncLiteStream.open(dbPath)) {
 
@@ -750,7 +746,7 @@ import io.synclite.logger.Jedis;
 import java.nio.file.Path;
 
 Path dbPath = Path.of("cache.db");
-Path conf   = Path.of("synclite_logger.conf");
+Path conf   = Path.of("synclite.conf");
 
 try (Jedis jedis = Jedis.builder(dbPath, conf, "cache-device")
         .host("localhost")
@@ -824,83 +820,91 @@ try (KafkaProducer producer = new KafkaProducer(props)) {
 
 ### 6.8 Python Usage
 
-SyncLite Logger can be used from Python via two bridge libraries: **JayDeBeApi** (SQL / JDBC style) and **JPype** (direct Java API calls). Use JayDeBeApi for standard SQL workloads; use JPype when you need the higher-level `SyncLiteStore` or `SyncLiteStream` APIs.
+SyncLite is consumed from Python via the **`synclite`** package, a thin
+PyO3 wrapper over the Rust runtime. The Python API mirrors the Rust wrapper
+crate 1:1 — `Connection`, `Statement`, `DuckDBConnection`, `DuckDBStatement`,
+plus module-level `initialize` and `await_sync`. No JVM, no JAR, no
+`jaydebeapi` / `jpype` bridge.
 
-#### JayDeBeApi — SQL (JDBC-style)
+Install:
+
+```pwsh
+pip install maturin
+cd synclite-logger-rust\python
+maturin develop --release
+```
+
+#### Txn device (`SQLITE` / `DUCKDB`)
 
 ```python
-import jaydebeapi, jpype
+import synclite as sl
 
-jar = "/path/to/synclite-logger-<version>.jar"
-jpype.startJVM(jpype.getDefaultJVMPath(), f"-Djava.class.path={jar}", convertStrings=True)
+DB_PATH = "myapp.db"
 
-conn = jaydebeapi.connect(
-    "io.synclite.logger.SQLite",
-    "jdbc:synclite_sqlite:/home/alice/synclite/db/myapp.db",
-    {"config": "/home/alice/synclite/synclite_logger.conf"},
-    jar
+sl.initialize(
+    device_type="SQLITE",
+    device_name="sampledevice",
+    db_path=DB_PATH,
+    destination=sl.DestinationOptions(
+        dst_type="POSTGRES",
+        dst_connection_string="postgresql://user:pw@localhost:5432/syncdb",
+        dst_database="syncdb",
+        dst_schema="public",
+    ),
 )
-cur = conn.cursor()
-cur.execute("CREATE TABLE IF NOT EXISTS events(id INT, payload TEXT)")
-cur.execute("INSERT INTO events VALUES(1, 'hello from Python')")
+
+conn = sl.Connection.open(DB_PATH)
+conn.execute("CREATE TABLE IF NOT EXISTS events(id INT PRIMARY KEY, payload TEXT)")
+
+stmt = conn.prepare("INSERT INTO events(id, payload) VALUES(?, ?)")
+stmt.execute([1, "hello from Python"])
+
+stmt = conn.prepare("INSERT INTO events(id, payload) VALUES(?, ?)")
+stmt.add_batch([2, "row two"])
+stmt.add_batch([3, "row three"])
+stmt.execute_batch()
+
+for row in conn.query("SELECT id, payload FROM events ORDER BY id"):
+    print(row)
+
 conn.commit()
+conn.flush()
+sl.await_sync(DB_PATH, 30.0)
 conn.close()
 ```
 
-#### JPype — `SyncLiteStore` API
+For DuckDB, swap `sl.Connection` for `sl.DuckDBConnection` and pass
+`device_type="DUCKDB"` to `sl.initialize`.
+
+#### Store / Streaming devices
+
+Write a config file with `device-type=SQLITE_STORE` (or `STREAMING`,
+`DUCKDB_STORE`) and open via `open_with_config`:
 
 ```python
-import jpype, jpype.imports
-jpype.startJVM(classpath=["/path/to/synclite-logger-<version>.jar"])
+import synclite as sl
 
-from io.synclite.logger import SQLiteStore, SyncLiteStore
-from java.nio.file import Paths
-from java.util import LinkedHashMap
+CONF_PATH = "store_device.conf"
 
-db   = Paths.get("/home/alice/synclite/db/mystore.db")
-conf = Paths.get("/home/alice/synclite/synclite_logger.conf")
-SQLiteStore.initialize(db, conf)
+sl.initialize(
+    device_type="SQLITE_STORE",
+    device_name="sampledevice",
+    db_path="store.db",
+    config_path=CONF_PATH,
+)
 
-with SyncLiteStore.open(db) as store:
-    cols = LinkedHashMap()
-    cols.put("id", "INTEGER PRIMARY KEY")
-    cols.put("name", "TEXT")
-    store.createTable("users", cols)
-    store.insert("users", {"id": 1, "name": "Alice"})
-
-SQLiteStore.closeDevice(db)
-jpype.shutdownJVM()
-```
-
-#### JPype — `SyncLiteStream` API
-
-```python
-import jpype, jpype.imports
-jpype.startJVM(classpath=["/path/to/synclite-logger-<version>.jar"])
-
-from io.synclite.logger import Streaming, SyncLiteStream
-from java.nio.file import Paths
-from java.util import LinkedHashMap
-
-db   = Paths.get("/home/alice/synclite/db/events.db")
-conf = Paths.get("/home/alice/synclite/synclite_logger.conf")
-Streaming.initialize(db, conf)
-
-with SyncLiteStream.open(db) as stream:
-    cols = LinkedHashMap()
-    cols.put("ts",         "BIGINT")
-    cols.put("event_type", "TEXT")
-    stream.createTable("events", cols)
-    stream.insert("events", {"ts": 1714200000000, "event_type": "SIGNUP"})
-
-jpype.shutdownJVM()
+conn = sl.Connection.open_with_config(CONF_PATH)
+conn.execute("CREATE TABLE IF NOT EXISTS orders(id INT PRIMARY KEY, status TEXT)")
+conn.execute("INSERT INTO orders(id, status) VALUES(?, ?)", [1, "created"])
+conn.execute("INSERT INTO orders(id, status) VALUES(?, ?)", [2, "confirmed"])
+conn.close()
 ```
 
 ---
 
 ### 6.9 Device Encryption
 
-SyncLite Logger supports transparent encryption of log files before they are shipped to staging storage. Configure encryption in `synclite_logger.conf`:
+SyncLite Logger supports transparent encryption of log files before they are shipped to staging storage. Configure encryption in `synclite.conf`:
 
 ```properties
 # Path to the encryption public key file (DER format).
@@ -923,7 +927,7 @@ The **Command Handler** enables bi-directional communication: SyncLite Consolida
 
 Each command file is named `<timestamp>.<command-text>`. The logger processes them in timestamp order, exactly once (it remembers the last processed timestamp across restarts).
 
-#### `synclite_logger.conf` settings
+#### `synclite.conf` settings
 
 ```properties
 enable-command-handler=true
@@ -1038,12 +1042,198 @@ The logger waits for the process to exit before marking the command as processed
 
 ---
 
+### 6.11 Rust Library
+
+The [`synclite`](https://github.com/syncliteio/SyncLite/tree/main/synclite-logger-rust)
+crate is a pure-Rust port of the SyncLite Logger pipeline — logger,
+shipper, and embedded consolidator in a single binary. It speaks the
+same on-disk SQL-log format as the Java Logger, so devices written by
+the Rust runtime can be consolidated by the standard SyncLite
+Consolidator (and vice versa).
+
+**Install**
+
+```toml
+# Cargo.toml
+[dependencies]
+synclite = "<latest>"
+```
+
+**Hello, SyncLite (Rust)**
+
+```rust
+use synclite::rusqlite::Connection;
+use synclite::{DestinationOptions, DeviceType, DstSyncMode, DstType, Result, SyncLiteOptions, Value};
+use postgres::{Client, NoTls};
+
+fn main() -> Result<()> {
+    const DB_PATH: &str = "orders.db";
+    const DEVICE_NAME: &str = "orders-device";
+
+    synclite::initialize(
+        DeviceType::Sqlite,
+        DEVICE_NAME,
+        DB_PATH,
+        Some(DestinationOptions {
+            dst_type: DstType::Postgres,
+            dst_connection_string:
+                "postgresql://postgres:postgres@localhost:5432/syncdb".into(),
+            dst_database: Some("syncdb".into()),
+            dst_schema:   Some("syncschema".into()),
+            dst_sync_mode: DstSyncMode::Consolidation,
+        }),
+        SyncLiteOptions::default(),
+    )?;
+
+    let mut conn = Connection::open(DB_PATH)?;
+    conn.execute("CREATE TABLE IF NOT EXISTS orders(id INTEGER, item TEXT, qty INTEGER)", &[])?;
+    conn.execute(
+        "INSERT INTO orders VALUES(?, ?, ?)",
+        &[Value::Int(1), Value::Text("widget".into()), Value::Int(100)],
+    )?;
+    conn.commit()?;
+
+    // Read back from local SQLite before forcing sync.
+    let local_rows = conn.query("SELECT id, item, qty FROM orders WHERE id = 1", &[])?;
+    if let Some(row) = local_rows.first() {
+        println!("[READ FROM LOCAL DB] {:?}", row);
+    }
+
+    // Roll the active log segment + wait for PostgreSQL apply.
+    conn.flush()?;
+    match synclite::await_sync(DB_PATH, std::time::Duration::from_secs(30)) {
+        Ok(()) => {
+            println!("[SYNC] await_sync succeeded");
+            let mut pg = Client::connect(
+                "postgresql://postgres:postgres@localhost:5432/syncdb",
+                NoTls,
+            )?;
+            let pg_row = pg.query_opt(
+                "SELECT row_to_json(t)::text FROM (SELECT * FROM syncschema.orders WHERE id = $1) t",
+                &[&1_i64],
+            )?;
+            println!("[READ FROM POSTGRESQL POST SYNC] {:?}", pg_row);
+        }
+        Err(e) => println!("[SYNC] await_sync failed: {e}"),
+    }
+    conn.close()?;
+    Ok(())
+}
+```
+
+**API surface**
+
+| Item | Notes |
+|------|-------|
+| `initialize(device_type, device_name, db_path, destination, options)` | One-shot bootstrap. Idempotent per `db_path`. `device_name` must be alphanumeric. |
+| `DeviceType` | `Sqlite`, `Duckdb` (SQL device); `Sqlite` also backs STORE/STREAMING devices. |
+| `DestinationOptions` | `dst_type` (`Sqlite` / `Duckdb` / `Postgres`), `dst_connection_string`, `dst_database` (required for Postgres/DuckDB, rejected for SQLite), `dst_schema` (required for Postgres, optional for DuckDB, rejected for SQLite), `dst_sync_mode` (`Consolidation` / `Replication`). |
+| `SyncLiteOptions` | Mirrors the Java `synclite.conf` keys (log batch size, ship interval, retention, encryption, etc.). |
+| `synclite::SyncLite` | Type alias for `Logger`, kept for symmetry with the Java `SyncLite` facade. |
+
+**Embedded native helper**
+
+The crate bundles the `synclitecdc` native CDC helper for Linux
+x86_64/x86 and Windows x86_64/x86. On first use it is extracted next to
+the device DB so SQL devices work without any external install step.
+
+**Device reinitialize**
+
+The Rust runtime exposes an in-place reinitialize that wipes per-device
+local state and the device's destination metadata so the next
+`synclite::initialize` re-seeds from scratch under the same UUID,
+device-name, device-type, and destination wiring:
+
+```rust
+// Preserve destination data; only local state is wiped.
+synclite::reinitialize(db_path, false)?;
+
+// REPLICATION mode: also drop the user tables owned by this device.
+// CONSOLIDATION mode: dropping is a no-op (the destination is shared
+// across many devices, so dropping would be unsafe for siblings).
+synclite::reinitialize(db_path, true)?;
+```
+
+A trigger-file protocol lets out-of-process tooling force a reinit on
+the next bring-up without linking against the crate — drop
+`reinitialize.<device-name>` or
+`reinitialize_with_clean_destination.<device-name>` alongside the
+database file and `synclite::initialize` will fire the reinit and
+delete the trigger.
+
+**Pause / resume sync**
+
+Halt destination consolidation for a device without stopping the
+logger. While paused, the in-process logger keeps appending segments
+locally and the shipper keeps publishing them to the upload root —
+only the consolidator's apply step is held back. On `resume_sync` the
+queued segments drain in order.
+
+```rust
+synclite::pause_sync(db_path)?;
+assert!(synclite::is_sync_paused(db_path)?);
+// ...keep writing; segments accumulate locally but do not reach the
+//    destination database...
+synclite::resume_sync(db_path)?;
+```
+
+Both calls are idempotent; the paused state is persisted in a sentinel
+file under the device home, so it survives process restarts.
+
+Trigger-file protocol: drop `pause_sync.<device-name>` or
+`resume_sync.<device-name>` alongside the database file and the next
+`synclite::initialize` toggles state and deletes the trigger.
+
+**Sync status, latency, statistics**
+
+Three read-only helpers report what the consolidator is doing for a
+device. They open SQLite files the consolidator has already produced
+— no workers are started and no destination round-trips are made.
+
+```rust
+let st = synclite::sync_status(db_path)?;
+// st.state is SyncState::NotInitialized | Paused | Running
+// plus raw status / status_description / last_heartbeat_time_ms.
+
+let s = synclite::sync_statistics(db_path)?;
+// log_segments_applied, processed_oper_count, processed_txn_count,
+// processed_log_size, last_consolidated_commit_id, last_heartbeat_time_ms.
+
+let l = synclite::sync_latency(db_path)?;
+// l.source_commit_id  = MAX(commit_id) from device synclite_txn
+// l.applied_commit_id = last commit_id applied at the destination
+// l.latency_ms        = source - applied (wall-clock ms); -1 when the
+//                       applied side is unknown.
+```
+
+Because every `commit_id` is a `System.currentTimeMillis()` value
+emitted by the logger, `latency_ms` is the actual wall-clock sync lag.
+
+**Runnable samples**
+
+[`synclite-code-samples/synclite-logger/rust/`](synclite-code-samples/synclite-logger/rust/)
+is a self-contained Cargo project with one example per device shape:
+
+```sh
+cd synclite-code-samples/synclite-logger/rust
+cargo run --example synclite_rusqlite        # SQLite SQL device
+cargo run --example synclite_duckdb          # DuckDB SQL device
+cargo run --example synclite_duckdb_store    # DuckDB STORE device
+cargo run --example synclite_sqlite_store    # SQLite STORE device
+cargo run --example synclite_streaming       # SQLite STREAMING device
+```
+
+For the full crate layout, internals, and build instructions see
+[`synclite-logger-rust/README.md`](synclite-logger-rust/README.md).
+
+---
+
 ## 7. SyncLite DB (HTTP/JSON Server)
 
 **SyncLite DB** is a standalone database server that wraps the same embedded databases (SQLite, DuckDB, Derby, H2, HyperSQL) and exposes them over HTTP as a JSON API — making SyncLite accessible to **any programming language**.
 
 ```
-Your App (any language)  ──HTTP/JSON──▶  SyncLite DB Server  ──▶  Staging Storage  ──▶  SyncLite Consolidator  ──▶  Destination
+Your App (any language)  --HTTP/JSON-->  SyncLite DB Server  -->  Staging Storage  -->  SyncLite Consolidator  -->  Destination
 ```
 
 ### 7.1 Starting the Server
@@ -1073,7 +1263,7 @@ All requests are `POST /synclite` with a JSON body.
   "db-name": "myapp",
   "synclite-logger-options": {
     "local-data-stage-directory": "/home/alice/synclite/job1/stageDir",
-    "destination-type": "FS"
+    "device-stage-type": "FS"
   },
   "sql": "initialize"
 }
@@ -1421,7 +1611,7 @@ requests.post(BASE, json={
     "db-name": "myapp",
     "synclite-logger-options": {
         "local-data-stage-directory": "/tmp/synclite/stageDir",
-        "destination-type": "FS"
+        "device-stage-type": "FS"
     },
     "sql": "initialize"
 })
@@ -1465,12 +1655,12 @@ synclite-cli.sh
 # Explicit path and type
 synclite-cli.sh /path/to/myapp.db \
     --device-type SQLITE \
-    --synclite-logger-config /path/to/synclite_logger.conf
+    --synclite-logger-config /path/to/synclite.conf
 
 # Remote mode (via SyncLite DB server)
 synclite-cli.sh /path/to/myapp.db \
     --device-type SQLITE \
-    --synclite-logger-config /path/to/synclite_logger.conf \
+    --synclite-logger-config /path/to/synclite.conf \
     --server http://localhost:5555
 ```
 
@@ -1513,7 +1703,7 @@ It is deployed as a Java WAR on Apache Tomcat and exposes a web UI for job confi
 ```
 SyncLite Logger  ─┐
 SyncLite DB      ─┤
-SyncLite DBReader ─┤──▶  Staging Storage  ──▶  SyncLite Consolidator  ──▶  Destination(s)
+SyncLite DBReader ─┤-->  Staging Storage  -->  SyncLite Consolidator  -->  Destination(s)
 SyncLite QReader ─┘
 ```
 
@@ -1581,7 +1771,7 @@ Key configuration options set through the web UI (stored internally by Consolida
 **SyncLite DBReader** is a web-based tool for setting up scalable, incremental, many-to-many database ETL, replication, and migration pipelines. It reads data from source databases and feeds the data into the SyncLite pipeline.
 
 ```
-Source DB(s)  ──▶  SyncLite DBReader  ──▶  Staging Storage  ──▶  SyncLite Consolidator  ──▶  Destination(s)
+Source DB(s)  -->  SyncLite DBReader  -->  Staging Storage  -->  SyncLite Consolidator  -->  Destination(s)
 ```
 
 ### Key Features
@@ -1629,8 +1819,8 @@ Source DB(s)  ──▶  SyncLite DBReader  ──▶  Staging Storage  ──�
 ```
 IoT Devices / Sensors
        │  MQTT publish
-       ▼
-  MQTT Broker(s)  ──subscribe──▶  SyncLite QReader  ──▶  Staging Storage  ──▶  SyncLite Consolidator  ──▶  Destination
+             v
+    MQTT Broker(s)  --subscribe-->  SyncLite QReader  -->  Staging Storage  -->  SyncLite Consolidator  -->  Destination
 ```
 
 ### Key Features
@@ -1678,7 +1868,7 @@ IoT Devices / Sensors
 
 ```
 SyncLite Consolidator jobs  ─┐
-SyncLite DBReader jobs       ├──▶  SyncLite Job Monitor  (web UI)
+SyncLite DBReader jobs       --+-->  SyncLite Job Monitor  (web UI)
 SyncLite QReader jobs       ─┘
 ```
 
@@ -1712,8 +1902,8 @@ Open `http://localhost:8080/synclite-job-monitor` after deployment.
 ```
 Validator (workload generator)
        │  SQL operations via SyncLite Logger / SyncLite DB
-       ▼
-  Edge Device  ──▶  Staging Storage  ──▶  SyncLite Consolidator  ──▶  Destination DB
+      v
+  Edge Device  -->  Staging Storage  -->  SyncLite Consolidator  -->  Destination DB
        │                                                                      │
        └──────────────── Validator (data comparison) ◀────────────────────────┘
 ```
@@ -1751,45 +1941,45 @@ Open `http://localhost:8080/synclite-sample-app` after deployment.
 | **Device creation** | Create one or many SyncLite devices (SQLite, DuckDB, Derby, H2, HyperSQL, Streaming) from a web form |
 | **SQL workload execution** | Run configurable INSERT / UPDATE / DELETE workloads on N devices in parallel |
 | **Multi-device consolidation** | Watch hundreds of devices consolidating into a single destination DB |
-| **Configuration** | Shows how to pass a `synclite_logger.conf` to `SyncLite.initialize()` |
+| **Configuration** | Shows how to pass a `synclite.conf` to `SyncLite.initialize()` |
 
 ### Architecture
 
 ```
-Browser  ──HTTP──▶  SyncLite Sample Web App (Tomcat)
+Browser  --HTTP-->  SyncLite Sample Web App (Tomcat)
                          │  SyncLite Logger (embedded JDBC)
-                         ▼
+                 v
                    Edge Databases (SQLite / DuckDB / …)
                          │  sync log files
-                         ▼
+                 v
                    Local staging directory
                          │
-                         ▼
-                   SyncLite Consolidator  ──▶  Destination DB
+                 v
+             SyncLite Consolidator  -->  Destination DB
 ```
 
 Source entry points in `synclite-sample-web-app/web/src/`:
 - `main/webapp/` — JSP views (create device, run workload, dashboard)
 - `main/java/` — Servlet handlers and SyncLite Logger integration code
-- `main/resources/synclite_logger.conf` — sample logger configuration
+- `main/resources/synclite.conf` — sample logger configuration
 
 ---
 
 ## 15. Staging Storage Setup
 
-The staging storage is the intermediary layer between edge devices and SyncLite Consolidator. Configure `local-data-stage-directory` in `synclite_logger.conf` for local/NFS staging. For remote staging, configure the appropriate section and use the matching Docker helper scripts.
+The staging storage is the intermediary layer between edge devices and SyncLite Consolidator. Configure `local-data-stage-directory` in `synclite.conf` for local/NFS staging. For remote staging, configure the appropriate section and use the matching Docker helper scripts.
 
 ### Local / NFS
 
 ```properties
-destination-type=FS
+device-stage-type=FS
 local-data-stage-directory=/path/to/shared/nfs/mount/stage
 ```
 
 ### SFTP
 
 ```properties
-destination-type=SFTP
+device-stage-type=SFTP
 local-data-stage-directory=/path/to/local/buffer
 sftp:host=sftp.example.com
 sftp:port=22
@@ -1809,7 +1999,7 @@ bin/stage/sftp/docker-stop.sh
 ### MinIO (S3-compatible object storage)
 
 ```properties
-destination-type=MINIO
+device-stage-type=MINIO
 local-data-stage-directory=/path/to/local/buffer
 minio:endpoint=http://localhost:9000
 minio:access-key=minioadmin
@@ -1829,7 +2019,7 @@ bin/stage/minio/docker-stop.sh
 ### Amazon S3
 
 ```properties
-destination-type=S3
+device-stage-type=S3
 local-data-stage-directory=/path/to/local/buffer
 s3:access-key=AKIAIOSFODNN7EXAMPLE
 s3:secret-key=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
@@ -1840,7 +2030,7 @@ s3:command-stage-bucket-name=my-synclite-commands
 ### Apache Kafka
 
 ```properties
-destination-type=KAFKA
+device-stage-type=KAFKA
 local-data-stage-directory=/path/to/local/buffer
 kafka-producer:bootstrap.servers=broker1:9092,broker2:9092
 kafka-consumer:bootstrap.servers=broker1:9092,broker2:9092
@@ -1856,9 +2046,9 @@ kafka-consumer:bootstrap.servers=broker1:9092,broker2:9092
 # 1. Edit STAGE and DST variables at the top of docker-deploy.sh
 #    to configure staging storage type and destination DB type.
 cd bin/
-./docker-deploy.sh    # Builds Docker image, deploys SyncLite container
-./docker-start.sh     # Starts everything
-./docker-stop.sh      # Stops everything
+./docker-deploy.sh    # Builds synclite-platform image, deploys platform container
+./docker-start.sh     # Starts synclite-platform container and optional helpers
+./docker-stop.sh      # Stops synclite-platform container and optional helpers
 ```
 
 ### Docker helpers for staging servers
@@ -1893,49 +2083,51 @@ bin/dst/mysql/docker-start.sh
 
 ```
 synclite-platform-oss/
-├── bin/
-│   ├── deploy.sh / deploy.bat          # One-command setup: downloads Tomcat + JDK, deploys WARs
-│   ├── start.sh / start.bat            # Start Tomcat + all SyncLite apps
-│   ├── stop.sh / stop.bat              # Graceful shutdown
-│   ├── docker-deploy.sh                # Docker image build + deploy
-│   ├── docker-start.sh / docker-stop.sh
-│   ├── tomcat-users.xml                # Default Tomcat user config (synclite/synclite)
-│   ├── stage/
-│   │   ├── sftp/                       # Docker scripts for SFTP staging server
+â"Å"── bin/
+│   â"Å"── deploy.sh / deploy.bat          # One-command setup: downloads Tomcat + JDK, deploys WARs
+│   â"Å"── start.sh / start.bat            # Start Tomcat + all SyncLite apps
+│   â"Å"── stop.sh / stop.bat              # Graceful shutdown
+│   â"Å"── docker-deploy.sh                # Docker image build + deploy
+│   â"Å"── docker-start.sh / docker-stop.sh
+│   â"Å"── tomcat-users.xml                # Default Tomcat user config (synclite/synclite)
+│   â"Å"── stage/
+│   │   â"Å"── sftp/                       # Docker scripts for SFTP staging server
 │   │   └── minio/                      # Docker scripts for MinIO staging server
 │   └── dst/
-│       ├── postgresql/                 # Docker scripts for PostgreSQL destination
+│       â"Å"── postgresql/                 # Docker scripts for PostgreSQL destination
 │       └── mysql/                      # Docker scripts for MySQL destination
 │
-├── lib/
-│   ├── logger/
+â"Å"── lib/
+│   â"Å"── logger/
 │   │   └── java/
-│   │       └── synclite-logger-<version>.jar   # Add to your edge app classpath
+│   │       └── synclite-<version>.jar       # Java logger jar (add to edge app classpath)
 │   └── consolidator/
 │       └── synclite-consolidator-<version>.war
 │
-├── tools/
-│   ├── synclite-client/                # CLI client (synclite-cli.sh / .bat)
-│   ├── synclite-db/                    # SyncLite DB HTTP server
-│   ├── synclite-dbreader/              # DBReader WAR + launcher
-│   ├── synclite-qreader/               # QReader WAR + launcher
-│   ├── synclite-job-monitor/           # Job Monitor WAR
+â"Å"── tools/
+│   â"Å"── synclite-client/                # CLI client (synclite-cli.sh / .bat)
+│   â"Å"── synclite-db/                    # SyncLite DB HTTP server
+│   â"Å"── synclite-dbreader/              # DBReader WAR + launcher
+│   â"Å"── synclite-qreader/               # QReader WAR + launcher
+│   â"Å"── synclite-job-monitor/           # Job Monitor WAR
 │   └── synclite-validator/             # Validator WAR
 │
 └── sample-apps/
-    ├── synclite-logger/
-    │   ├── java/                       # Java sample apps
-    │   │   ├── SyncliteDeviceApp.java
-    │   │   ├── SyncLiteAppenderDeviceApp.java
-    │   │   ├── SyncLiteStoreDeviceApp.java
-    │   │   ├── SyncLiteStreamingApp.java
-    │   │   ├── SyncLiteStoreAPIApp.java
-    │   │   ├── SyncLiteStreamAPIApp.java
-    │   │   ├── SyncLiteKafkaProduceApp.java
+    â"Å"── synclite-logger/
+    │   â"Å"── java/                       # Java sample apps
+    │   │   â"Å"── SyncliteDeviceApp.java
+    │   │   â"Å"── SyncLiteAppenderDeviceApp.java
+    │   │   â"Å"── SyncLiteStoreDeviceApp.java
+    │   │   â"Å"── SyncLiteStreamingApp.java
+    │   │   â"Å"── SyncLiteStoreAPIApp.java
+    │   │   â"Å"── SyncLiteStreamAPIApp.java
+    │   │   â"Å"── SyncLiteKafkaProduceApp.java
     │   │   └── SyncLiteJedisAPIApp.java
-    │   ├── python/                     # Python sample apps (JayDeBeApi + JPype)
-    │   │   ├── JayDeBeApi/             # SQL-style JDBC bridge samples
-    │   │   └── JPype/                  # Direct Java API bridge samples
+    │   â"Å"── python/                     # Python sample apps (PyO3 over Rust runtime)
+    │   │   â"Å"── synclite_device_app.py
+    │   │   â"Å"── synclite_store_device_app.py
+    │   │   â"Å"── synclite_streaming_app.py
+    │   │   └── synclite_duckdb_app.py
     │   └── jsp-servlet/                # Sample web app WAR
     └── synclite-db/
         └── (language SDK samples)
@@ -1947,8 +2139,8 @@ synclite-platform-oss/
 
 - **Default credentials:** The default Tomcat credentials are `synclite` / `synclite`. Change them in `bin/tomcat-users.xml` before any network-exposed deployment.
 - **Docker default credentials:** All Docker helper scripts use default usernames and passwords. Always change credentials and add TLS before production use.
-- **Staging storage credentials:** SFTP passwords, S3/MinIO access keys, and Kafka credentials appear in `synclite_logger.conf`. Secure this file with appropriate file permissions and use secret management systems in production.
-- **Device encryption:** Set `device-encryption-key-file` in `synclite_logger.conf` (pointing to a pre-existing DER public key file) to encrypt log files before shipping. Register the corresponding private key in the Consolidator job configuration. The file must exist at startup — the logger does not auto-generate it.
+- **Staging storage credentials:** SFTP passwords, S3/MinIO access keys, and Kafka credentials appear in `synclite.conf`. Secure this file with appropriate file permissions and use secret management systems in production.
+- **Device encryption:** Set `device-encryption-key-file` in `synclite.conf` (pointing to a pre-existing DER public key file) to encrypt log files before shipping. Register the corresponding private key in the Consolidator job configuration. The file must exist at startup — the logger does not auto-generate it.
 - **Network exposure:** SyncLite DB's HTTP server has no TLS built in — place it behind a reverse proxy with TLS in production.
 - **Authentication:** Always configure Bearer token or HMAC app-auth for SyncLite DB in any environment accessible over a network.
 
