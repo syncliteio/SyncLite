@@ -125,6 +125,9 @@ SyncLite Consolidator (central always-on sink)
 |---|---|
 | Java (JDK) | 25 |
 | Apache Maven | 3.8.6+ |
+| Rust toolchain (`rustup`, `cargo`) | stable |
+| Zig compiler (for cross-arch Rust runtime packaging) | latest stable |
+| cargo-zigbuild (for Linux cross-compiled cdylibs) | latest |
 
 > The `bin/deploy.sh` / `bin/deploy.bat` scripts download Apache Tomcat 9.0.117 and OpenJDK 25 automatically. No manual installation needed for a quick start.
 
@@ -136,7 +139,33 @@ cd SyncLite
 mvn -Drevision=oss clean install
 ```
 
+Build accelerators for Maven:
+
+```bash
+# Skip tests (faster local iteration)
+mvn -Drevision=oss -DskipTests clean install
+
+# Build Java modules only (skip non-Java loggers / Rust runtime)
+mvn -Drevision=oss -DskipNonJavaLoggers -DskipTests clean install
+```
+
 The release is assembled under `SyncLite/target/synclite-platform-oss/`.
+
+If you only want the embedded Rust runtime (`synclite` crate) and not the full Tomcat web stack, build just the Rust workspace:
+
+```bash
+cd synclite-logger-rust
+cargo build --workspace
+```
+
+If you are packaging multi-arch Rust runtime natives (Linux x86_64 / aarch64 from a non-Linux host), install the cross-build prerequisites first:
+
+```bash
+cargo install cargo-zigbuild
+rustup target add x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu
+# Ensure zig is installed and available on PATH
+zig version
+```
 
 ### Build individual components
 
@@ -177,6 +206,13 @@ cd synclite-job-monitor/root
 mvn -Drevision=oss clean install
 ```
 
+- Build the Rust runtime workspace and bindings:
+
+```bash
+cd synclite-logger-rust
+cargo build --workspace
+```
+
 - Build the DBReader, QReader and Validator modules:
 
 ```bash
@@ -196,6 +232,8 @@ When these individual builds complete, their artifacts appear under their respec
 - Downloads Apache Tomcat 9.0.117
 - Downloads OpenJDK 25
 - Deploys all SyncLite WAR files into Tomcat
+
+If your use case is Rust/Python/C++ embedding through the Rust runtime, you do not need these deploy scripts. They are only for the web applications (Consolidator, DBReader, QReader, Job Monitor, Sample App).
 
 To stop:
 
@@ -319,7 +357,7 @@ DROP TABLE users;
 How these operations might appear in `commandlog` as captured by `synclite-logger`:
 
 | change_sequence_number | commit_id      | sql                                                           | argcnt | arg1         | arg2 |
-|---:|:---------------|:---|-------:|:-------------|:-----|
+|------------------------:|:---------------|:-------------------------------------------------------------|-------:|:-------------|:-----|
 | 1                       | 1683840000000  | CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT)        | 0      | -            | -    |
 | 2                       | 1683840001000  | INSERT INTO users (id, name) VALUES (?, ?)                   | 2      | 1            | Alice|
 | 3                       | 1683840001000  |                                                              | 2      | 2            | Bob  |
@@ -622,20 +660,40 @@ try (Connection c = DriverManager.getConnection("jdbc:synclite_sqlite:" + dbPath
 }
 ```
 
-#### Appender device (high-throughput, append-only)
+#### Store device (typed CRUD over SQL backend)
 
 ```java
-Class.forName("io.synclite.logger.SQLiteAppender");
-SQLiteAppender.initialize(dbPath, conf);
+Class.forName("io.synclite.logger.SQLiteStore");
+SQLiteStore.initialize(dbPath, conf);
 
-try (Connection c = DriverManager.getConnection("jdbc:synclite_sqlite_appender:" + dbPath);
-     PreparedStatement ps = c.prepareStatement("INSERT INTO logs(ts, msg) VALUES(?, ?)")) {
-    ps.setLong(1, System.currentTimeMillis());
-    ps.setString(2, "high-throughput record");
-    ps.addBatch();
-    ps.executeBatch();
+try (SyncLiteStore store = SQLiteStore.open(dbPath)) {
+    store.createTable("orders", new LinkedHashMap<>(Map.of(
+        "id", "INTEGER PRIMARY KEY",
+        "status", "TEXT"
+    )));
+    store.insert("orders", Map.of("id", 1, "status", "created"));
+    store.update("orders", Map.of("status", "shipped"), Map.of("id", 1));
 }
-SQLiteAppender.closeAll();
+SQLiteStore.closeDevice(dbPath);
+```
+
+#### Streaming device (high-throughput append-only)
+
+```java
+Class.forName("io.synclite.logger.Streaming");
+Streaming.initialize(dbPath, conf);
+
+try (SyncLiteStream stream = SyncLiteStream.open(dbPath)) {
+    stream.createTable("logs", new LinkedHashMap<>(Map.of(
+        "ts", "BIGINT",
+        "msg", "TEXT"
+    )));
+    stream.insert("logs", Map.of(
+        "ts", System.currentTimeMillis(),
+        "msg", "high-throughput record"
+    ));
+}
+Streaming.closeDevice(dbPath);
 ```
 
 ---
@@ -869,7 +927,12 @@ for row in conn.query("SELECT id, payload FROM events ORDER BY id"):
 
 conn.commit()
 conn.flush()
+# Demo only: await_sync is shown here to make sample output deterministic.
+# In production, sync runs continuously in the background.
 sl.await_sync(DB_PATH, 30.0)
+# Optional runtime controls:
+# sl.pause_sync(DB_PATH)
+# sl.resume_sync(DB_PATH)
 conn.close()
 ```
 
@@ -904,7 +967,7 @@ conn.close()
 
 ### 6.9 Device Encryption
 
-SyncLite Logger supports transparent encryption of log files before they are shipped to staging storage. Configure encryption in `synclite.conf`:
+SyncLite Logger (Java JDBC runtime) supports transparent encryption of log files before they are shipped to staging storage. Configure encryption in `synclite.conf`:
 
 ```properties
 # Path to the encryption public key file (DER format).
@@ -918,6 +981,8 @@ When encryption is enabled:
 - Log files are encrypted on the edge device before shipping.
 - SyncLite Consolidator decrypts them upon receipt (the corresponding private key must be registered in the Consolidator job configuration).
 - The local database file itself is **not** encrypted — only the shipped log files.
+
+> Rust runtime note: device encryption is not supported in the Rust runtime yet.
 
 ---
 
@@ -1099,7 +1164,8 @@ fn main() -> Result<()> {
         println!("[READ FROM LOCAL DB] {:?}", row);
     }
 
-    // Roll the active log segment + wait for PostgreSQL apply.
+    // Demo only: await_sync is shown here to make sample output deterministic.
+    // In production, sync runs continuously in the background.
     conn.flush()?;
     match synclite::await_sync(DB_PATH, std::time::Duration::from_secs(30)) {
         Ok(()) => {
@@ -1116,6 +1182,11 @@ fn main() -> Result<()> {
         }
         Err(e) => println!("[SYNC] await_sync failed: {e}"),
     }
+
+    // Optional runtime controls:
+    // synclite::pause_sync(DB_PATH)?;
+    // synclite::resume_sync(DB_PATH)?;
+
     conn.close()?;
     Ok(())
 }
@@ -1128,7 +1199,7 @@ fn main() -> Result<()> {
 | `initialize(device_type, device_name, db_path, destination, options)` | One-shot bootstrap. Idempotent per `db_path`. `device_name` must be alphanumeric. |
 | `DeviceType` | `Sqlite`, `Duckdb` (SQL device); `Sqlite` also backs STORE/STREAMING devices. |
 | `DestinationOptions` | `dst_type` (`Sqlite` / `Duckdb` / `Postgres`), `dst_connection_string`, `dst_database` (required for Postgres/DuckDB, rejected for SQLite), `dst_schema` (required for Postgres, optional for DuckDB, rejected for SQLite), `dst_sync_mode` (`Consolidation` / `Replication`). |
-| `SyncLiteOptions` | Mirrors the Java `synclite.conf` keys (log batch size, ship interval, retention, encryption, etc.). |
+| `SyncLiteOptions` | Mirrors most Java `synclite.conf` keys (log batch size, ship interval, retention, etc.; device encryption is not supported yet in Rust runtime). |
 | `synclite::SyncLite` | Type alias for `Logger`, kept for symmetry with the Java `SyncLite` facade. |
 
 **Embedded native helper**
@@ -1275,6 +1346,8 @@ All requests are `POST /synclite` with a JSON body.
 - If `synclite-logger-options` is omitted, server default logger config is used.
 
 **`db-type` values:** `SQLITE` · `DUCKDB` · `DERBY` · `H2` · `HYPERSQL` · `STREAMING` · `SQLITE_APPENDER` · `DUCKDB_APPENDER` · `DERBY_APPENDER` · `H2_APPENDER` · `HYPERSQL_APPENDER`
+
+`*_APPENDER` values are legacy compatibility names; for new documentation and usage guidance, prefer Store / Streaming terminology.
 
 #### DDL — Create a table
 
@@ -1667,6 +1740,8 @@ synclite-cli.sh /path/to/myapp.db \
 ### Supported Device Types
 
 `SQLITE` · `DUCKDB` · `DERBY` · `H2` · `HYPERSQL` · `STREAMING` · `SQLITE_APPENDER` · `DUCKDB_APPENDER` · `DERBY_APPENDER` · `H2_APPENDER` · `HYPERSQL_APPENDER`
+
+`*_APPENDER` values are legacy compatibility names; for new documentation and usage guidance, prefer Store / Streaming terminology.
 
 ### Interactive Session Example
 
@@ -2083,54 +2158,53 @@ bin/dst/mysql/docker-start.sh
 
 ```
 synclite-platform-oss/
-â"Å"── bin/
-│   â"Å"── deploy.sh / deploy.bat          # One-command setup: downloads Tomcat + JDK, deploys WARs
-│   â"Å"── start.sh / start.bat            # Start Tomcat + all SyncLite apps
-│   â"Å"── stop.sh / stop.bat              # Graceful shutdown
-│   â"Å"── docker-deploy.sh                # Docker image build + deploy
-│   â"Å"── docker-start.sh / docker-stop.sh
-│   â"Å"── tomcat-users.xml                # Default Tomcat user config (synclite/synclite)
-│   â"Å"── stage/
-│   │   â"Å"── sftp/                       # Docker scripts for SFTP staging server
-│   │   └── minio/                      # Docker scripts for MinIO staging server
-│   └── dst/
-│       â"Å"── postgresql/                 # Docker scripts for PostgreSQL destination
-│       └── mysql/                      # Docker scripts for MySQL destination
-│
-â"Å"── lib/
-│   â"Å"── logger/
-│   │   └── java/
-│   │       └── synclite-<version>.jar       # Java logger jar (add to edge app classpath)
-│   └── consolidator/
-│       └── synclite-consolidator-<version>.war
-│
-â"Å"── tools/
-│   â"Å"── synclite-client/                # CLI client (synclite-cli.sh / .bat)
-│   â"Å"── synclite-db/                    # SyncLite DB HTTP server
-│   â"Å"── synclite-dbreader/              # DBReader WAR + launcher
-│   â"Å"── synclite-qreader/               # QReader WAR + launcher
-│   â"Å"── synclite-job-monitor/           # Job Monitor WAR
-│   └── synclite-validator/             # Validator WAR
-│
-└── sample-apps/
-    â"Å"── synclite-logger/
-    │   â"Å"── java/                       # Java sample apps
-    │   │   â"Å"── SyncliteDeviceApp.java
-    │   │   â"Å"── SyncLiteAppenderDeviceApp.java
-    │   │   â"Å"── SyncLiteStoreDeviceApp.java
-    │   │   â"Å"── SyncLiteStreamingApp.java
-    │   │   â"Å"── SyncLiteStoreAPIApp.java
-    │   │   â"Å"── SyncLiteStreamAPIApp.java
-    │   │   â"Å"── SyncLiteKafkaProduceApp.java
-    │   │   └── SyncLiteJedisAPIApp.java
-    │   â"Å"── python/                     # Python sample apps (PyO3 over Rust runtime)
-    │   │   â"Å"── synclite_device_app.py
-    │   │   â"Å"── synclite_store_device_app.py
-    │   │   â"Å"── synclite_streaming_app.py
-    │   │   └── synclite_duckdb_app.py
-    │   └── jsp-servlet/                # Sample web app WAR
-    └── synclite-db/
-        └── (language SDK samples)
++-- bin/
+|   +-- deploy.sh / deploy.bat          # One-command setup: downloads Tomcat + JDK, deploys WARs
+|   +-- start.sh / start.bat            # Start Tomcat + all SyncLite apps
+|   +-- stop.sh / stop.bat              # Graceful shutdown
+|   +-- docker-deploy.sh                # Docker image build + deploy
+|   +-- docker-start.sh / docker-stop.sh
+|   +-- tomcat-users.xml                # Default Tomcat user config (synclite/synclite)
+|   +-- stage/
+|   |   +-- sftp/                       # Docker scripts for SFTP staging server
+|   |   +-- minio/                      # Docker scripts for MinIO staging server
+|   +-- dst/
+|       +-- postgresql/                 # Docker scripts for PostgreSQL destination
+|       +-- mysql/                      # Docker scripts for MySQL destination
+|
++-- lib/
+|   +-- logger/
+|   |   +-- java/
+|   |       +-- synclite-<version>.jar  # Java logger jar (add to edge app classpath)
+|   +-- consolidator/
+|       +-- synclite-consolidator-<version>.war
+|
++-- tools/
+|   +-- synclite-client/                # CLI client (synclite-cli.sh / .bat)
+|   +-- synclite-db/                    # SyncLite DB HTTP server
+|   +-- synclite-dbreader/              # DBReader WAR + launcher
+|   +-- synclite-qreader/               # QReader WAR + launcher
+|   +-- synclite-job-monitor/           # Job Monitor WAR
+|   +-- synclite-validator/             # Validator WAR
+|
++-- sample-apps/
+    +-- synclite-logger/
+    |   +-- java/                       # Java sample apps
+    |   |   +-- SyncliteDeviceApp.java
+    |   |   +-- SyncLiteStoreDeviceApp.java
+    |   |   +-- SyncLiteStreamingApp.java
+    |   |   +-- SyncLiteStoreAPIApp.java
+    |   |   +-- SyncLiteStreamAPIApp.java
+    |   |   +-- SyncLiteKafkaProduceApp.java
+    |   |   +-- SyncLiteJedisAPIApp.java
+    |   +-- python/                     # Python sample apps (PyO3 over Rust runtime)
+    |   |   +-- synclite_device_app.py
+    |   |   +-- synclite_store_device_app.py
+    |   |   +-- synclite_streaming_app.py
+    |   |   +-- synclite_duckdb_app.py
+    |   +-- jsp-servlet/                # Sample web app WAR
+    +-- synclite-db/
+        +-- (language SDK samples)
 ```
 
 ---
@@ -2140,7 +2214,7 @@ synclite-platform-oss/
 - **Default credentials:** The default Tomcat credentials are `synclite` / `synclite`. Change them in `bin/tomcat-users.xml` before any network-exposed deployment.
 - **Docker default credentials:** All Docker helper scripts use default usernames and passwords. Always change credentials and add TLS before production use.
 - **Staging storage credentials:** SFTP passwords, S3/MinIO access keys, and Kafka credentials appear in `synclite.conf`. Secure this file with appropriate file permissions and use secret management systems in production.
-- **Device encryption:** Set `device-encryption-key-file` in `synclite.conf` (pointing to a pre-existing DER public key file) to encrypt log files before shipping. Register the corresponding private key in the Consolidator job configuration. The file must exist at startup — the logger does not auto-generate it.
+- **Device encryption:** Supported in Java Logger via `device-encryption-key-file` in `synclite.conf` (pre-existing DER public key file). Register the corresponding private key in Consolidator job configuration. Rust runtime device encryption is not supported yet.
 - **Network exposure:** SyncLite DB's HTTP server has no TLS built in — place it behind a reverse proxy with TLS in production.
 - **Authentication:** Always configure Bearer token or HMAC app-auth for SyncLite DB in any environment accessible over a network.
 
