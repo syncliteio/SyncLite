@@ -430,12 +430,12 @@ Notes:
 ```xml
 <dependency>
     <groupId>io.synclite</groupId>
-    <artifactId>synclite-logger</artifactId>
+    <artifactId>synclite</artifactId>
     <version><!-- latest version --></version>
 </dependency>
 ```
 
-**Jar:** Copy `synclite-<version>.jar` from `lib/java/` in the platform release into your project classpath.
+**Jar:** Copy `synclite-${revision}.jar` from `lib/java/` in the platform release into your project classpath.
 
 ---
 
@@ -2175,7 +2175,7 @@ synclite-platform-oss/
 +-- lib/
 |   +-- logger/
 |   |   +-- java/
-|   |       +-- synclite-<version>.jar  # Java logger jar (add to edge app classpath)
+|   |       +-- synclite-${revision}.jar  # Java logger jar (add to edge app classpath)
 |   +-- consolidator/
 |       +-- synclite-consolidator-<version>.war
 |
