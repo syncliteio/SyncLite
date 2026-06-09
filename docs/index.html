@@ -468,7 +468,7 @@
         <p>Deploy hundreds of edge devices. Each runs a local embedded DB. SyncLite consolidates all of them into a single cloud database in real time — without you writing a line of replication code.</p>
       </div>
       <div class="card">
-        <div class="card-icon">âš¡</div>
+        <div class="card-icon">⚡</div>
         <h3>Real-Time Streaming Pipelines</h3>
         <p>Use the SyncLiteStream API or Kafka Producer-compatible interface for high-throughput append-only event ingestion. Land events in any data warehouse or lake with exactly-once semantics.</p>
       </div>
@@ -500,8 +500,7 @@
       <button class="tab-btn active" onclick="showTab('rust')">Rust <span style="font-size:.65rem;padding:.1em .45em;margin-left:.3em;border-radius:99px;background:var(--green);color:#0a0e1a;font-weight:800;letter-spacing:.04em;">NEW</span></button>
       <button class="tab-btn" onclick="showTab('python')">Python <span style="font-size:.65rem;padding:.1em .45em;margin-left:.3em;border-radius:99px;background:var(--green);color:#0a0e1a;font-weight:800;letter-spacing:.04em;">NEW</span></button>
       <button class="tab-btn" onclick="showTab('cpp')">C++ <span style="font-size:.65rem;padding:.1em .45em;margin-left:.3em;border-radius:99px;background:var(--green);color:#0a0e1a;font-weight:800;letter-spacing:.04em;">NEW</span></button>
-      <button class="tab-btn" onclick="showTab('jdbc')">Java (JDBC)</button>
-      <button class="tab-btn" onclick="showTab('jembedded')">Java (Embedded) <span style="font-size:.65rem;padding:.1em .45em;margin-left:.3em;border-radius:99px;background:var(--green);color:#0a0e1a;font-weight:800;letter-spacing:.04em;">NEW</span></button>
+      <button class="tab-btn" onclick="showTab('jembedded')">Java (JDBC) <span style="font-size:.65rem;padding:.1em .45em;margin-left:.3em;border-radius:99px;background:var(--green);color:#0a0e1a;font-weight:800;letter-spacing:.04em;">NEW</span></button>
       <button class="tab-btn" onclick="showTab('store')">SyncLiteStore</button>
       <button class="tab-btn" onclick="showTab('stream')">SyncLiteStream</button>
       <button class="tab-btn" onclick="showTab('jedis')">Jedis</button>
@@ -550,34 +549,53 @@
     </div>
 
     <!-- JDBC -->
-    <div id="tab-jdbc" class="tab-pane">
-<pre><span class="cmt">// Standard JDBC — SyncLite captures every transaction transparently</span>
-<span class="cls">Class</span>.<span class="fn">forName</span>(<span class="str">"io.synclite.logger.SQLite"</span>);
-<span class="cls">SQLite</span>.<span class="fn">initialize</span>(dbPath, conf);   <span class="cmt">// reads synclite.conf</span>
-<span class="cmt">// To switch to DuckDB/Derby/H2/HyperSQL, change driver class + JDBC URL only.</span>
+    <div id="tab-jembedded" class="tab-pane">
+<pre><span class="cmt">// Java JDBC app — local SQLite + SyncLite logger + embedded consolidator to PostgreSQL.</span>
+<span class="cls">Path</span> dbPath = <span class="cls">Path</span>.<span class="fn">of</span>(<span class="str">"sample_consolidator_sqlite.db"</span>);
+<span class="cls">SQLite</span>.<span class="fn">initialize</span>(dbPath, <span class="str">"sampledevice"</span>, <span class="cls">DestinationOptions</span>.<span class="fn">builder</span>()
+    .dstType(<span class="cls">DstType</span>.<span class="fn">POSTGRES</span>)
+    .connectionString(<span class="str">"jdbc:postgresql://localhost:5432/syncdb"</span>)
+    .database(<span class="str">"syncdb"</span>)
+    .schema(<span class="str">"syncschema"</span>)
+    .syncMode(<span class="cls">DstSyncMode</span>.<span class="fn">CONSOLIDATION</span>)
+    .<span class="fn">build</span>());
 
-<span class="kw">try</span> (<span class="cls">Connection</span> c = <span class="cls">DriverManager</span>.<span class="fn">getConnection</span>(<span class="str">"jdbc:synclite_sqlite:"</span> + dbPath);
-     <span class="cls">Statement</span>  s = c.<span class="fn">createStatement</span>()) {
+<span class="kw">try</span> (<span class="cls">Connection</span> c = <span class="cls">DriverManager</span>.<span class="fn">getConnection</span>(<span class="str">"jdbc:synclite_sqlite:"</span> + dbPath)) {
+    <span class="kw">try</span> (<span class="cls">Statement</span> s = c.<span class="fn">createStatement</span>()) {
+        s.<span class="fn">execute</span>(<span class="str">"DROP TABLE IF EXISTS users"</span>);
+        s.<span class="fn">execute</span>(<span class="str">"CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY, name TEXT, score INTEGER)"</span>);
+    }
 
-    s.<span class="fn">execute</span>(<span class="str">"CREATE TABLE IF NOT EXISTS orders(id INT, item TEXT, qty INT)"</span>);
-    s.<span class="fn">execute</span>(<span class="str">"INSERT INTO orders VALUES(1, 'widget', 100)"</span>);
+    <span class="kw">try</span> (<span class="cls">PreparedStatement</span> p = c.<span class="fn">prepareStatement</span>(<span class="str">"INSERT INTO users(id, name, score) VALUES(?, ?, ?)"</span>)) {
+        p.<span class="fn">setInt</span>(<span class="num">1</span>, <span class="num">1</span>);
+        p.<span class="fn">setString</span>(<span class="num">2</span>, <span class="str">"Alice"</span>);
+        p.<span class="fn">setInt</span>(<span class="num">3</span>, <span class="num">100</span>);
+        p.<span class="fn">executeUpdate</span>();
+        p.<span class="fn">setInt</span>(<span class="num">1</span>, <span class="num">2</span>);
+        p.<span class="fn">setString</span>(<span class="num">2</span>, <span class="str">"Bob"</span>);
+        p.<span class="fn">setInt</span>(<span class="num">3</span>, <span class="num">200</span>);
+        p.<span class="fn">executeUpdate</span>();
+    }
 
-    <span class="cmt">// SELECT — local read from the embedded database</span>
-    <span class="cls">ResultSet</span> rs = s.<span class="fn">executeQuery</span>(<span class="str">"SELECT id, item, qty FROM orders WHERE id = 1"</span>);
-    <span class="kw">while</span> (rs.<span class="fn">next</span>()) { <span class="cmt">/* process row */</span> }
+    c.<span class="fn">commit</span>();
 
-    <span class="cmt">// UPDATE and DELETE — also captured and replicated to destination</span>
-    s.<span class="fn">execute</span>(<span class="str">"UPDATE orders SET qty = 200 WHERE id = 1"</span>);
-    s.<span class="fn">execute</span>(<span class="str">"DELETE FROM orders WHERE id = 1"</span>);
-    <span class="cmt">// ↑ all DML logged to a binary file → shipped to stage → consolidated into destination</span>
+    <span class="kw">try</span> (<span class="cls">Statement</span> query = c.<span class="fn">createStatement</span>();
+         <span class="cls">ResultSet</span> rs = query.<span class="fn">executeQuery</span>(<span class="str">"SELECT id, name, score FROM users ORDER BY id"</span>)) {
+        <span class="kw">while</span> (rs.<span class="fn">next</span>()) {
+            <span class="cls">System</span>.<span class="fn">out</span>.<span class="fn">println</span>(<span class="str">"[LOCAL] "</span> + rs.<span class="fn">getInt</span>(<span class="str">"id"</span>) + <span class="str">", "</span> + rs.<span class="fn">getString</span>(<span class="str">"name"</span>));
+        }
+    }
+
+    <span class="cls">SyncLite</span>.<span class="fn">awaitSync</span>(dbPath, <span class="cls">Duration</span>.<span class="fn">ofSeconds</span>(<span class="num">30</span>));
+    <span class="cmt">// then read from PostgreSQL after the in-process consolidator applies the segment.</span>
 }
-<span class="cls">SQLite</span>.<span class="fn">closeAll</span>();</pre>
+<span class="cls">SQLite</span>.<span class="fn">closeDevice</span>(dbPath);</pre>
     </div>
 
     <!-- SyncLiteStore -->
     <div id="tab-store" class="tab-pane">
 <pre><span class="cmt">// SyncLiteStore — typed CRUD without raw SQL, schema evolution built-in</span>
-<span class="cls">Class</span>.<span class="fn">forName</span>(<span class="str">"io.synclite.logger.SQLiteStore"</span>);
+<span class="cls">Class</span>.<span class="fn">forName</span>(<span class="str">"io.synclite.SQLiteStore"</span>);
 <span class="cls">SQLiteStore</span>.<span class="fn">initialize</span>(dbPath, conf);
 
 <span class="kw">try</span> (<span class="cls">SyncLiteStore</span> store = <span class="cls">SQLiteStore</span>.<span class="fn">open</span>(dbPath)) {
@@ -598,7 +616,7 @@
     <!-- SyncLiteStream -->
     <div id="tab-stream" class="tab-pane">
 <pre><span class="cmt">// SyncLiteStream — fluent append-only event ingestion</span>
-<span class="cls">Class</span>.<span class="fn">forName</span>(<span class="str">"io.synclite.logger.Streaming"</span>);
+<span class="cls">Class</span>.<span class="fn">forName</span>(<span class="str">"io.synclite.Streaming"</span>);
 <span class="cls">Streaming</span>.<span class="fn">initialize</span>(dbPath, conf);
 
 <span class="kw">try</span> (<span class="cls">SyncLiteStream</span> stream = <span class="cls">SyncLiteStream</span>.<span class="fn">open</span>(dbPath)) {
