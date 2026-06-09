@@ -9,6 +9,14 @@
 		<revision>oss</revision>
 		<!-- Set -DskipNonJavaLoggers=true to skip non-Java logger build and packaging. -->
 		<skipNonJavaLoggers>false</skipNonJavaLoggers>
+		<!--
+		  Skip the `cargo test` execution wired into the `test` phase.
+		  Derived from `-DskipTests` or `-DskipNonJavaLoggers=true` via
+		  the profiles below; default false so a plain `mvn test` /
+		  `mvn install` runs the Rust device integration suite alongside
+		  the JUnit suites.
+		-->
+		<skipRustTests>false</skipRustTests>
 		<!-- Rust logger native deps: keep DuckDB prebuilt/downloaded to avoid heavy native builds. -->
 		<duckdbDownloadLib>true</duckdbDownloadLib>
 		<!-- Globs so per-arch variants (e.g. libsynclite_<rev>_linux_x86_64.so) coexist. -->
@@ -16,6 +24,11 @@
 		<rust.logger.include.lib>libsynclite_${revision}*.lib</rust.logger.include.lib>
 		<rust.logger.include.so>libsynclite_${revision}*.so</rust.logger.include.so>
 		<rust.logger.include.dylib>libsynclite_${revision}*.dylib</rust.logger.include.dylib>
+		<!-- JNI cdylib (Java consumers). Same naming pattern as the C SDK above. -->
+		<rust.logger.include.jni.dll>libsynclite_${revision}_jni*.dll</rust.logger.include.jni.dll>
+		<rust.logger.include.jni.lib>libsynclite_${revision}_jni*.lib</rust.logger.include.jni.lib>
+		<rust.logger.include.jni.so>libsynclite_${revision}_jni*.so</rust.logger.include.jni.so>
+		<rust.logger.include.jni.dylib>libsynclite_${revision}_jni*.dylib</rust.logger.include.jni.dylib>
 	</properties>
   
   	<!-- sub modules -->
@@ -57,6 +70,43 @@
 								<argument>--release</argument>
 								<argument>-p</argument>
 								<argument>synclite-c</argument>
+								<argument>-p</argument>
+								<argument>synclite-bindings-java</argument>
+							</arguments>
+						</configuration>
+					</execution>
+					<!--
+					  Rust device integration tests. Bound to Maven's `test`
+					  phase so they run alongside the JUnit suites; honors
+					  `-DskipTests` exactly like surefire. Uses a single thread
+					  because the tests share `~/synclite/test/rustruntime/`
+					  state across cases. `-DskipNonJavaLoggers=true` also
+					  skips this execution since the whole Rust toolchain is
+					  off in that mode.
+					-->
+					<execution>
+						<id>test-rust-synclite</id>
+						<phase>test</phase>
+						<goals>
+							<goal>exec</goal>
+						</goals>
+						<configuration>
+							<skip>${skipRustTests}</skip>
+							<workingDirectory>${project.basedir}/synclite-logger-rust</workingDirectory>
+							<executable>cargo</executable>
+							<environmentVariables>
+								<SYNCLITE_RUST_ARTIFACT_VERSION>${revision}</SYNCLITE_RUST_ARTIFACT_VERSION>
+								<DUCKDB_DOWNLOAD_LIB>${duckdbDownloadLib}</DUCKDB_DOWNLOAD_LIB>
+							</environmentVariables>
+							<arguments>
+								<argument>test</argument>
+								<argument>-p</argument>
+								<argument>synclite</argument>
+								<argument>--test</argument>
+								<argument>device_integration</argument>
+								<argument>--release</argument>
+								<argument>--</argument>
+								<argument>--test-threads=1</argument>
 							</arguments>
 						</configuration>
 					</execution>
@@ -91,6 +141,8 @@
 								<argument>--release</argument>
 								<argument>-p</argument>
 								<argument>synclite-c</argument>
+								<argument>-p</argument>
+								<argument>synclite-bindings-java</argument>
 								<argument>--target</argument>
 								<argument>x86_64-unknown-linux-gnu</argument>
 							</arguments>
@@ -115,6 +167,8 @@
 								<argument>--release</argument>
 								<argument>-p</argument>
 								<argument>synclite-c</argument>
+								<argument>-p</argument>
+								<argument>synclite-bindings-java</argument>
 								<argument>--target</argument>
 								<argument>aarch64-unknown-linux-gnu</argument>
 							</arguments>
@@ -194,6 +248,59 @@
 								      overwrite="true"
 								      quiet="true"
 								      failonerror="false"/>
+
+								<!--
+								  JNI cdylib (synclite-bindings-java crate). Mirrors the synclite_c
+								  rename above so the Java jar and the release zip's lib/native/
+								  both pick the same versioned filename.
+								-->
+								<copy file="${project.basedir}/synclite-logger-rust/target/release/synclite_jni.dll"
+								      tofile="${project.basedir}/synclite-logger-rust/target/release/libsynclite_${revision}_jni.dll"
+								      overwrite="true"
+								      quiet="true"
+								      failonerror="false"/>
+								<copy file="${project.basedir}/synclite-logger-rust/target/release/deps/synclite_jni.dll"
+								      tofile="${project.basedir}/synclite-logger-rust/target/release/libsynclite_${revision}_jni.dll"
+								      overwrite="true"
+								      quiet="true"
+								      failonerror="false"/>
+								<copy file="${project.basedir}/synclite-logger-rust/target/release/synclite_jni.dll.lib"
+								      tofile="${project.basedir}/synclite-logger-rust/target/release/libsynclite_${revision}_jni.lib"
+								      overwrite="true"
+								      quiet="true"
+								      failonerror="false"/>
+								<copy file="${project.basedir}/synclite-logger-rust/target/release/libsynclite_jni.so"
+								      tofile="${project.basedir}/synclite-logger-rust/target/release/libsynclite_${revision}_jni.so"
+								      overwrite="true"
+								      quiet="true"
+								      failonerror="false"/>
+								<copy file="${project.basedir}/synclite-logger-rust/target/release/deps/libsynclite_jni.so"
+								      tofile="${project.basedir}/synclite-logger-rust/target/release/libsynclite_${revision}_jni.so"
+								      overwrite="true"
+								      quiet="true"
+								      failonerror="false"/>
+								<copy file="${project.basedir}/synclite-logger-rust/target/release/libsynclite_jni.dylib"
+								      tofile="${project.basedir}/synclite-logger-rust/target/release/libsynclite_${revision}_jni.dylib"
+								      overwrite="true"
+								      quiet="true"
+								      failonerror="false"/>
+								<copy file="${project.basedir}/synclite-logger-rust/target/release/deps/libsynclite_jni.dylib"
+								      tofile="${project.basedir}/synclite-logger-rust/target/release/libsynclite_${revision}_jni.dylib"
+								      overwrite="true"
+								      quiet="true"
+								      failonerror="false"/>
+								<!-- Cross-compiled JNI Linux outputs. -->
+								<copy file="${project.basedir}/synclite-logger-rust/target/x86_64-unknown-linux-gnu/release/libsynclite_jni.so"
+								      tofile="${project.basedir}/synclite-logger-rust/target/release/libsynclite_${revision}_jni_linux_x86_64.so"
+								      overwrite="true"
+								      quiet="true"
+								      failonerror="false"/>
+								<copy file="${project.basedir}/synclite-logger-rust/target/aarch64-unknown-linux-gnu/release/libsynclite_jni.so"
+								      tofile="${project.basedir}/synclite-logger-rust/target/release/libsynclite_${revision}_jni_linux_aarch64.so"
+								      overwrite="true"
+								      quiet="true"
+								      failonerror="false"/>
+
 								<!-- Build unified Rust synclite.conf = logger conf + consolidator conf -->
 								<mkdir dir="${project.build.directory}"/>
 								<concat destfile="${project.build.directory}/synclite.conf" force="yes" fixlastline="yes">
@@ -271,10 +378,31 @@
 			</activation>
 			<properties>
 		<revision>oss</revision>
+				<!-- No Rust toolchain → no Rust tests. -->
+				<skipRustTests>true</skipRustTests>
 				<rust.logger.include.dll>__skip_nonjava__</rust.logger.include.dll>
 				<rust.logger.include.lib>__skip_nonjava__</rust.logger.include.lib>
 				<rust.logger.include.so>__skip_nonjava__</rust.logger.include.so>
 				<rust.logger.include.dylib>__skip_nonjava__</rust.logger.include.dylib>
+				<rust.logger.include.jni.dll>__skip_nonjava__</rust.logger.include.jni.dll>
+				<rust.logger.include.jni.lib>__skip_nonjava__</rust.logger.include.jni.lib>
+				<rust.logger.include.jni.so>__skip_nonjava__</rust.logger.include.jni.so>
+				<rust.logger.include.jni.dylib>__skip_nonjava__</rust.logger.include.jni.dylib>
+			</properties>
+		</profile>
+		<!--
+		  Mirror surefire's `-DskipTests` semantics for the Rust device
+		  integration tests wired into the `test` phase.
+		-->
+		<profile>
+			<id>skip-rust-tests-via-skiptests</id>
+			<activation>
+				<property>
+					<name>skipTests</name>
+				</property>
+			</activation>
+			<properties>
+				<skipRustTests>true</skipRustTests>
 			</properties>
 		</profile>
 	</profiles>

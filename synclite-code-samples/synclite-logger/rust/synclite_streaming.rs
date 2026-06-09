@@ -11,7 +11,7 @@ const DEVICE_NAME: &str = "sampledevice";
 
 fn main() -> Result<()> {
     synclite::initialize(
-        DeviceType::Streaming,
+        DeviceType::STREAMING,
         DEVICE_NAME,
         DB_PATH,
         None,

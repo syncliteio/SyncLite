@@ -41,7 +41,7 @@ fn main() -> Result<()> {
     // One call wires up the local logger, the segment shipper, and the
     // embedded consolidator that drains into PostgreSQL.
     synclite::initialize(
-        DeviceType::Sqlite,
+        DeviceType::SQLITE,
         DEVICE_NAME,
         DB_PATH,
         Some(DestinationOptions {

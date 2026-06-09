@@ -24,20 +24,29 @@ logger-db-traits  = { path = "../../../synclite-logger-rust/crates/logger/db-tra
 
 `cargo run --example <name>` rebuilds against the freshest in-tree code.
 
-### Option B — published crates.io release
+### Option B — git dependency on the public SyncLite repo
 
-Useful when you just want to embed SyncLite in a Rust project without
-the platform repo. Replace the path dependencies above with:
+Useful when you want to embed SyncLite in a Rust project of your own
+without cloning the platform repo. Cargo will fetch the crates straight
+from GitHub at a pinned tag. Replace the path dependencies above with:
 
 ```toml
 [dependencies]
-synclite          = "0.1"
-logger-core       = "0.1"
-logger-db-traits  = "0.1"
+synclite          = { git = "https://github.com/syncliteio/SyncLite.git", branch = "main" }
+logger-core       = { git = "https://github.com/syncliteio/SyncLite.git", branch = "main" }
+logger-db-traits  = { git = "https://github.com/syncliteio/SyncLite.git", branch = "main" }
 ```
 
-Both options expose the exact same `synclite::` API — the sample
-sources compile against either.
+This tracks the latest commit on `main`. For reproducible builds pin to
+a commit instead (`rev = "<sha>"`) or to a release tag once one is
+published (`tag = "<version>"` — see
+[`synclite_platform_version.txt`](../../../synclite_platform_version.txt)
+for the current platform version). Both options expose the exact same
+`synclite::` API — the sample sources compile against either.
+
+> A published crates.io release (`synclite = "<version>"`) is on the
+> roadmap; until then the git dependency above is the canonical way to
+> consume SyncLite from a standalone Rust project.
 
 ## Marquee sample — local SQLite syncing to remote PostgreSQL
 
@@ -76,7 +85,7 @@ SELECT * FROM syncschema.users ORDER BY id;
 
 ```rust
 synclite::initialize(
-    DeviceType::Sqlite,
+    DeviceType::SQLITE,
     DEVICE_NAME,
     DB_PATH,
     Some(DestinationOptions {

@@ -9,7 +9,7 @@ const DEVICE_NAME: &str = "sampledevicestore";
 
 fn main() -> Result<()> {
     synclite::initialize(
-        DeviceType::DuckDbStore,
+        DeviceType::DUCKDB_STORE,
         DEVICE_NAME,
         DB_PATH,
         None,

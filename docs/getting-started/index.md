@@ -156,7 +156,7 @@ fn main() -> Result<()> {
 
     // Wire up logger + shipper + embedded consolidator in one call.
     synclite::initialize(
-        DeviceType::Sqlite,
+        DeviceType::SQLITE,
         DEVICE_NAME,
         DB_PATH,
         Some(DestinationOptions {
@@ -216,12 +216,69 @@ rusqlite-style example, with `synclite_duckdb_store` and
 
 ---
 
+### ☕ Java — Embedded Runtime (NEW)
+
+The Java SDK ships as a **single jar** (`synclite-<version>.jar`) that already bundles
+logger + shipper + in-process consolidator (via a JNI-loaded native engine inside the jar).
+Drop it in, call `SQLite.initialize(dbPath, deviceName, destinationOptions)`, and your JVM app
+syncs to PostgreSQL (or SQLite/DuckDB) in the background. No separate Consolidator WAR to
+deploy.
+
+```java
+import io.synclite.*;
+import java.nio.file.Path;
+import java.sql.*;
+import java.time.Duration;
+
+public class App {
+    public static void main(String[] args) throws Exception {
+        Path dbPath = Path.of("orders.db");
+        DestinationOptions dst = DestinationOptions.builder()
+                .dstType(DstType.POSTGRES)
+                .connectionString("jdbc:postgresql://localhost:5432/syncdb")
+                .database("syncdb")
+                .schema("syncschema")
+                .syncMode(DstSyncMode.CONSOLIDATION)
+                .build();
+
+        // One call wires up the local logger, the segment shipper, and the
+        // embedded consolidator that drains into PostgreSQL.
+        SQLite.initialize(dbPath, "orders-device", dst);
+        try {
+            try (Connection conn = DriverManager.getConnection("jdbc:synclite_sqlite:" + dbPath);
+                 Statement s = conn.createStatement()) {
+                s.execute("CREATE TABLE IF NOT EXISTS orders(id INT, item TEXT, qty INT)");
+                s.execute("INSERT INTO orders VALUES(1, 'widget', 100)");
+            }
+            // Block until the in-flight segment has been applied to PostgreSQL.
+            SyncLite.awaitSync(dbPath, Duration.ofSeconds(30));
+        } finally {
+            SQLite.closeDevice(dbPath);
+        }
+    }
+}
+```
+
+Run with the SyncLite jar on the classpath (no extra fat jar — the in-process consolidator is already bundled):
+
+```sh
+java -cp synclite-logger-java/logger/target/synclite-oss.jar:. App
+```
+
+**Section A below** describes the *logger-only* mode (`synclite-<version>.jar`) which works
+with a separate standalone Consolidator WAR — useful when many devices fan in to one
+central pipeline.
+
+Runnable embedded-runtime sample: `synclite-logger-java/samples/SyncliteSqlitePostgresApp.java`.
+
+---
+
 ### A. Edge / Desktop App with Embedded Database (Java)
 
 Add `synclite-<version>.jar` to your classpath, then:
 
 ```java
-import io.synclite.logger.*;
+import io.synclite.*;
 import java.nio.file.Path;
 import java.sql.*;
 
@@ -230,7 +287,7 @@ Path dbPath = dbDir.resolve("myapp.db");
 Path conf   = dbDir.resolve("synclite.conf");
 
 // Initialize with SQLite (replace SQLite / synclite_sqlite with DuckDB, Derby, H2, HyperSQL as needed)
-Class.forName("io.synclite.logger.SQLite");
+Class.forName("io.synclite.SQLite");
 SQLite.initialize(dbPath, conf);
 
 try (Connection conn = DriverManager.getConnection("jdbc:synclite_sqlite:" + dbPath);
@@ -261,10 +318,10 @@ SQLite.closeAll();
 `STORE` device types (`SQLITE_STORE`, `DUCKDB_STORE`, etc.) expose the `SyncLiteStore` API: typed `insert`, `update`, `delete`, and `selectAll` methods that handle schema evolution automatically and log every operation to the replication pipeline.
 
 ```java
-import io.synclite.logger.SQLiteStore;
-import io.synclite.logger.SyncLiteStore;
+import io.synclite.SQLiteStore;
+import io.synclite.SyncLiteStore;
 
-Class.forName("io.synclite.logger.SQLiteStore");
+Class.forName("io.synclite.SQLiteStore");
 SQLiteStore.initialize(dbPath, conf);
 
 try (SyncLiteStore store = SQLiteStore.open(dbPath)) {
@@ -289,10 +346,10 @@ SQLiteStore.closeDevice(dbPath);
 `SyncLiteStream` wraps the `STREAMING` device with a fluent `insert` / `insertBatch` API. UPDATE and DELETE are absent by design — this models event flow, not mutable records.
 
 ```java
-import io.synclite.logger.Streaming;
-import io.synclite.logger.SyncLiteStream;
+import io.synclite.Streaming;
+import io.synclite.SyncLiteStream;
 
-Class.forName("io.synclite.logger.Streaming");
+Class.forName("io.synclite.Streaming");
 Streaming.initialize(dbPath, conf);
 
 try (SyncLiteStream stream = SyncLiteStream.open(dbPath)) {

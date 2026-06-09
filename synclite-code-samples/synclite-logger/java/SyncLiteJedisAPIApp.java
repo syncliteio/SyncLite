@@ -16,7 +16,7 @@
 import java.nio.file.Path;
 import java.util.Map;
 
-import io.synclite.logger.Jedis;
+import io.synclite.Jedis;
 
 /**
  * Jedis API sample.

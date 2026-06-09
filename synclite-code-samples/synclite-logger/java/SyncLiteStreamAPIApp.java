@@ -22,8 +22,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import io.synclite.logger.Streaming;
-import io.synclite.logger.SyncLiteStream;
+import io.synclite.Streaming;
+import io.synclite.SyncLiteStream;
 
 /**
  * Stream API sample.
@@ -40,7 +40,7 @@ import io.synclite.logger.SyncLiteStream;
 public class SyncLiteStreamAPIApp {
 
     public static void main(String[] args) throws ClassNotFoundException, SQLException {
-        Class.forName("io.synclite.logger.Streaming");
+        Class.forName("io.synclite.Streaming");
         Path dbPath = Path.of("sample_stream_api.db");
         Streaming.initialize(dbPath, Path.of("synclite.conf"));
 

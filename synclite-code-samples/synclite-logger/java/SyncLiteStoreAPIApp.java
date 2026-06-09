@@ -23,8 +23,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import io.synclite.logger.SQLiteStore;
-import io.synclite.logger.SyncLiteStore;
+import io.synclite.SQLiteStore;
+import io.synclite.SyncLiteStore;
 
 /**
  * Store API sample.
@@ -43,7 +43,7 @@ import io.synclite.logger.SyncLiteStore;
 public class SyncLiteStoreAPIApp {
 
     public static void main(String[] args) throws ClassNotFoundException, SQLException {
-        Class.forName("io.synclite.logger.SQLiteStore");
+        Class.forName("io.synclite.SQLiteStore");
         Path dbPath = Path.of("sample_store_api.db");
         SQLiteStore.initialize(dbPath, Path.of("synclite.conf"));
 

@@ -11,7 +11,7 @@ const DEVICE_NAME: &str = "sampledevicestore";
 
 fn main() -> Result<()> {
     synclite::initialize(
-        DeviceType::SqliteStore,
+        DeviceType::SQLITE_STORE,
         DEVICE_NAME,
         DB_PATH,
         None, // see synclite_rusqlite_postgres.rs for the PostgreSQL destination shape
