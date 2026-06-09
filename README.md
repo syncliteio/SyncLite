@@ -11,7 +11,7 @@
   </p>
 </p>
 
-# SyncLite — The embeddable database runtime with built-in sync
+# SyncLite — Build Anything Sync Anywhere
 
 **SyncLite is a lightweight, embeddable database runtime.** Drop one library into your app and you get a fully-featured embedded database (SQLite, DuckDB, Apache Derby, H2, or HyperSQL) whose every write is durably logged and continuously synced to wherever you want — another database, a data warehouse, a data lake, or just a file in object storage.
 
