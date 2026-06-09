@@ -66,7 +66,7 @@ fn main() -> Result<()> {
     let _ = std::fs::remove_dir_all(format!("{DB_PATH}.synclite"));
 
     synclite::initialize(
-        DeviceType::Sqlite,
+        DeviceType::SQLITE,
         DEVICE_NAME,
         DB_PATH,
         Some(dest()),
@@ -79,7 +79,7 @@ fn main() -> Result<()> {
 
     // Same UUID, same device name — bring the device back up.
     synclite::initialize(
-        DeviceType::Sqlite,
+        DeviceType::SQLITE,
         DEVICE_NAME,
         DB_PATH,
         Some(dest()),

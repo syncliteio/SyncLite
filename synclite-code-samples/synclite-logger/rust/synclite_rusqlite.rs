@@ -14,7 +14,7 @@ const DEVICE_NAME: &str = "sampledevice";
 
 fn main() -> Result<()> {
     synclite::initialize(
-        DeviceType::Sqlite,
+        DeviceType::SQLITE,
         DEVICE_NAME,
         DB_PATH,
         None, // local-only; see synclite_rusqlite_postgres.rs for the PG variant

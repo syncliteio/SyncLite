@@ -1,5 +1,5 @@
-import io.synclite.logger.DuckDB;
-import io.synclite.logger.SQLite;
+import io.synclite.DuckDB;
+import io.synclite.SQLite;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -36,7 +36,7 @@ public class SyncLiteBulkTxnParityApp {
 
         writeConf(confPath, deviceName, stageDir);
 
-        Class.forName("io.synclite.logger.SQLite");
+        Class.forName("io.synclite.SQLite");
         Class.forName("org.sqlite.JDBC");
 
         SQLite.initialize(dbPath, confPath);
@@ -88,7 +88,7 @@ public class SyncLiteBulkTxnParityApp {
 
         writeConf(confPath, deviceName, stageDir);
 
-        Class.forName("io.synclite.logger.DuckDB");
+        Class.forName("io.synclite.DuckDB");
         Class.forName("org.sqlite.JDBC");
 
         DuckDB.initialize(dbPath, confPath);

@@ -89,7 +89,7 @@ Data Producers (Edge/App Layer)
 Staging Storage (Local FS / SFTP / S3 / MinIO / Kafka / OneDrive / Google Drive / NFS)
                                  |
                                  v
-SyncLite Consolidator (central always-on sink) / Embedded Consolidator
+SyncLite Consolidator (central always-on sink)  OR  Embedded Consolidator (in-process)
                                  |
                                  +--> PostgreSQL / MySQL / SQL Server / Oracle / SQLite / DuckDB
                                  +--> Amazon Redshift / ClickHouse / MongoDB
@@ -98,14 +98,21 @@ SyncLite Consolidator (central always-on sink) / Embedded Consolidator
 
 **Flow:** sources produce compact binary log files → files are shipped to staging storage → SyncLite Consolidator delivers them to one or more destinations in real time.
 
+**Two consolidator topologies, same wire format.** The Consolidator engine is available in two interchangeable forms:
+
+- **Standalone (central) Consolidator WAR** — the always-on web app at `http://<host>:8080/synclite-consolidator`. Best when many devices fan in to one place and you want centralized monitoring.
+- **Embedded Consolidator** — the same engine running *in-process* inside your application. The Java jar (`synclite-<version>.jar`) and the Rust runtime (`synclite` crate) both bundle it via a JNI-loaded native engine. Best for single-process deployments — drop in one library, point it at a destination, and the app self-replicates with no separate service.
+
+Both produce the same `.sqllog` segments, so you can mix devices (some logger-only against the central Consolidator, others fully embedded) on the same staging storage.
+
 ---
 
 ## 3. Components
 
 | Component | Description | Port / URL |
 |---|---|---|
-| **SyncLite Logger** | Embeddable JDBC driver for Java edge apps | (embedded library — no port) |
-| **SyncLite Runtime** | Full SyncLite runtime in Rust (`synclite` crate) — logger + shipper + embedded consolidator, consumable from Rust, Python, and C++ | (embedded library — no port) |
+| **SyncLite for Java** | One jar (`synclite-<version>.jar`) = JDBC / Store / Stream APIs + logger + shipper + in-process consolidator (via bundled `synclite_jni` native). Logger-only or full-runtime is just an API-call choice at `initialize(...)` time. | (embedded library — no port) |
+| **SyncLite Rust Runtime** | Same runtime in Rust (`synclite` crate) — logger + shipper + in-process consolidator. Consumable from Rust, Python, Node.js, C/C++, Go, Ruby, C# via a single `cdylib`. | (embedded library — no port) |
 | **SyncLite DB** | Standalone HTTP/JSON database server for any language | Configurable (default `5555`) |
 | **SyncLite Client** | Interactive CLI for SyncLite devices | (CLI tool — no port) |
 | **SyncLite Consolidator** | Central real-time consolidation engine (WAR) | `http://localhost:8080/synclite-consolidator` |
@@ -436,6 +443,24 @@ Notes:
 ```
 
 **Jar:** Copy `synclite-${revision}.jar` from `lib/java/` in the platform release into your project classpath.
+
+> **DuckDB device users:** the DuckDB JDBC driver (`org.duckdb:duckdb_jdbc`)
+> ships ~50 MB of native libraries and is **not bundled** in the
+> SyncLite jar. If your application uses any DuckDB device (`DUCKDB`,
+> `DUCKDB_STORE`, `DUCKDB_APPENDER`, …) add it explicitly to your project
+> alongside SyncLite, pinned to the same version SyncLite is built
+> against:
+>
+> ```xml
+> <dependency>
+>     <groupId>org.duckdb</groupId>
+>     <artifactId>duckdb_jdbc</artifactId>
+>     <version>1.5.2.0</version>
+> </dependency>
+> ```
+>
+> The same note applies to the full-runtime `synclite-consolidator` jar.
+> Non-DuckDB users can ignore this dependency entirely.
 
 ---
 

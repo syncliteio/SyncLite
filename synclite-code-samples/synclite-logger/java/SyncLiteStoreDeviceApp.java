@@ -21,7 +21,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
-import io.synclite.logger.SQLiteStore;
+import io.synclite.SQLiteStore;
 
 /**
  * Store device sample.
@@ -41,7 +41,7 @@ import io.synclite.logger.SQLiteStore;
 public class SyncLiteStoreDeviceApp {
 
     public static void main(String[] args) throws ClassNotFoundException, SQLException {
-        Class.forName("io.synclite.logger.SQLiteStore");
+        Class.forName("io.synclite.SQLiteStore");
         Path dbPath = Path.of("sample_store_sqlite.db");
         SQLiteStore.initialize(dbPath, Path.of("synclite.conf"));
 

@@ -20,7 +20,7 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Statement;
 
-import io.synclite.logger.Streaming;
+import io.synclite.Streaming;
 
 /**
  * Streaming device sample.
@@ -37,7 +37,7 @@ import io.synclite.logger.Streaming;
 public class SyncLiteStreamingApp {
 
     public static void main(String[] args) throws ClassNotFoundException, SQLException {
-        Class.forName("io.synclite.logger.Streaming");
+        Class.forName("io.synclite.Streaming");
         Path dbPath = Path.of("sample_streaming.db");
         Streaming.initialize(dbPath, Path.of("synclite.conf"));
 

@@ -61,6 +61,19 @@
 		<fileSet>
 			<directory>${project.basedir}/synclite-code-samples</directory>
 			<outputDirectory>/sample-apps/</outputDirectory>
+			<excludes>
+				<!-- Local developer artifacts that must not ship with the platform package. -->
+				<exclude>**/target/**</exclude>
+				<exclude>**/Cargo.lock</exclude>
+				<exclude>**/*.log</exclude>
+				<exclude>**/*_out.txt</exclude>
+				<exclude>**/run.log</exclude>
+				<exclude>**/run_out.txt</exclude>
+				<exclude>**/*.synclite/**</exclude>
+				<exclude>**/*.db</exclude>
+				<exclude>**/*.duckdb</exclude>
+				<exclude>**/*.sqlite</exclude>
+			</excludes>
 		</fileSet>
 		<fileSet>
 			<directory>${project.basedir}/synclite-sample-web-app/web

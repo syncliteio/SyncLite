@@ -21,7 +21,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
-import io.synclite.logger.SQLite;
+import io.synclite.SQLite;
 
 /**
  * SQL device sample.
@@ -48,11 +48,11 @@ public class SyncliteDeviceApp {
     public static void appStartup() throws SQLException, ClassNotFoundException {
         // SQL-device default: SQLite.
         // Replace for other SQL-device engines:
-        // 1) Driver class: io.synclite.logger.SQLite -> Derby, DuckDB, H2, HyperSQL
+        // 1) Driver class: io.synclite.SQLite -> Derby, DuckDB, H2, HyperSQL
         // 2) Initialize call: SQLite.initialize(...) -> <Engine>.initialize(...)
         // 3) JDBC URL prefix in runBusinessLogic():
         //    jdbc:synclite_sqlite: -> jdbc:synclite_derby:, jdbc:synclite_duckdb:, jdbc:synclite_h2:, jdbc:synclite_hsqldb:
-        Class.forName("io.synclite.logger.SQLite");
+        Class.forName("io.synclite.SQLite");
         Path dbPath = Path.of("sample_txn_sqlite.db");
         SQLite.initialize(dbPath, Path.of("synclite.conf"));
     }
