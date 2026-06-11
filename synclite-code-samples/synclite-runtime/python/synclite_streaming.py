@@ -1,5 +1,10 @@
 """Python mirror of `synclite_streaming.rs`.
 
+PREVIEW-ONLY — this sample targets the upcoming `synclite-logger-python`
+PyO3 wheel. It will NOT run against the ctypes wrapper shipped today as
+`lib/python/synclite.py`. For a runnable Python sample, see
+`synclite_quickstart.py` in this folder.
+
 STREAMING-device sample. Same `Connection` API as the txn / store
 samples; only `device-type` differs (configured in the conf file).
 """

@@ -48,7 +48,7 @@ cargo build -p synclite-c            # debug
 # or: cargo build -p synclite-c --release
 
 # 2. Build the samples
-cd ..\synclite-code-samples\synclite-logger\cpp
+cd ..\synclite-code-samples\synclite-runtime\cpp
 cmake -S . -B build
 cmake --build build --config Debug
 ```

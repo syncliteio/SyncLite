@@ -1,5 +1,10 @@
 """Python mirror of `synclite_duckdb_store.rs`.
 
+PREVIEW-ONLY — this sample targets the upcoming `synclite-logger-python`
+PyO3 wheel. It will NOT run against the ctypes wrapper shipped today as
+`lib/python/synclite.py`. For a runnable Python sample, see
+`synclite_quickstart.py` in this folder.
+
 DUCKDB_STORE device: bulk-friendly variant of the DuckDB sample. Same
 DuckDB-backed `DuckDBConnection` API; only `device_type` differs.
 """

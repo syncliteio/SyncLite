@@ -17,6 +17,21 @@
 		  the JUnit suites.
 		-->
 		<skipRustTests>false</skipRustTests>
+		<!--
+		  Toggle the platform assembly (synclite-platform-<rev>/ folder and
+		  synclite-platform-<rev>.zip) and the slim runtime assembly
+		  (synclite-runtime-<rev>.zip = Java jar + Rust cdylibs + Python wrapper
+		  + sample-apps/). The `runtime-only` profile flips both flags so the
+		  build produces only the runtime zip.
+		-->
+		<skipPlatformAssembly>false</skipPlatformAssembly>
+		<skipRuntimeAssembly>true</skipRuntimeAssembly>
+		<!--
+		  Linux cross-compile of the Rust runtime requires cargo-zigbuild + zig
+		  on PATH. Pass -DskipRustCrossCompile=true on hosts without zig to
+		  build only the host-arch cdylib (libsynclite_<rev>.{dll,lib,so,dylib}).
+		-->
+		<skipRustCrossCompile>false</skipRustCrossCompile>
 		<!-- Rust logger native deps: keep DuckDB prebuilt/downloaded to avoid heavy native builds. -->
 		<duckdbDownloadLib>true</duckdbDownloadLib>
 		<!-- Globs so per-arch variants (e.g. libsynclite_<rev>_linux_x86_64.so) coexist. -->
@@ -29,20 +44,19 @@
 		<rust.logger.include.jni.lib>libsynclite_${revision}_jni*.lib</rust.logger.include.jni.lib>
 		<rust.logger.include.jni.so>libsynclite_${revision}_jni*.so</rust.logger.include.jni.so>
 		<rust.logger.include.jni.dylib>libsynclite_${revision}_jni*.dylib</rust.logger.include.jni.dylib>
+		<!--
+		  Python ctypes wrapper shipped under lib/python/ next to lib/native/.
+		  Useless without the cdylib it wraps, so the skip-nonjava-loggers profile
+		  blanks this out (Java-only build #4 has no native lib to pair with it).
+		-->
+		<rust.logger.include.python>synclite.py</rust.logger.include.python>
 	</properties>
   
-  	<!-- sub modules -->
-	<modules>
-		<module>synclite-consolidator\root</module>
-		<module>synclite-logger-java\logger</module>
-		<module>synclite-db\root</module>
-		<module>synclite-client\client</module>
-		<module>synclite-sample-web-app\web</module>
-		<module>synclite-dbreader\root</module>
-		<module>synclite-qreader\root</module>
-		<module>synclite-job-monitor\root</module>
-		<module>synclite-validator\root</module>
-	</modules>
+  	<!--
+  	  Default reactor — built unless an alternate-modules profile is active.
+  	  Maven merges <modules> across profiles, so to *replace* the default reactor we put it inside a
+  	  profile with activeByDefault=true; selecting any other profile deactivates the default.
+  	-->
 	
 	<build>
 		<plugins>
@@ -70,8 +84,6 @@
 								<argument>--release</argument>
 								<argument>-p</argument>
 								<argument>synclite-c</argument>
-								<argument>-p</argument>
-								<argument>synclite-bindings-java</argument>
 							</arguments>
 						</configuration>
 					</execution>
@@ -129,7 +141,7 @@
 							<goal>exec</goal>
 						</goals>
 						<configuration>
-							<skip>${skipNonJavaLoggers}</skip>
+							<skip>${skipRustCrossCompile}</skip>
 							<workingDirectory>${project.basedir}/synclite-logger-rust</workingDirectory>
 							<executable>cargo</executable>
 							<environmentVariables>
@@ -141,8 +153,6 @@
 								<argument>--release</argument>
 								<argument>-p</argument>
 								<argument>synclite-c</argument>
-								<argument>-p</argument>
-								<argument>synclite-bindings-java</argument>
 								<argument>--target</argument>
 								<argument>x86_64-unknown-linux-gnu</argument>
 							</arguments>
@@ -155,7 +165,7 @@
 							<goal>exec</goal>
 						</goals>
 						<configuration>
-							<skip>${skipNonJavaLoggers}</skip>
+							<skip>${skipRustCrossCompile}</skip>
 							<workingDirectory>${project.basedir}/synclite-logger-rust</workingDirectory>
 							<executable>cargo</executable>
 							<environmentVariables>
@@ -167,8 +177,6 @@
 								<argument>--release</argument>
 								<argument>-p</argument>
 								<argument>synclite-c</argument>
-								<argument>-p</argument>
-								<argument>synclite-bindings-java</argument>
 								<argument>--target</argument>
 								<argument>aarch64-unknown-linux-gnu</argument>
 							</arguments>
@@ -189,6 +197,15 @@
 						</goals>
 						<configuration>
 							<target>
+								<!--
+								  Cargo names cdylibs after the [lib] name (or package name if no [lib.name]),
+								  replacing hyphens with underscores. The `synclite-c` crate's [lib.name]
+								  is `synclite_c`, so cargo produces synclite_c.{dll,so,dylib}
+								  (and synclite_c.dll.lib on Windows). The renames below produce
+								  the versioned filenames consumed by Java NativeLoader and by the platform
+								  zip's lib/native/ folder. All copies are best-effort (failonerror=false)
+								  so a logger-only build on a host without a Rust toolchain still succeeds.
+								-->
 								<copy file="${project.basedir}/synclite-logger-rust/target/release/synclite_c.dll"
 								      tofile="${project.basedir}/synclite-logger-rust/target/release/libsynclite_${revision}.dll"
 								      overwrite="true"
@@ -249,58 +266,6 @@
 								      quiet="true"
 								      failonerror="false"/>
 
-								<!--
-								  JNI cdylib (synclite-bindings-java crate). Mirrors the synclite_c
-								  rename above so the Java jar and the release zip's lib/native/
-								  both pick the same versioned filename.
-								-->
-								<copy file="${project.basedir}/synclite-logger-rust/target/release/synclite_jni.dll"
-								      tofile="${project.basedir}/synclite-logger-rust/target/release/libsynclite_${revision}_jni.dll"
-								      overwrite="true"
-								      quiet="true"
-								      failonerror="false"/>
-								<copy file="${project.basedir}/synclite-logger-rust/target/release/deps/synclite_jni.dll"
-								      tofile="${project.basedir}/synclite-logger-rust/target/release/libsynclite_${revision}_jni.dll"
-								      overwrite="true"
-								      quiet="true"
-								      failonerror="false"/>
-								<copy file="${project.basedir}/synclite-logger-rust/target/release/synclite_jni.dll.lib"
-								      tofile="${project.basedir}/synclite-logger-rust/target/release/libsynclite_${revision}_jni.lib"
-								      overwrite="true"
-								      quiet="true"
-								      failonerror="false"/>
-								<copy file="${project.basedir}/synclite-logger-rust/target/release/libsynclite_jni.so"
-								      tofile="${project.basedir}/synclite-logger-rust/target/release/libsynclite_${revision}_jni.so"
-								      overwrite="true"
-								      quiet="true"
-								      failonerror="false"/>
-								<copy file="${project.basedir}/synclite-logger-rust/target/release/deps/libsynclite_jni.so"
-								      tofile="${project.basedir}/synclite-logger-rust/target/release/libsynclite_${revision}_jni.so"
-								      overwrite="true"
-								      quiet="true"
-								      failonerror="false"/>
-								<copy file="${project.basedir}/synclite-logger-rust/target/release/libsynclite_jni.dylib"
-								      tofile="${project.basedir}/synclite-logger-rust/target/release/libsynclite_${revision}_jni.dylib"
-								      overwrite="true"
-								      quiet="true"
-								      failonerror="false"/>
-								<copy file="${project.basedir}/synclite-logger-rust/target/release/deps/libsynclite_jni.dylib"
-								      tofile="${project.basedir}/synclite-logger-rust/target/release/libsynclite_${revision}_jni.dylib"
-								      overwrite="true"
-								      quiet="true"
-								      failonerror="false"/>
-								<!-- Cross-compiled JNI Linux outputs. -->
-								<copy file="${project.basedir}/synclite-logger-rust/target/x86_64-unknown-linux-gnu/release/libsynclite_jni.so"
-								      tofile="${project.basedir}/synclite-logger-rust/target/release/libsynclite_${revision}_jni_linux_x86_64.so"
-								      overwrite="true"
-								      quiet="true"
-								      failonerror="false"/>
-								<copy file="${project.basedir}/synclite-logger-rust/target/aarch64-unknown-linux-gnu/release/libsynclite_jni.so"
-								      tofile="${project.basedir}/synclite-logger-rust/target/release/libsynclite_${revision}_jni_linux_aarch64.so"
-								      overwrite="true"
-								      quiet="true"
-								      failonerror="false"/>
-
 								<!-- Build unified Rust synclite.conf = logger conf + consolidator conf -->
 								<mkdir dir="${project.build.directory}"/>
 								<concat destfile="${project.build.directory}/synclite.conf" force="yes" fixlastline="yes">
@@ -341,6 +306,7 @@
 							<goal>single</goal>
 						</goals>
 						<configuration>
+							<skipAssembly>${skipPlatformAssembly}</skipAssembly>
 							<appendAssemblyId>false</appendAssemblyId>						
 							<finalName>synclite-platform-${revision}</finalName>
 							<descriptors>
@@ -355,19 +321,69 @@
 							<goal>single</goal>
 						</goals>
 						<configuration>
+							<skipAssembly>${skipPlatformAssembly}</skipAssembly>
 							<appendAssemblyId>false</appendAssemblyId>						
 							<finalName>synclite-platform-${revision}</finalName>
 							<descriptors>
 								<descriptor>assembly/platform_zip.xml</descriptor>
 							</descriptors>
 						</configuration>
-					</execution>					
+					</execution>
+					<!--
+					  Slim runtime zip: Java logger jar + multi-arch Rust cdylibs +
+					  Python ctypes wrapper + sample-apps/{cpp,java,python,rust}.
+					  Skipped by default; flipped on by the `runtime-only` profile
+					  when the build is invoked with -DruntimeOnly=true.
+					-->
+					<execution>
+						<id>create-runtime-zip</id>
+						<phase>package</phase>
+						<goals>
+							<goal>single</goal>
+						</goals>
+						<configuration>
+							<skipAssembly>${skipRuntimeAssembly}</skipAssembly>
+							<appendAssemblyId>false</appendAssemblyId>
+							<finalName>synclite-runtime-${revision}</finalName>
+							<descriptors>
+								<descriptor>assembly/runtime_zip.xml</descriptor>
+							</descriptors>
+						</configuration>
+					</execution>
 				</executions>
 			</plugin>
 		</plugins>
 	</build>
 
 	<profiles>
+		<!--
+		  Default reactor: all modules. activeByDefault=true means this profile is
+		  active for plain `mvn ...` invocations and is automatically deactivated
+		  when any other profile activates. Putting the module list inside a profile
+		  is the only way to *replace* (not merge with) the reactor when an
+		  alternate-modules profile is selected.
+
+		  IMPORTANT: every other profile activated by a property toggle
+		  (skip-nonjava-loggers, skip-rust-tests-via-skiptests, …) MUST repeat
+		  this full <modules> list, otherwise it silently empties the reactor.
+		-->
+		<profile>
+			<id>default-modules</id>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+			</activation>
+			<modules>
+				<module>synclite-consolidator\root</module>
+				<module>synclite-logger-java\logger</module>
+				<module>synclite-db\root</module>
+				<module>synclite-client\client</module>
+				<module>synclite-sample-web-app\web</module>
+				<module>synclite-dbreader\root</module>
+				<module>synclite-qreader\root</module>
+				<module>synclite-job-monitor\root</module>
+				<module>synclite-validator\root</module>
+			</modules>
+		</profile>
 		<profile>
 			<id>skip-nonjava-loggers</id>
 			<activation>
@@ -376,10 +392,27 @@
 					<value>true</value>
 				</property>
 			</activation>
+			<!--
+			  Activating this profile auto-deactivates default-modules (activeByDefault),
+			  so the full reactor list must be repeated here to keep the Java modules
+			  building under -DskipNonJavaLoggers=true.
+			-->
+			<modules>
+				<module>synclite-consolidator\root</module>
+				<module>synclite-logger-java\logger</module>
+				<module>synclite-db\root</module>
+				<module>synclite-client\client</module>
+				<module>synclite-sample-web-app\web</module>
+				<module>synclite-dbreader\root</module>
+				<module>synclite-qreader\root</module>
+				<module>synclite-job-monitor\root</module>
+				<module>synclite-validator\root</module>
+			</modules>
 			<properties>
-		<revision>oss</revision>
-				<!-- No Rust toolchain → no Rust tests. -->
+				<revision>oss</revision>
+				<!-- No Rust toolchain → no Rust tests, and no cross-compile either. -->
 				<skipRustTests>true</skipRustTests>
+				<skipRustCrossCompile>true</skipRustCrossCompile>
 				<rust.logger.include.dll>__skip_nonjava__</rust.logger.include.dll>
 				<rust.logger.include.lib>__skip_nonjava__</rust.logger.include.lib>
 				<rust.logger.include.so>__skip_nonjava__</rust.logger.include.so>
@@ -388,6 +421,8 @@
 				<rust.logger.include.jni.lib>__skip_nonjava__</rust.logger.include.jni.lib>
 				<rust.logger.include.jni.so>__skip_nonjava__</rust.logger.include.jni.so>
 				<rust.logger.include.jni.dylib>__skip_nonjava__</rust.logger.include.jni.dylib>
+				<!-- Java-only build (#4): no native lib, so the ctypes wrapper would be dead weight. -->
+				<rust.logger.include.python>__skip_nonjava__</rust.logger.include.python>
 			</properties>
 		</profile>
 		<!--
@@ -401,7 +436,54 @@
 					<name>skipTests</name>
 				</property>
 			</activation>
+			<!--
+			  Activating this profile auto-deactivates default-modules (activeByDefault),
+			  so the full reactor list must be repeated here to keep the Java modules
+			  building under -DskipTests.
+			-->
+			<modules>
+				<module>synclite-consolidator\root</module>
+				<module>synclite-logger-java\logger</module>
+				<module>synclite-db\root</module>
+				<module>synclite-client\client</module>
+				<module>synclite-sample-web-app\web</module>
+				<module>synclite-dbreader\root</module>
+				<module>synclite-qreader\root</module>
+				<module>synclite-job-monitor\root</module>
+				<module>synclite-validator\root</module>
+			</modules>
 			<properties>
+				<skipRustTests>true</skipRustTests>
+			</properties>
+		</profile>
+		<!--
+		  Runtime-only build: produces synclite-runtime-<rev>.zip containing
+		  lib/java (synclite jar + conf) + lib/native (Rust cdylibs, multi-arch)
+		  + lib/python (ctypes wrapper) + sample-apps/{cpp,java,python,rust}.
+		  Skips the platform assembly and every web/tool module; reactor builds
+		  only the Java logger module so the jar exists. Rust crates and their
+		  cdylibs are produced by the root-pom Cargo executions as usual.
+
+		  Usage:
+		    mvn -Drevision=oss -DruntimeOnly=true clean install
+
+		  Output: target/synclite-runtime-<rev>.zip
+		-->
+		<profile>
+			<id>runtime-only</id>
+			<activation>
+				<property>
+					<name>runtimeOnly</name>
+					<value>true</value>
+				</property>
+			</activation>
+			<modules>
+				<module>synclite-logger-java\logger</module>
+			</modules>
+			<properties>
+				<skipPlatformAssembly>true</skipPlatformAssembly>
+				<skipRuntimeAssembly>false</skipRuntimeAssembly>
+				<!-- No platform-side tests to run; keep Rust device tests opt-in. -->
 				<skipRustTests>true</skipRustTests>
 			</properties>
 		</profile>

@@ -1,6 +1,6 @@
 # Getting Started with SyncLite
 
-> **Build Anything, Sync Anywhere** — open-source, low-code relational data synchronization and consolidation platform.
+> **Build Anything, Sync Anywhere** — the embeddable database runtime with built-in sync.
 >
 > Full documentation: https://github.com/syncliteio/SyncLite/blob/main/DOCUMENTATION.md
 
@@ -8,109 +8,272 @@
 
 ## What Is SyncLite?
 
-SyncLite gives developers a single toolkit to:
+**SyncLite is a lightweight, embeddable database runtime.** Drop one library into your app and you get a fully-featured embedded database (SQLite, DuckDB, Apache Derby, H2, or HyperSQL) whose every write is durably logged and continuously synced to wherever you want — another database, a data warehouse, a data lake, or just a file in object storage.
 
-- Build **offline-first, sync-ready edge and desktop applications** using embedded databases (SQLite, DuckDB, Apache Derby, H2, HyperSQL) that automatically replicate changes to any cloud destination.
-- Stand up **last-mile data streaming pipelines** with high-throughput event ingestion delivered into any database, data warehouse, or data lake.
-- Configure **database ETL, replication, and migration** pipelines across heterogeneous systems with minimal code.
-- Connect **IoT / MQTT message brokers** to analytical databases in minutes.
+No server to install. No daemon to babysit. No CDC pipeline to wire up. Your application links a jar, a crate, or a native library and ships.
 
-All flows follow one unified architecture:
-
+```text
+your app  ──►  SyncLite Runtime (embedded DB + log + shipper + sync)  ──►  Postgres / MySQL / Snowflake / S3 / ...
 ```
-Edge Sources (SyncLite Logger / DB / DBReader / QReader)
-     │
-      v  compact binary log files
-  Staging Storage  (local dir / SFTP / S3 / MinIO / Kafka / OneDrive / Google Drive)
-     │
-      v
-  SyncLite Consolidator  (always-on sink)
-     │
-      v
-  Destination DB / Data Warehouse / Data Lake
-```
+
+### What you get without installing anything
+
+- **One library, full stack.** Embedded SQL database + write-ahead logger + segment shipper + (optional) in-process consolidator — all inside your process.
+- **Pick your language.** First-class **Java** (jar) and **Rust** (crate) runtimes; the Rust runtime is embeddable from **Python, Node.js, C/C++, Go, Ruby, C#** via a single `cdylib`.
+- **Pick your local DB.** SQLite, DuckDB, Apache Derby, H2, HyperSQL — all behind the same APIs.
+- **Pick your write style.** Plain **JDBC / SQL**, a typed **Store CRUD** API (`insert` / `update` / `delete` / `selectAll`), a fluent **Stream** append-only API, or a drop-in **Jedis** subclass for Redis users.
+- **Sync is just config.** Point the runtime at a destination and writes start flowing — no separate CDC tool, no Kafka, no replication agent.
 
 ---
 
-## Platform Components
+## Runtime first, tools on top
+
+SyncLite ships as two things:
+
+1. **The Runtime** — what your application embeds. This is the core of the project: a small library that owns the local DB, the log, the shipper, and (in the full-runtime jar / Rust crate) the in-process consolidator that pushes data to destinations.
+2. **Optional tooling** — webapps and CLIs built **on top of** the same runtime, for teams who want centralized ops, scheduled ETL jobs, IoT ingest, or end-to-end test harnesses. None of them are required to use the runtime in your code.
+
+If you're a developer building an app, you only need group 1. If you're standing up a data platform, group 2 is there when you need it.
+
+### Components
+
+**Embeddable runtime — link it into your app**
 
 | Component | What It Does |
 |---|---|
-| **SyncLite Logger** | Local-first, embeddable JDBC driver for Java edge apps — wraps SQLite, DuckDB, Derby, H2, HyperSQL for robust offline and sync-ready operation |
-| **SyncLite Runtime** | Full SyncLite runtime in Rust (logger + consolidator), consumable from Rust, Python, and C++ |
-| **SyncLite DB** | Local-first, sync-enabled database server. Optimized for localhost/edge, exposes embedded DBs over HTTP/JSON for any language |
-| **SyncLite Client** | Interactive CLI for managing SyncLite devices |
-| **SyncLite Consolidator** | Central real-time consolidation engine — delivers data to destinations |
-| **SyncLite DBReader** | Database ETL / replication / migration tool |
-| **SyncLite QReader** | IoT MQTT connector (Eclipse Paho; works with any MQTT v3.1 broker) |
-| **SyncLite Job Monitor** | Unified job management and scheduling UI |
-| **SyncLite Validator** | End-to-end integration testing |
-| **Sample Web App** | JSP/Servlet demo showing SyncLite Logger in action |
+| **SyncLite for Java** (`synclite-<version>.jar`) | One jar = JDBC / Store / Stream APIs + logger + shipper + (optional) in-process consolidator via bundled `synclite_jni` native. |
+| **SyncLite Rust Runtime** | Same runtime in Rust as a single `cdylib`. Consumable from Rust, Python, Node.js, C/C++, Go, Ruby, C#. |
+| **SyncLite DB** | Wraps the runtime as a tiny local-first HTTP/JSON service for any language that doesn't (yet) embed the native lib. |
+| **SyncLite Client** | Interactive CLI for inspecting and querying SyncLite devices. |
+
+**Optional tooling — built on top of the runtime**
+
+| Component | What It Does |
+|---|---|
+| **SyncLite Consolidator** | Standalone consolidation service for the central topology — accepts log segments from many devices and applies them to destinations. |
+| **SyncLite DBReader** | Database ETL / replication / migration jobs (source DB → SyncLite devices → destinations). |
+| **SyncLite QReader** | IoT MQTT connector (Eclipse Paho; works with any MQTT v3.1 broker). |
+| **SyncLite Job Monitor** | Unified job management and scheduling UI for DBReader / QReader / Consolidator jobs. |
+| **SyncLite Validator** | End-to-end integration test harness. |
+| **Sample Web App** | JSP/Servlet demo showing the Java runtime embedded inside a real web app. |
 
 ---
 
-## Prerequisites
+## Step 1 — Build SyncLite
+
+> **Architecture support.** SyncLite is **64-bit only** — `x86_64` and `aarch64` on Windows / Linux / macOS. 32-bit hosts are not supported because the embedded Rust runtime depends on the DuckDB engine, which requires a 64-bit host.
+
+### Prerequisites (Java-only build)
 
 | Requirement | Version |
 |---|---|
 | Java | 25 |
 | Apache Maven | 3.8.6+ |
-| Rust toolchain (`rustup`, `cargo`) | stable |
-| Zig compiler (for cross-arch Rust runtime packaging) | latest stable |
-| cargo-zigbuild (for Linux cross-compiled cdylibs) | latest |
 | Git | any recent version |
 
-> The `deploy.sh` / `deploy.bat` scripts download **Apache Tomcat 9.0.117** and **OpenJDK 25** automatically — no manual JDK installation required for a quick start.
+### Additional prerequisites (build all loggers including the Rust runtime)
 
----
+| Requirement | Version |
+|---|---|
+| Rust toolchain (`rustup`, `cargo`) | 1.86.0 |
+| [`cargo-zigbuild`](https://github.com/rust-cross/cargo-zigbuild) | latest |
+| [Zig](https://ziglang.org/download/) compiler on `PATH` | latest stable |
+| Rust standard libraries for Linux x86_64 and aarch64 | — |
 
-## Step 1 — Clone and Build
+The Rust cdylibs for **Linux x86_64 and aarch64** are cross-compiled on every host so a single `mvn package` produces a complete, multi-arch `lib/native/` payload. Install the cross-compile toolchain once on the build host:
 
 ```bash
-git clone --recurse-submodules git@github.com:syncliteio/SyncLite.git SyncLite
-cd SyncLite
-mvn -Drevision=oss clean install
+cargo install cargo-zigbuild
+rustup target add x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu
+# zig must be on PATH — download from https://ziglang.org/download/
+zig version
 ```
 
-Build accelerators for Maven:
+> If `mvn package` fails with `error: no such command: zigbuild`, you are missing `cargo-zigbuild` — run `cargo install cargo-zigbuild` and retry.
+
+macOS (`libsynclite_<rev>.dylib`) still requires running the build on a macOS host — the Apple SDK isn't redistributable so it cannot be cross-compiled from Windows or Linux.
+
+> The `bin/deploy.sh` / `bin/deploy.bat` scripts download **Apache Tomcat 9.0.117** and **OpenJDK 25** automatically — no manual JDK installation required for a quick start of the optional platform.
+
+### Clone
 
 ```bash
-# Skip tests (faster local iteration)
+git clone --recurse-submodules https://github.com/syncliteio/SyncLite.git SyncLite
+cd SyncLite
+```
+
+### Build flavors
+
+SyncLite has **three** Maven build flavors, ordered from largest to smallest output. Pick the smallest one that meets your need.
+
+| # | Flavor | Produces | Rust toolchain? |
+|---|---|---|---|
+| 1 | **Full platform** (default) | `target/synclite-platform-<rev>.zip` — Tomcat scripts + WARs + tools + samples + multi-arch native runtime | Required |
+| 2 | **Full platform, Java-only** | Same as #1 but no `lib/native/` | Not required |
+| 3 | **Runtime** (recommended for app developers) | `target/synclite-runtime-<rev>.zip` — `lib/java/` (synclite jar) + multi-arch `lib/native/` (Rust cdylibs) + `lib/python/` (ctypes wrapper) + cross-language `sample-apps/{cpp,java,python,rust}` | Required |
+
+```bash
+# 1. Full platform (default) — Tomcat platform zip with WARs, tools, all language samples, and the multi-arch Rust runtime
+mvn -Drevision=oss clean install
+
+# 2. Full platform, Java-only — same Tomcat platform zip as #1 but no lib/native/ (no Rust toolchain required)
+mvn -Drevision=oss -DskipNonJavaLoggers=true clean install
+
+# 3. Runtime — slim embeddable zip: synclite jar + multi-arch native cdylibs + sample-apps/{cpp,java,python,rust}
+mvn -Drevision=oss -DruntimeOnly=true clean install
+```
+
+> **What `-DruntimeOnly=true` does:** activates a Maven profile that reduces the reactor to just the `synclite-logger-java/logger` module and switches the assembly from the full `synclite-platform-<rev>.zip` to the slim `synclite-runtime-<rev>.zip`. Skips the consolidator, dbreader, qreader, job-monitor, validator, sample-web-app, db, and client modules.
+
+> **What `-DskipNonJavaLoggers=true` does:** skips all parent-pom Rust executions (host build + Linux x86_64 + Linux aarch64) and excludes `lib/native/` from the assembly. It also auto-activates `-DskipRustCrossCompile=true` and `-DskipRustTests=true`. Use whenever you don't have a Rust toolchain on the build host.
+
+### Build accelerators
+
+These switches combine with any flavor above:
+
+- **`-DskipTests`** — skip JUnit + Rust device-integration tests.
+- **`-DskipRustCrossCompile=true`** — skip the two Linux cross-compile cargo executions (`x86_64-unknown-linux-gnu` + `aarch64-unknown-linux-gnu`). Use on hosts without `cargo-zigbuild` + `zig` on `PATH`; the host-arch cdylib is still built. Only relevant for flavors #1 and #3 (flavor #2 already skips all Rust).
+
+```bash
+# Fastest full platform build (skips all tests)
 mvn -Drevision=oss -DskipTests clean install
 
-# Build Java modules only (skip non-Java loggers / Rust runtime)
-mvn -Drevision=oss -DskipNonJavaLoggers -DskipTests clean install
+# Fastest runtime build on a host without zig — host-arch cdylib only, no Linux cross-compile, no tests
+mvn -Drevision=oss -DruntimeOnly=true -DskipRustCrossCompile=true -DskipTests clean install
 ```
 
-If you only want to use the Rust runtime (without deploying the full Tomcat web stack), build the Rust workspace directly:
+### Build the Rust runtime directly (no Maven packaging)
+
+If you only need the Rust crate / cdylib for embedding in Rust, Python, Node.js, C/C++, Go, Ruby, or C#, you can skip Maven entirely and build the Rust workspace directly:
 
 ```bash
 cd synclite-logger-rust
 cargo build --workspace
 ```
 
-If you are packaging multi-arch Rust runtime natives (Linux x86_64 / aarch64 from a non-Linux host), install the cross-build prerequisites first:
+### Release structure
 
-```bash
-cargo install cargo-zigbuild
-rustup target add x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu
-# Ensure zig is installed and available on PATH
-zig version
-```
-
-The full platform release is assembled under:
+The **runtime** flavor (#3) assembles under `SyncLite/target/synclite-runtime-oss/`:
 
 ```
-SyncLite/target/synclite-platform-oss/
-+-- bin/          # deploy / start / stop scripts, Docker helpers
-+-- lib/          # synclite-logger JAR, consolidator WAR
-+-- tools/        # synclite-db, dbreader, qreader, job-monitor, validator
-+-- sample-apps/  # Java, Python, and JSP/Servlet samples
+synclite-runtime-oss/
++-- lib/
+|   +-- java/
+|   |   +-- synclite-<version>.jar                    # Add to your app classpath
+|   |   +-- synclite.conf                             # Default logger configuration
+|   +-- native/                                       # Multi-arch Rust runtime cdylibs
+|   |   +-- libsynclite_<version>.dll                 # Windows host build
+|   |   +-- libsynclite_<version>.lib                 # Windows import library
+|   |   +-- libsynclite_<version>_linux_x86_64.so     # cross-compiled (omitted if -DskipRustCrossCompile=true)
+|   |   +-- libsynclite_<version>_linux_aarch64.so    # cross-compiled (omitted if -DskipRustCrossCompile=true)
+|   |   +-- libsynclite_<version>.dylib               # only if built on macOS
+|   |   +-- synclite.conf
+|   +-- python/
+|       +-- synclite.py                               # ctypes wrapper around the native cdylib
++-- sample-apps/                                      # Language samples: cpp, java, python, rust
++-- LICENSE
++-- synclite_platform_version.txt
+```
+
+The **full platform** flavors (#1 and #2) assemble under `SyncLite/target/synclite-platform-oss/`:
+
+```
+synclite-platform-oss/
++-- bin/                                              # deploy / start / stop, Docker helpers
++-- lib/                                              # Same as runtime zip above
+|   +-- java/
+|   +-- native/                                       # Present in flavor #1 only
++-- tools/                                            # synclite-db, dbreader, qreader, job-monitor, validator
++-- sample-apps/                                      # Java, Python, and JSP/Servlet samples
 ```
 
 ---
 
-## Step 2 — Deploy and Start
+## Step 2 — Try the Embedded Runtime (Java → PostgreSQL)
+
+The fastest way to see SyncLite in action is to drop the single jar into a Java app and sync writes straight into PostgreSQL — no Tomcat, no separate Consolidator service.
+
+### Spin up a local PostgreSQL destination
+
+Use the bundled Docker helper:
+
+```bash
+cd target/synclite-platform-oss/bin/dst/postgresql/
+./docker-deploy.sh    # starts PostgreSQL on localhost:5432 (user: postgres / pwd: postgres)
+```
+
+Or use any existing PostgreSQL with a database `syncdb` and schema `syncschema`.
+
+### Run the bundled sample
+
+```bash
+JAR=synclite-logger-java/logger/target/synclite-oss.jar
+(cd synclite-logger-java/samples \
+   && javac -cp ../logger/target/synclite-oss.jar SyncliteSqlitePostgresApp.java)
+java -cp "$JAR:synclite-logger-java/samples" SyncliteSqlitePostgresApp
+```
+
+### What the sample does
+
+```java
+import io.synclite.*;
+import java.nio.file.Path;
+import java.sql.*;
+import java.time.Duration;
+
+public class SyncliteSqlitePostgresApp {
+    public static void main(String[] args) throws Exception {
+        Path  dbPath  = Path.of("orders.db");
+        String pgUrl  = "jdbc:postgresql://localhost:5432/syncdb";
+        String schema = "syncschema";
+
+        DestinationOptions dst = DestinationOptions.builder()
+                .dstType(DstType.POSTGRES)
+                .connectionString(pgUrl)
+                .database("syncdb").schema(schema)
+                .syncMode(DstSyncMode.CONSOLIDATION).build();
+
+        // One call: local SQLite logger + segment shipper + in-process consolidator -> PostgreSQL.
+        SQLite.initialize(dbPath, "orders-device", dst);
+        try {
+            try (Connection c = DriverManager.getConnection("jdbc:synclite_sqlite:" + dbPath);
+                 Statement  s = c.createStatement()) {
+                s.execute("DROP TABLE IF EXISTS orders");
+                s.execute("CREATE TABLE orders(id INTEGER PRIMARY KEY, item TEXT, qty INTEGER)");
+                s.execute("INSERT INTO orders VALUES(1, 'widget', 100)");
+            }
+            SyncLite.awaitSync(dbPath, Duration.ofSeconds(30));   // wait for PG apply
+
+            try (Connection pg = DriverManager.getConnection(pgUrl, "postgres", "postgres");
+                 PreparedStatement ps = pg.prepareStatement(
+                     "SELECT row_to_json(t)::text FROM (SELECT * FROM "
+                   + schema + ".orders WHERE id = ?) t")) {
+                ps.setLong(1, 1);
+                try (ResultSet rs = ps.executeQuery()) {
+                    System.out.println("[PG] " + (rs.next() ? rs.getString(1) : "no row"));
+                }
+            }
+        } finally { SQLite.closeDevice(dbPath); }
+    }
+}
+```
+
+Full source: [synclite-logger-java/samples/SyncliteSqlitePostgresApp.java](synclite-logger-java/samples/SyncliteSqlitePostgresApp.java).
+
+### Same thing in Rust → PostgreSQL
+
+```bash
+cd synclite-code-samples/synclite-runtime/rust
+cargo run --example synclite_rusqlite_postgres
+```
+
+The Rust runtime is the same `cdylib` consumable from Python, Node.js, C/C++, Go, Ruby, and C#. See [Step 4 — Choose Your Use Case](#step-4--choose-your-use-case) for per-language snippets.
+
+---
+
+## Step 3 — (Optional) Deploy the Full Platform
+
+Skip this step if all you need is the embedded runtime. Use it when you want the central **Consolidator + DBReader + QReader + Job Monitor + Sample Web App** running as services.
 
 ### Native (Windows / Linux / macOS)
 
@@ -148,8 +311,6 @@ bin/dst/mysql/docker-deploy.sh      # MySQL destination
 
 > ⚠️ Docker helper scripts use default credentials. Change usernames, passwords, and enable TLS before any production use.
 
-If your use case is the embedded Rust runtime (`synclite` crate), you do not need `deploy.sh` / `start.sh` or the platform Docker scripts. Those scripts are for deploying the SyncLite web applications (Consolidator, DBReader, QReader, Job Monitor, Sample App). For Rust runtime apps, use Cargo directly from `synclite-code-samples/synclite-logger/rust` or your own Rust project.
-
 ### App URLs (after start)
 
 | URL | App |
@@ -161,22 +322,13 @@ If your use case is the embedded Rust runtime (`synclite` crate), you do not nee
 | http://localhost:8080/synclite-job-monitor | Manage and schedule all SyncLite jobs |
 | http://localhost:8080/manager | Tomcat manager (`synclite` / `synclite`) |
 
----
+### Try the Sample Web App
 
+The sample web app shows the Java runtime embedded inside a real JSP/Servlet app, with live sync to a destination configured in the Consolidator.
 
----
-
-
-
-## Step 3 — Try the Sample App (Recommended)
-
-The fastest way to see SyncLite in action is to launch the sample web app. **Note:** The sample app requires the SyncLite Consolidator to be running and configured as a destination for sync to work.
-
-If you used the platform's `deploy.sh`/`start.sh` or Docker scripts, the Consolidator and Sample App are already running and accessible at the URLs below.
-
-1. Open [http://localhost:8080/synclite-consolidator](http://localhost:8080/synclite-consolidator) and configure a destination database (e.g., PostgreSQL, MySQL, etc.).
+1. Open [http://localhost:8080/synclite-consolidator](http://localhost:8080/synclite-consolidator) and configure a destination database (e.g., the PostgreSQL container you started in Step 2).
 2. Open [http://localhost:8080/synclite-sample-app](http://localhost:8080/synclite-sample-app)
-3. In the sample app, create a device, run SQL workloads, and watch live sync to your configured destination — all from your browser.
+3. Create a device, run SQL workloads, and watch live sync to your configured destination — all from your browser.
 
 ---
 
@@ -289,10 +441,10 @@ returns `source - applied` as wall-clock milliseconds (every `commit_id` is a
 `System.currentTimeMillis()` value); `-1` means the applied side is unknown
 (destination unreachable, consolidator not running yet, etc.).
 
-Runnable samples live in [`synclite-code-samples/synclite-logger/rust/`](synclite-code-samples/synclite-logger/rust/):
+Runnable samples live in [`synclite-code-samples/synclite-runtime/rust/`](synclite-code-samples/synclite-runtime/rust/):
 
 ```sh
-cd synclite-code-samples/synclite-logger/rust
+cd synclite-code-samples/synclite-runtime/rust
 cargo run --example synclite_rusqlite
 cargo run --example synclite_duckdb_store
 cargo run --example synclite_streaming

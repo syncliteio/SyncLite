@@ -126,6 +126,8 @@ Both produce the same `.sqllog` segments, so you can mix devices (some logger-on
 
 ## 4. Prerequisites & Build
 
+> **Architecture support.** SyncLite is **64-bit only** — `x86_64` and `aarch64` on Windows / Linux / macOS. 32-bit hosts are not supported because the embedded Rust runtime depends on the DuckDB engine, which requires a 64-bit host.
+
 ### Prerequisites
 
 | Requirement | Version |
@@ -146,17 +148,46 @@ cd SyncLite
 mvn -Drevision=oss clean install
 ```
 
-Build accelerators for Maven:
+### Build flavors
+
+SyncLite has **three** top-level reactor build flavors, ordered from largest to smallest output. Pick the smallest one that meets your need.
+
+| # | Flavor | Produces | Rust toolchain? |
+|---|---|---|---|
+| 1 | **Full platform** (default) | `target/synclite-platform-<rev>.zip` — Tomcat scripts + WARs + tools + samples + multi-arch native | Required |
+| 2 | **Full platform, Java-only** | Same as #1 but no `lib/native/` | Not required |
+| 3 | **Runtime** | `target/synclite-runtime-<rev>.zip` — just `lib/java/` + multi-arch `lib/native/` | Required |
 
 ```bash
-# Skip tests (faster local iteration)
-mvn -Drevision=oss -DskipTests clean install
+# 1. Full platform (default)
+mvn -Drevision=oss clean install
 
-# Build Java modules only (skip non-Java loggers / Rust runtime)
-mvn -Drevision=oss -DskipNonJavaLoggers -DskipTests clean install
+# 2. Full platform, Java-only
+mvn -Drevision=oss -DskipNonJavaLoggers=true clean install
+
+# 3. Runtime — fastest path for embedded use
+mvn -Drevision=oss -DruntimeOnly=true clean install
 ```
 
-The release is assembled under `SyncLite/target/synclite-platform-oss/`.
+> For just the synclite logger jar, or just the Rust cdylibs, build the subproject directly (`cd synclite-logger-java && mvn install`, or `cd synclite-logger-rust && cargo build --workspace --release`).
+
+### Build accelerators
+
+These switches combine with any flavor above:
+
+- `-DskipTests` — skip JUnit + Rust device-integration tests.
+- `-DskipRustCrossCompile=true` — skip the two Linux cross-compile cargo executions (use on hosts without `cargo-zigbuild` + `zig`; host-arch cdylib still built). Only relevant for flavors #1 and #3.
+
+```bash
+# Fastest full platform build
+mvn -Drevision=oss -DskipTests clean install
+
+# Fastest runtime build on a host without zig
+mvn -Drevision=oss -DruntimeOnly=true -DskipRustCrossCompile=true -DskipTests clean install
+```
+
+The full platform release is assembled under `SyncLite/target/synclite-platform-oss/`.
+The runtime build produces `SyncLite/target/synclite-runtime-oss/` (and `.zip`).
 
 If you only want the embedded Rust runtime (`synclite` crate) and not the full Tomcat web stack, build just the Rust workspace:
 
@@ -426,6 +457,8 @@ SyncLite devices are grouped into three user-facing categories:
 
 - **Streaming Device**: The `STREAMING` device implements append-only ingestion and exposes `SyncLiteStream` APIs (`insert`, `insertBatch`). It's optimized for high-throughput event capture and does not provide UPDATE/DELETE semantics.
 
+> **Which device should I pick?** Store devices (`*_STORE`) and the `STREAMING` device emit pre-formed row events that the Consolidator applies directly to the destination — no SQL-log parsing or CDC-deduction step on the apply path, so they deliver the highest end-to-end consolidation throughput. Reach for a SQL device (`SQLITE`, `DUCKDB`, `DERBY`, `H2`, `HYPERSQL`) when your app actually needs raw SQL, JOINs, multi-statement transactions in one connection, or ad-hoc DDL beyond the schema-evolution the Store API handles for you. For a brand-new app, `SQLITE_STORE` is usually the fastest *and* simplest starting point.
+
 Notes:
 - Appender and DBLogger device types are internal implementation variants and are intentionally not documented as primary device types.
 
@@ -476,6 +509,8 @@ SyncLite devices are grouped into three user-facing categories. Documentation an
     - Are ideal for deterministic CRUD semantics and lower application complexity.
 
 - **Streaming Device** — The `STREAMING` device models append-only ingestion and exposes `SyncLiteStream` APIs (`insert`, `insertBatch`). It's optimized for high-throughput event capture and intentionally does not provide UPDATE/DELETE semantics.
+
+> **Which device should I pick?** Store devices (`*_STORE`) and the `STREAMING` device emit pre-formed row events that the Consolidator applies directly to the destination — no SQL-log parsing or CDC-deduction step on the apply path, so they deliver the highest end-to-end consolidation throughput. Reach for a SQL device (`SQLITE`, `DUCKDB`, `DERBY`, `H2`, `HYPERSQL`) when your app actually needs raw SQL, JOINs, multi-statement transactions in one connection, or ad-hoc DDL beyond the schema-evolution the Store API handles for you. For a brand-new app, `SQLITE_STORE` is usually the fastest *and* simplest starting point.
 
 Examples (common device identifiers): `SQLITE`, `DUCKDB`, `DERBY`, `H2`, `HYPERSQL`, `SQLITE_STORE`, `DUCKDB_STORE`, `DERBY_STORE`, `H2_STORE`, `HYPERSQL_STORE`, `STREAMING`.
 
@@ -903,24 +938,69 @@ try (KafkaProducer producer = new KafkaProducer(props)) {
 
 ### 6.8 Python Usage
 
-SyncLite is consumed from Python via the **`synclite`** package, a thin
-PyO3 wrapper over the Rust runtime. The Python API mirrors the Rust wrapper
-crate 1:1 — `Connection`, `Statement`, `DuckDBConnection`, `DuckDBStatement`,
-plus module-level `initialize` and `await_sync`. No JVM, no JAR, no
-`jaydebeapi` / `jpype` bridge.
+SyncLite supports two Python entry points at different maturity levels:
 
-Install:
+| | Today | Coming |
+|---|---|---|
+| Package | `synclite` ctypes wrapper (single file: `lib/python/synclite.py`) | `synclite-logger-python` PyO3 wheel |
+| Backed by | C ABI in `synclite-bindings-c` cdylib (same binary as C / C++ / Java JNI) | PyO3 over the Rust runtime |
+| Install | None \u2014 ships in every release zip alongside `lib/native/libsynclite_oss.*` | `pip install synclite-logger-python` |
+| Surface | `Runtime.open_config`, `log_sql`, `commit`, `flush_log`, `rollback`, `close` | Rich `Connection` / `Statement` / `await_sync`, plus DB-API 2.0, SyncLiteStore, SyncLiteStream, Redis / Kafka compatibility |
+| Parameter binding | No (values inlined in SQL) | Yes |
+| CPython matrix | Any 3.8+ on any OS/arch where `lib/native/` ships a binary | Per-(CPython \u00d7 OS \u00d7 arch) wheel |
 
-```pwsh
-pip install maturin
-cd synclite-logger-rust\python
-maturin develop --release
-```
+No JVM, no JAR, no `jaydebeapi` / `jpype` bridge in either case.
 
-#### Txn device (`SQLITE` / `DUCKDB`)
+#### Today \u2014 `synclite` ctypes wrapper
+
+The release zip already contains everything you need: a single Python
+file (`lib/python/synclite.py`) plus the platform cdylib in
+`lib/native/`. The wrapper finds the cdylib automatically when run from
+the unpacked zip layout; outside it, point at the library with
+`SYNCLITE_NATIVE_LIB` or `SYNCLITE_NATIVE_DIR`.
 
 ```python
-import synclite as sl
+import synclite as sl  # from lib/python/synclite.py
+
+# Minimal SQLite-device config shipping to PostgreSQL.
+with open("synclite_logger.conf", "w") as f:
+    f.write(
+        "device-name=sampledevice\n"
+        "db-engine=SQLITE\n"
+        "device-type=SQLITE\n"
+        "db-path=myapp.db\n"
+        "local-data-stage-directory=synclite-stage\n"
+        "dst-type=POSTGRES\n"
+        "dst-connection-string=postgresql://user:pw@localhost:5432/syncdb\n"
+        "dst-database=syncdb\n"
+        "dst-schema=public\n"
+        "dst-sync-mode=CONSOLIDATION\n"
+    )
+
+with sl.Runtime.open_config("synclite_logger.conf") as rt:
+    rt.log_sql("CREATE TABLE IF NOT EXISTS events(id INT PRIMARY KEY, payload TEXT)")
+    rt.log_sql("INSERT INTO events(id, payload) VALUES(1, 'hello from Python')")
+    rt.log_sql("INSERT INTO events(id, payload) VALUES(2, 'row two')")
+    rt.commit()
+    rt.flush_log()
+# \u2191 logged locally; the in-process shipper + consolidator drain to PostgreSQL.
+```
+
+The C ABI logs SQL strings only \u2014 there is no parameter binding yet \u2014
+so values are inlined. The richer `Connection` / `Statement` API below is
+where this is heading.
+
+#### Coming \u2014 `synclite-logger-python` (PyO3 wheel)
+
+The five samples under
+[`synclite-code-samples/synclite-runtime/python/`](synclite-code-samples/synclite-runtime/python/)
+(`synclite_rusqlite*.py`, `synclite_streaming.py`, `synclite_duckdb*.py`)
+are the canonical reference for the upcoming PyO3 wheel \u2014 mirroring the
+Rust API 1:1 (`Connection`, `Statement`, `DuckDBConnection`,
+`DuckDBStatement`, plus module-level `initialize` and `await_sync`):
+
+```python
+import synclite as sl  # via the upcoming synclite-logger-python wheel
 
 DB_PATH = "myapp.db"
 
@@ -964,7 +1044,7 @@ conn.close()
 For DuckDB, swap `sl.Connection` for `sl.DuckDBConnection` and pass
 `device_type="DUCKDB"` to `sl.initialize`.
 
-#### Store / Streaming devices
+##### Store / Streaming devices
 
 Write a config file with `device-type=SQLITE_STORE` (or `STREAMING`,
 `DUCKDB_STORE`) and open via `open_with_config`:
@@ -1307,11 +1387,11 @@ emitted by the logger, `latency_ms` is the actual wall-clock sync lag.
 
 **Runnable samples**
 
-[`synclite-code-samples/synclite-logger/rust/`](synclite-code-samples/synclite-logger/rust/)
+[`synclite-code-samples/synclite-runtime/rust/`](synclite-code-samples/synclite-runtime/rust/)
 is a self-contained Cargo project with one example per device shape:
 
 ```sh
-cd synclite-code-samples/synclite-logger/rust
+cd synclite-code-samples/synclite-runtime/rust
 cargo run --example synclite_rusqlite        # SQLite SQL device
 cargo run --example synclite_duckdb          # DuckDB SQL device
 cargo run --example synclite_duckdb_store    # DuckDB STORE device
@@ -2200,7 +2280,7 @@ synclite-platform-oss/
 +-- lib/
 |   +-- logger/
 |   |   +-- java/
-|   |       +-- synclite-${revision}.jar  # Java logger jar (add to edge app classpath)
+|   |       +-- synclite-${revision}.jar  # synclite jar (add to edge app classpath)
 |   +-- consolidator/
 |       +-- synclite-consolidator-<version>.war
 |
@@ -2222,7 +2302,8 @@ synclite-platform-oss/
     |   |   +-- SyncLiteStreamAPIApp.java
     |   |   +-- SyncLiteKafkaProduceApp.java
     |   |   +-- SyncLiteJedisAPIApp.java
-    |   +-- python/                     # Python sample apps (PyO3 over Rust runtime)
+    |   +-- python/                     # Python samples (ctypes wrapper today;
+    |   |                               #   PyO3 synclite-logger-python on the roadmap)
     |   |   +-- synclite_device_app.py
     |   |   +-- synclite_store_device_app.py
     |   |   +-- synclite_streaming_app.py

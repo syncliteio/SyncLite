@@ -1,0 +1,85 @@
+<assembly
+	xmlns="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.2"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.2 http://maven.apache.org/xsd/assembly-1.1.2.xsd">
+	<!--
+	  Slim embeddable runtime: Java logger jar + Rust multi-arch cdylibs + Python ctypes wrapper
+	  + cross-language sample apps. No Tomcat WARs, no consolidator/dbreader/qreader tooling.
+	  Produced by `-DruntimeOnly=true`; see the runtime-only profile in the root pom.
+	-->
+	<id>dir</id>
+	<includeBaseDirectory>false</includeBaseDirectory>
+	<formats>
+		<format>zip</format>
+	</formats>
+	<fileSets>
+		<!-- Java logger jar -->
+		<fileSet>
+			<directory>${project.basedir}/synclite-logger-java/logger/target</directory>
+			<includes>
+				<include>*.jar</include>
+			</includes>
+			<fileMode>755</fileMode>
+			<directoryMode>755</directoryMode>
+			<outputDirectory>lib/java</outputDirectory>
+		</fileSet>
+		<fileSet>
+			<directory>${project.basedir}/synclite-logger-java/logger/src/main/resources</directory>
+			<includes>
+				<include>*.conf</include>
+			</includes>
+			<outputDirectory>lib/java</outputDirectory>
+		</fileSet>
+		<!-- Rust cdylibs (multi-arch via glob) -->
+		<fileSet>
+			<directory>${project.basedir}/synclite-logger-rust/target/release</directory>
+			<includes>
+				<include>${rust.logger.include.dll}</include>
+				<include>${rust.logger.include.lib}</include>
+				<include>${rust.logger.include.so}</include>
+				<include>${rust.logger.include.dylib}</include>
+				<include>${rust.logger.include.jni.dll}</include>
+				<include>${rust.logger.include.jni.lib}</include>
+				<include>${rust.logger.include.jni.so}</include>
+				<include>${rust.logger.include.jni.dylib}</include>
+			</includes>
+			<fileMode>755</fileMode>
+			<directoryMode>755</directoryMode>
+			<outputDirectory>lib/native</outputDirectory>
+		</fileSet>
+		<fileSet>
+			<directory>${project.build.directory}</directory>
+			<includes>
+				<include>synclite.conf</include>
+			</includes>
+			<fileMode>644</fileMode>
+			<outputDirectory>lib/native</outputDirectory>
+		</fileSet>
+		<!-- Python ctypes wrapper -->
+		<fileSet>
+			<directory>${project.basedir}/synclite-logger-rust/python</directory>
+			<includes>
+				<include>${rust.logger.include.python}</include>
+			</includes>
+			<fileMode>644</fileMode>
+			<outputDirectory>lib/python</outputDirectory>
+		</fileSet>
+		<!-- Cross-language sample apps (cpp / java / python / rust under synclite-runtime/) -->
+		<fileSet>
+			<directory>${project.basedir}/synclite-code-samples/synclite-runtime</directory>
+			<outputDirectory>/sample-apps/</outputDirectory>
+			<excludes>
+				<exclude>**/target/**</exclude>
+				<exclude>**/Cargo.lock</exclude>
+				<exclude>**/*.log</exclude>
+				<exclude>**/*_out.txt</exclude>
+				<exclude>**/run.log</exclude>
+				<exclude>**/run_out.txt</exclude>
+				<exclude>**/*.synclite/**</exclude>
+				<exclude>**/*.db</exclude>
+				<exclude>**/*.duckdb</exclude>
+				<exclude>**/*.sqlite</exclude>
+			</excludes>
+		</fileSet>
+	</fileSets>
+</assembly>

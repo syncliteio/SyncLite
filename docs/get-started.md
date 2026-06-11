@@ -52,6 +52,8 @@ Edge Sources (SyncLite Logger / DB / DBReader / QReader)
 
 ## Prerequisites
 
+> **Architecture support.** SyncLite is **64-bit only** — `x86_64` and `aarch64` on Windows / Linux / macOS. 32-bit hosts are not supported because the embedded Rust runtime depends on the DuckDB engine, which requires a 64-bit host.
+
 | Requirement | Version |
 |---|---|
 | Java | 25 |
@@ -67,17 +69,65 @@ Edge Sources (SyncLite Logger / DB / DBReader / QReader)
 ```bash
 git clone --recurse-submodules git@github.com:syncliteio/SyncLite.git SyncLite
 cd SyncLite
-mvn -Drevision=oss clean install
 ```
 
-The full platform release is assembled under:
+SyncLite has **three** Maven build flavors, ordered from largest to smallest output. Pick the smallest one that meets your need.
+
+| # | Flavor | Produces | Rust toolchain? |
+|---|---|---|---|
+| 1 | **Full platform** (default) | `target/synclite-platform-<rev>.zip` — Tomcat scripts + WARs + tools + samples + multi-arch native | Required |
+| 2 | **Full platform, Java-only** | Same as #1 but no `lib/native/` | Not required |
+| 3 | **Runtime** | `target/synclite-runtime-<rev>.zip` — `lib/java/` (synclite jar) + multi-arch `lib/native/` (Rust cdylibs) + `lib/python/` (ctypes wrapper) + cross-language `sample-apps/{cpp,java,python,rust}` | Required |
+
+```bash
+# 1. Full platform (default) — everything
+mvn -Drevision=oss clean install
+
+# 2. Full platform, Java-only — same as #1 but no native libraries
+mvn -Drevision=oss -DskipNonJavaLoggers=true clean install
+
+# 3. Runtime — slim embeddable zip: synclite jar + multi-arch native cdylibs + sample-apps/{cpp,java,python,rust}
+mvn -Drevision=oss -DruntimeOnly=true clean install
+```
+
+### Build accelerators
+
+These switches combine with any flavor above:
+
+- `-DskipTests` — skip JUnit + Rust device-integration tests.
+- `-DskipRustCrossCompile=true` — skip the two Linux cross-compile cargo executions (use on hosts without `cargo-zigbuild` + `zig`; host-arch cdylib still built). Only relevant for flavors #1 and #3.
+
+```bash
+# Fastest full platform build (skips all tests)
+mvn -Drevision=oss -DskipTests clean install
+
+# Fastest runtime build on a host without zig — host-arch cdylib only, no Linux cross-compile, no tests
+mvn -Drevision=oss -DruntimeOnly=true -DskipRustCrossCompile=true -DskipTests clean install
+```
+
+### Output layouts
+
+Full platform flavors (#1 and #2):
 
 ```
 SyncLite/target/synclite-platform-oss/
 ├─ bin/          # deploy / start / stop scripts, Docker helpers
-├─ lib/          # synclite-logger JAR, consolidator WAR
+├─ lib/          # synclite-logger JAR, consolidator WAR (+ native cdylibs + Python ctypes wrapper in #1)
 ├─ tools/        # synclite-db, dbreader, qreader, job-monitor, validator
 └─ sample-apps/  # Java, Python, and JSP/Servlet samples
+```
+
+Runtime flavor (#3):
+
+```
+SyncLite/target/synclite-runtime-oss/
+├─ lib/
+│  ├─ java/    # synclite-<version>.jar + synclite.conf
+│  ├─ native/  # libsynclite_<version>.{dll,lib,so,dylib} + synclite.conf
+│  └─ python/  # synclite.py — ctypes wrapper paired with lib/native/
+├─ sample-apps/  # cpp, java, python, rust
+├─ LICENSE
+└─ synclite_platform_version.txt
 ```
 
 ---
@@ -230,7 +280,7 @@ txns / bytes / last consolidated commit id. `synclite::sync_latency(db_path)`
 returns the wall-clock lag in milliseconds (`source − applied`); `-1` when the
 applied side is unknown.
 
-Runnable samples live under `synclite-code-samples/synclite-logger/rust/` —
+Runnable samples live under `synclite-code-samples/synclite-runtime/rust/` —
 `cargo run --example synclite_rusqlite` from that folder gets you the
 rusqlite-style example, with `synclite_duckdb_store` and
 `synclite_streaming` covering the other device shapes.
