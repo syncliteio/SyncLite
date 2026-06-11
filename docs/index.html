@@ -389,7 +389,7 @@
 
   <div class="hero-pillars">
     <div class="hero-pillar">
-      <div class="hp-icon">⚡</div>
+      <div class="hp-icon">âš¡</div>
       <div class="hp-title">Native Database Speed</div>
       <div class="hp-desc">Reads and writes hit an embedded engine directly — no network roundtrip, no latency penalty. Your app is always fast.</div>
     </div>
@@ -468,7 +468,7 @@
         <p>Deploy hundreds of edge devices. Each runs a local embedded DB. SyncLite consolidates all of them into a single cloud database in real time — without you writing a line of replication code.</p>
       </div>
       <div class="card">
-        <div class="card-icon">⚡</div>
+        <div class="card-icon">âš¡</div>
         <h3>Real-Time Streaming Pipelines</h3>
         <p>Use the SyncLiteStream API or Kafka Producer-compatible interface for high-throughput append-only event ingestion. Land events in any data warehouse or lake with exactly-once semantics.</p>
       </div>
@@ -500,7 +500,7 @@
       <button class="tab-btn active" onclick="showTab('rust')">Rust <span style="font-size:.65rem;padding:.1em .45em;margin-left:.3em;border-radius:99px;background:var(--green);color:#0a0e1a;font-weight:800;letter-spacing:.04em;">NEW</span></button>
       <button class="tab-btn" onclick="showTab('python')">Python <span style="font-size:.65rem;padding:.1em .45em;margin-left:.3em;border-radius:99px;background:var(--green);color:#0a0e1a;font-weight:800;letter-spacing:.04em;">NEW</span></button>
       <button class="tab-btn" onclick="showTab('cpp')">C++ <span style="font-size:.65rem;padding:.1em .45em;margin-left:.3em;border-radius:99px;background:var(--green);color:#0a0e1a;font-weight:800;letter-spacing:.04em;">NEW</span></button>
-      <button class="tab-btn" onclick="showTab('jembedded')">Java (JDBC) <span style="font-size:.65rem;padding:.1em .45em;margin-left:.3em;border-radius:99px;background:var(--green);color:#0a0e1a;font-weight:800;letter-spacing:.04em;">NEW</span></button>
+      <button class="tab-btn" onclick="showTab('jdbc')">Java (JDBC)</button>
       <button class="tab-btn" onclick="showTab('store')">SyncLiteStore</button>
       <button class="tab-btn" onclick="showTab('stream')">SyncLiteStream</button>
       <button class="tab-btn" onclick="showTab('jedis')">Jedis</button>
@@ -512,7 +512,7 @@
 
     <!-- Rust -->
     <div id="tab-rust" class="tab-pane active">
-<pre><span class="cmt">// Pure-Rust SyncLite — no JVM, no JAR. Offline-first SQLite syncing to PostgreSQL.</span>
+<pre><span class="cmt">// Pure-Rust SyncLite. Offline-first SQLite syncing to PostgreSQL.</span>
 <span class="kw">use</span> synclite::{SyncLiteOptions, DestinationOptions, DstType, DstSyncMode, DeviceType, Value};
 <span class="kw">use</span> synclite::rusqlite::Connection;
 
@@ -539,63 +539,69 @@
         &amp;[<span class="cls">Value</span>::<span class="fn">Int</span>(1), <span class="cls">Value</span>::<span class="fn">Text</span>(<span class="str">"widget"</span>.into()), <span class="cls">Value</span>::<span class="fn">Int</span>(100)])?;
     conn.<span class="fn">commit</span>()?;
 
-    <span class="cmt">// Roll the active log segment + block until it has been applied to PostgreSQL.</span>
+    <span class="cmt">// Roll the active log segment, then block until the apply lands in PostgreSQL.</span>
+    <span class="cmt">// NOTE: await_sync is only used here to demonstrate SyncLite's background sync in action —</span>
+    <span class="cmt">// apps normally just keep writing; SyncLite ships changes asynchronously in the background.</span>
     conn.<span class="fn">flush</span>()?;
     synclite::<span class="fn">await_sync</span>(<span class="str">"orders.db"</span>, std::time::Duration::<span class="fn">from_secs</span>(30))?;
     conn.<span class="fn">close</span>()?;
-    <span class="cmt">// ↑ logged + shipped + consolidated into PostgreSQL — no Java in the loop.</span>
+    <span class="cmt">// ↑ logged + shipped + consolidated into PostgreSQL.</span>
     <span class="cls">Ok</span>(())
 }</pre>
     </div>
 
     <!-- JDBC -->
-    <div id="tab-jembedded" class="tab-pane">
-<pre><span class="cmt">// Java JDBC app — local SQLite + SyncLite logger + embedded consolidator to PostgreSQL.</span>
-<span class="cls">Path</span> dbPath = <span class="cls">Path</span>.<span class="fn">of</span>(<span class="str">"sample_consolidator_sqlite.db"</span>);
-<span class="cls">SQLite</span>.<span class="fn">initialize</span>(dbPath, <span class="str">"sampledevice"</span>, <span class="cls">DestinationOptions</span>.<span class="fn">builder</span>()
-    .dstType(<span class="cls">DstType</span>.<span class="fn">POSTGRES</span>)
-    .connectionString(<span class="str">"jdbc:postgresql://localhost:5432/syncdb"</span>)
-    .database(<span class="str">"syncdb"</span>)
-    .schema(<span class="str">"syncschema"</span>)
-    .syncMode(<span class="cls">DstSyncMode</span>.<span class="fn">CONSOLIDATION</span>)
-    .<span class="fn">build</span>());
+    <div id="tab-jdbc" class="tab-pane">
+<pre><span class="cmt">// Standard JDBC — SyncLite captures every transaction transparently.</span>
+<span class="cmt">// Offline-first SQLite syncing to PostgreSQL.</span>
 
-<span class="kw">try</span> (<span class="cls">Connection</span> c = <span class="cls">DriverManager</span>.<span class="fn">getConnection</span>(<span class="str">"jdbc:synclite_sqlite:"</span> + dbPath)) {
-    <span class="kw">try</span> (<span class="cls">Statement</span> s = c.<span class="fn">createStatement</span>()) {
-        s.<span class="fn">execute</span>(<span class="str">"DROP TABLE IF EXISTS users"</span>);
-        s.<span class="fn">execute</span>(<span class="str">"CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY, name TEXT, score INTEGER)"</span>);
-    }
+<span class="cls">Path</span> dbPath = <span class="cls">Path</span>.<span class="fn">of</span>(<span class="str">"orders.db"</span>);
 
-    <span class="kw">try</span> (<span class="cls">PreparedStatement</span> p = c.<span class="fn">prepareStatement</span>(<span class="str">"INSERT INTO users(id, name, score) VALUES(?, ?, ?)"</span>)) {
-        p.<span class="fn">setInt</span>(<span class="num">1</span>, <span class="num">1</span>);
-        p.<span class="fn">setString</span>(<span class="num">2</span>, <span class="str">"Alice"</span>);
-        p.<span class="fn">setInt</span>(<span class="num">3</span>, <span class="num">100</span>);
-        p.<span class="fn">executeUpdate</span>();
-        p.<span class="fn">setInt</span>(<span class="num">1</span>, <span class="num">2</span>);
-        p.<span class="fn">setString</span>(<span class="num">2</span>, <span class="str">"Bob"</span>);
-        p.<span class="fn">setInt</span>(<span class="num">3</span>, <span class="num">200</span>);
-        p.<span class="fn">executeUpdate</span>();
-    }
+<span class="cmt">// Wire up logger + shipper + embedded consolidator in one call.</span>
+<span class="cls">SQLite</span>.<span class="fn">initialize</span>(dbPath, <span class="str">"orders-device"</span>,
+    <span class="cls">DestinationOptions</span>.<span class="fn">builder</span>()
+        .<span class="fn">dstType</span>(<span class="cls">DstType</span>.POSTGRES)
+        .<span class="fn">connectionString</span>(<span class="str">"jdbc:postgresql://localhost:5432/syncdb"</span>)
+        .<span class="fn">database</span>(<span class="str">"syncdb"</span>)
+        .<span class="fn">schema</span>(<span class="str">"syncschema"</span>)
+        .<span class="fn">syncMode</span>(<span class="cls">DstSyncMode</span>.CONSOLIDATION)
+        .<span class="fn">build</span>());
 
-    c.<span class="fn">commit</span>();
+<span class="cmt">// From here on the app talks to a plain local SQLite database via JDBC.</span>
+<span class="kw">try</span> (<span class="cls">Connection</span> conn = <span class="cls">DriverManager</span>.<span class="fn">getConnection</span>(<span class="str">"jdbc:synclite_sqlite:"</span> + dbPath);
+     <span class="cls">Statement</span>  s    = conn.<span class="fn">createStatement</span>()) {
 
-    <span class="kw">try</span> (<span class="cls">Statement</span> query = c.<span class="fn">createStatement</span>();
-         <span class="cls">ResultSet</span> rs = query.<span class="fn">executeQuery</span>(<span class="str">"SELECT id, name, score FROM users ORDER BY id"</span>)) {
-        <span class="kw">while</span> (rs.<span class="fn">next</span>()) {
-            <span class="cls">System</span>.<span class="fn">out</span>.<span class="fn">println</span>(<span class="str">"[LOCAL] "</span> + rs.<span class="fn">getInt</span>(<span class="str">"id"</span>) + <span class="str">", "</span> + rs.<span class="fn">getString</span>(<span class="str">"name"</span>));
+    s.<span class="fn">execute</span>(<span class="str">"CREATE TABLE IF NOT EXISTS orders(id INT, item TEXT, qty INT)"</span>);
+    s.<span class="fn">execute</span>(<span class="str">"INSERT INTO orders VALUES(1, 'widget', 100)"</span>);
+    conn.<span class="fn">commit</span>();
+
+    <span class="cls">ResultSet</span> rs = s.<span class="fn">executeQuery</span>(<span class="str">"SELECT * FROM orders WHERE id = 1"</span>);
+    <span class="kw">while</span> (rs.<span class="fn">next</span>()) <span class="cmt">/* [READ FROM LOCAL DB] */</span> {}
+
+    <span class="cmt">// Roll the active log segment, then block until the apply lands in PostgreSQL.</span>
+    <span class="cmt">// NOTE: awaitSync is only used here to demonstrate SyncLite's background sync in action —</span>
+    <span class="cmt">// apps normally just keep writing; SyncLite ships changes asynchronously in the background.</span>
+    <span class="cls">SQLite</span>.<span class="fn">flush</span>(dbPath);
+    <span class="cls">SyncLite</span>.<span class="fn">awaitSync</span>(dbPath, <span class="cls">Duration</span>.<span class="fn">ofSeconds</span>(30));
+
+    <span class="kw">try</span> (<span class="cls">Connection</span> pg = <span class="cls">DriverManager</span>.<span class="fn">getConnection</span>(
+            <span class="str">"jdbc:postgresql://localhost:5432/syncdb"</span>, <span class="str">"postgres"</span>, <span class="str">"postgres"</span>);
+         <span class="cls">PreparedStatement</span> ps = pg.<span class="fn">prepareStatement</span>(
+            <span class="str">"SELECT id, item, qty FROM syncschema.orders WHERE id = ?"</span>)) {
+        ps.<span class="fn">setInt</span>(1, 1);
+        <span class="kw">try</span> (<span class="cls">ResultSet</span> pgrs = ps.<span class="fn">executeQuery</span>()) {
+            <span class="kw">while</span> (pgrs.<span class="fn">next</span>()) <span class="cmt">/* [READ FROM POSTGRESQL POST SYNC] */</span> {}
         }
     }
-
-    <span class="cls">SyncLite</span>.<span class="fn">awaitSync</span>(dbPath, <span class="cls">Duration</span>.<span class="fn">ofSeconds</span>(<span class="num">30</span>));
-    <span class="cmt">// then read from PostgreSQL after the in-process consolidator applies the segment.</span>
 }
-<span class="cls">SQLite</span>.<span class="fn">closeDevice</span>(dbPath);</pre>
+<span class="cls">SQLite</span>.<span class="fn">closeDevice</span>(dbPath);
+<span class="cmt">// ↑ logged + shipped + consolidated into PostgreSQL.</span></pre>
     </div>
 
     <!-- SyncLiteStore -->
     <div id="tab-store" class="tab-pane">
 <pre><span class="cmt">// SyncLiteStore — typed CRUD without raw SQL, schema evolution built-in</span>
-<span class="cls">Class</span>.<span class="fn">forName</span>(<span class="str">"io.synclite.SQLiteStore"</span>);
+<span class="cls">Class</span>.<span class="fn">forName</span>(<span class="str">"io.synclite.logger.SQLiteStore"</span>);
 <span class="cls">SQLiteStore</span>.<span class="fn">initialize</span>(dbPath, conf);
 
 <span class="kw">try</span> (<span class="cls">SyncLiteStore</span> store = <span class="cls">SQLiteStore</span>.<span class="fn">open</span>(dbPath)) {
@@ -616,7 +622,7 @@
     <!-- SyncLiteStream -->
     <div id="tab-stream" class="tab-pane">
 <pre><span class="cmt">// SyncLiteStream — fluent append-only event ingestion</span>
-<span class="cls">Class</span>.<span class="fn">forName</span>(<span class="str">"io.synclite.Streaming"</span>);
+<span class="cls">Class</span>.<span class="fn">forName</span>(<span class="str">"io.synclite.logger.Streaming"</span>);
 <span class="cls">Streaming</span>.<span class="fn">initialize</span>(dbPath, conf);
 
 <span class="kw">try</span> (<span class="cls">SyncLiteStream</span> stream = <span class="cls">SyncLiteStream</span>.<span class="fn">open</span>(dbPath)) {
@@ -690,39 +696,39 @@ qreader-default-synclite-table-name = <span class="str">iot_events</span>
 
     <!-- Python -->
     <div id="tab-python" class="tab-pane">
-<pre><span class="cmt"># Pure-Python (PyO3 bindings) — no JVM, no JAR. Offline-first SQLite syncing to PostgreSQL.</span>
+<pre><span class="cmt"># Pure-Python via ctypes — single synclite.py wrapping the C ABI cdylib.</span>
+<span class="cmt"># Ships in every release zip (lib/python/synclite.py + lib/native/libsynclite_oss.*).</span>
+<span class="cmt"># No pip install, no Rust toolchain, no maturin.</span>
 <span class="kw">import</span> synclite <span class="kw">as</span> sl
 
-sl.initialize(
-    device_type=<span class="str">"SQLITE"</span>,
-    device_name=<span class="str">"orders-device"</span>,
-    db_path=<span class="str">"orders.db"</span>,
-    destination=sl.DestinationOptions(
-        dst_type=<span class="str">"POSTGRES"</span>,
-        dst_connection_string=<span class="str">"postgresql://postgres:postgres@localhost:5432/syncdb"</span>,
-        dst_database=<span class="str">"syncdb"</span>,
-        dst_schema=<span class="str">"syncschema"</span>,
-        dst_sync_mode=<span class="str">"CONSOLIDATION"</span>,
-    ),
-)
+<span class="cmt"># Minimal SQLite-device config shipping to PostgreSQL.</span>
+<span class="kw">with</span> open(<span class="str">"synclite_logger.conf"</span>, <span class="str">"w"</span>) <span class="kw">as</span> f:
+    f.write(
+        <span class="str">"device-name=orders-device\n"</span>
+        <span class="str">"db-engine=SQLITE\n"</span>
+        <span class="str">"device-type=SQLITE\n"</span>
+        <span class="str">"db-path=orders.db\n"</span>
+        <span class="str">"local-data-stage-directory=synclite-stage\n"</span>
+        <span class="str">"dst-type=POSTGRES\n"</span>
+        <span class="str">"dst-connection-string=postgresql://postgres:postgres@localhost:5432/syncdb\n"</span>
+        <span class="str">"dst-database=syncdb\n"</span>
+        <span class="str">"dst-schema=syncschema\n"</span>
+        <span class="str">"dst-sync-mode=CONSOLIDATION\n"</span>
+    )
 
-<span class="cmt"># From here on the app talks to a plain local SQLite database.</span>
-conn = sl.Connection.open(<span class="str">"orders.db"</span>)
-conn.execute(<span class="str">"CREATE TABLE IF NOT EXISTS orders(id INTEGER, item TEXT, qty INTEGER)"</span>)
-conn.execute(<span class="str">"INSERT INTO orders VALUES(?, ?, ?)"</span>, [<span class="num">1</span>, <span class="str">"widget"</span>, <span class="num">100</span>])
-conn.commit()
-
-<span class="cmt"># Roll the active log segment + block until it has been applied to PostgreSQL.</span>
-conn.flush()
-sl.await_sync(<span class="str">"orders.db"</span>, <span class="num">30.0</span>)
-conn.close()
-<span class="cmt"># ↑ logged + shipped + consolidated into PostgreSQL — no Java in the loop.</span></pre>
+<span class="kw">with</span> sl.Runtime.open_config(<span class="str">"synclite_logger.conf"</span>) <span class="kw">as</span> rt:
+    rt.log_sql(<span class="str">"CREATE TABLE IF NOT EXISTS orders(id INTEGER, item TEXT, qty INTEGER)"</span>)
+    rt.log_sql(<span class="str">"INSERT INTO orders VALUES(1, 'widget', 100)"</span>)
+    rt.commit()
+    rt.flush_log()
+<span class="cmt"># ↑ logged locally; shipped + consolidated into PostgreSQL in the background.</span>
+<span class="cmt"># Richer Connection / Statement / await_sync / DB-API surface is coming via synclite-logger-python.</span></pre>
     </div>
 
     <!-- C++ -->
     <div id="tab-cpp" class="tab-pane">
 <pre><span class="cmt">// Header-only RAII wrapper over the synclite C ABI (synclite.hpp, C++17).</span>
-<span class="cmt">// No JVM, no JAR. Offline-first SQLite syncing to PostgreSQL.</span>
+<span class="cmt">// Offline-first SQLite syncing to PostgreSQL.</span>
 <span class="pre">#include</span> <span class="str">"synclite.hpp"</span>
 
 <span class="kw">int</span> <span class="fn">main</span>() {
@@ -742,10 +748,12 @@ conn.close()
                   { synclite::Value(<span class="num">1</span>), synclite::Value(<span class="str">"widget"</span>), synclite::Value(<span class="num">100</span>) });
     conn.<span class="fn">commit</span>();
 
-    <span class="cmt">// Roll the active log segment + block until it has been applied to PostgreSQL.</span>
+    <span class="cmt">// Roll the active log segment, then block until the apply lands in PostgreSQL.</span>
+    <span class="cmt">// NOTE: await_sync is only used here to demonstrate SyncLite's background sync in action —</span>
+    <span class="cmt">// apps normally just keep writing; SyncLite ships changes asynchronously in the background.</span>
     conn.<span class="fn">flush</span>();
     synclite::<span class="fn">await_sync</span>(<span class="str">"orders.db"</span>, <span class="num">30.0</span>);
-    <span class="cmt">// ↑ logged + shipped + consolidated into PostgreSQL — no Java in the loop.</span>
+    <span class="cmt">// ↑ logged + shipped + consolidated into PostgreSQL.</span>
     <span class="kw">return</span> <span class="num">0</span>;
 }</pre>
     </div>

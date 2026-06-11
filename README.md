@@ -11,7 +11,7 @@
   </p>
 </p>
 
-# SyncLite — Build Anything Sync Anywhere
+# SyncLite — The embeddable database runtime with built-in sync
 
 **SyncLite is a lightweight, embeddable database runtime.** Drop one library into your app and you get a fully-featured embedded database (SQLite, DuckDB, Apache Derby, H2, or HyperSQL) whose every write is durably logged and continuously synced to wherever you want — another database, a data warehouse, a data lake, or just a file in object storage.
 
@@ -177,9 +177,13 @@ A "device" is just a logical embedded DB that the runtime owns end-to-end (stora
 
 All three surfaces produce the same log format and use the same shipper + consolidator under the covers, so you can mix and match devices inside a single application.
 
+> **Which device should I pick?** Store devices (`*_STORE`) and the `STREAMING` device emit pre-formed row events that the Consolidator applies directly to the destination — no SQL-log parsing or CDC-deduction step on the apply path, so they deliver the highest end-to-end consolidation throughput. Reach for a SQL device when your app actually needs raw SQL, JOINs, multi-statement transactions in one connection, or ad-hoc DDL beyond the schema-evolution the Store API handles for you. For a brand-new app, `SQLITE_STORE` is usually the fastest *and* simplest starting point.
+
 ---
 
 ## Build SyncLite
+
+> **Architecture support.** SyncLite is **64-bit only** — `x86_64` and `aarch64` on Windows / Linux / macOS. 32-bit hosts are not supported because the embedded Rust runtime depends on the DuckDB engine, which requires a 64-bit host.
 
 **Prerequisites (Java-only build):** Java 25, Apache Maven 3.8.6+
 
@@ -201,6 +205,8 @@ rustup target add x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu
 
 > If `mvn package` fails with `error: no such command: zigbuild`, you are
 > missing `cargo-zigbuild` — run `cargo install cargo-zigbuild` and retry.
+> Alternatively, pass `-DskipRustCrossCompile=true` to build only the host-arch
+> cdylib and skip the two Linux cross-compile steps.
 
 macOS (`libsynclite_<rev>.dylib`) still requires running the build on a
 macOS host — the Apple SDK isn't redistributable so it cannot be
@@ -211,23 +217,68 @@ git clone --recurse-submodules https://github.com/syncliteio/SyncLite.git SyncLi
 cd SyncLite
 ```
 
-Build all components (including non-Java loggers):
+### Build flavors
+
+SyncLite has **three** Maven build flavors, ordered from largest to smallest output. Pick the smallest one that meets your need.
+
+| # | Flavor | What it produces |
+|---|---|---|
+| 1 | **Full platform** (default) | `target/synclite-platform-<rev>.zip` — Tomcat scripts + WARs + tools + samples + multi-arch native runtime |
+| 2 | **Full platform, Java-only** | Same as #1 but no `lib/native/` (no Rust toolchain required) |
+| 3 | **Runtime** (recommended for app developers) | `target/synclite-runtime-<rev>.zip` — slim zip with `lib/java/` (synclite jar) + multi-arch `lib/native/` (Rust cdylibs) + `lib/python/` (ctypes wrapper) + cross-language `sample-apps/{cpp,java,python,rust}` |
 
 ```bash
+# 1. Full platform (default) — Tomcat platform zip with WARs, tools, all language samples, and the multi-arch Rust runtime
 mvn -Drevision=oss clean install
+
+# 2. Full platform, Java-only — same Tomcat platform zip as #1 but no lib/native/ (no Rust toolchain required)
+mvn -Drevision=oss -DskipNonJavaLoggers=true clean install
+
+# 3. Runtime — slim embeddable zip: synclite jar + multi-arch native cdylibs + sample-apps/{cpp,java,python,rust}
+mvn -Drevision=oss -DruntimeOnly=true clean install
 ```
 
-Build Java components only (skip non-Java logger build and packaging):
+> For just the synclite logger jar, or just the Rust cdylibs, build the individual subprojects directly (`cd synclite-logger-java && mvn install`, or `cd synclite-logger-rust && cargo build --workspace --release`).
+
+### Build accelerators
+
+These switches combine with any flavor above:
+
+- `-DskipTests` — skip JUnit + Rust device-integration tests
+- `-DskipRustCrossCompile=true` — skip the two Linux cross-compile cargo executions (use on hosts without `zig`; host-arch cdylib still built). Only relevant for flavors #1 and #3.
 
 ```bash
-mvn -Drevision=oss -DskipNonJavaLoggers=true clean install
-```
+# Fastest full platform build (skips all tests)
+mvn -Drevision=oss -DskipTests clean install
 
-The release is assembled under `SyncLite/target/synclite-platform-oss/`.
+# Fastest runtime build on a host without zig — host-arch cdylib only, no Linux cross-compile, no tests
+mvn -Drevision=oss -DruntimeOnly=true -DskipRustCrossCompile=true -DskipTests clean install
+```
 
 > The `bin/deploy.sh` / `bin/deploy.bat` scripts download Apache Tomcat 9.0.117 and OpenJDK 25 automatically. No manual installation needed for a quick start.
 
 ## Release Structure
+
+### Runtime-only zip (`-DruntimeOnly=true`)
+
+```
+synclite-runtime-oss/
++-- lib/
+|   +-- java/
+|   |   +-- synclite-<version>.jar              # Add to your app classpath
+|   |   +-- synclite.conf                       # Default logger configuration
+|   +-- native/                                 # Multi-arch native cdylibs (Rust runtime)
+|       +-- libsynclite_<version>.dll                 # Windows host build
+|       +-- libsynclite_<version>.lib                 # Windows import library
+|       +-- libsynclite_<version>_linux_x86_64.so     # cross-compiled
+|       +-- libsynclite_<version>_linux_aarch64.so    # cross-compiled
+|       +-- libsynclite_<version>.dylib               # only if built on macOS
+|       +-- synclite.conf
++-- LICENSE
++-- synclite_platform_version.txt
+```
+
+### Full platform zip (default)
 
 ```
 synclite-platform-oss/
@@ -242,17 +293,9 @@ synclite-platform-oss/
 |   +-- dst/postgresql/               # Docker scripts for PostgreSQL destination
 |   +-- dst/mysql/                    # Docker scripts for MySQL destination
 |
-+-- lib/
++-- lib/                              # Same as runtime-only zip above
 |   +-- java/
-|   |   +-- synclite-<version>.jar              # Add to your app classpath (logger + shipper + in-process consolidator)
-|   |   +-- synclite.conf                       # Default logger configuration
-|   +-- native/                                 # Multi-arch native cdylibs (Rust runtime)
-|       +-- libsynclite_<version>.dll                 # Windows host build
-|       +-- libsynclite_<version>.lib                 # Windows import library
-|       +-- libsynclite_<version>_linux_x86_64.so     # cross-compiled
-|       +-- libsynclite_<version>_linux_aarch64.so    # cross-compiled
-|       +-- libsynclite_<version>.dylib               # only if built on macOS
-|       +-- synclite.conf
+|   +-- native/
 |
 +-- tools/
 |   +-- synclite-client/              # CLI client
@@ -348,7 +391,7 @@ Full runnable sample: [`synclite-logger-java/samples/SyncliteSqlitePostgresApp.j
 
 ```bash
 # Build the Rust runtime and run a sample directly
-cd synclite-code-samples/synclite-logger/rust
+cd synclite-code-samples/synclite-runtime/rust
 cargo run --example synclite_rusqlite
 
 # For PostgreSQL destination demo:

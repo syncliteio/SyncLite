@@ -81,6 +81,40 @@ Optional but recommended:
    ```
    A successful build creates the platform release under `target/synclite-platform-oss/`.
 
+   **Build flavors** — SyncLite has three top-level reactor flavors, ordered largest → smallest. Pick the smallest one that meets your need.
+
+   | # | Flavor | Produces | Rust toolchain? |
+   |---|---|---|---|
+   | 1 | Full platform (default) | `target/synclite-platform-<rev>.zip` | Required |
+   | 2 | Full platform, Java-only | Same as #1 but no `lib/native/` | Not required |
+   | 3 | Runtime | `target/synclite-runtime-<rev>.zip` (just `lib/java/` + multi-arch `lib/native/` + Python ctypes wrapper) | Required |
+
+   ```bash
+   # 1. Full platform (default)
+   mvn -Drevision=oss clean install
+
+   # 2. Full platform, Java-only
+   mvn -Drevision=oss -DskipNonJavaLoggers=true clean install
+
+   # 3. Runtime
+   mvn -Drevision=oss -DruntimeOnly=true clean install
+   ```
+
+   > For just the synclite logger jar, or just the Rust cdylibs, build the subproject directly (`cd synclite-logger-java && mvn install`, or `cd synclite-logger-rust && cargo build --workspace --release`).
+
+   **Build accelerators** (combine with any flavor above):
+
+   - `-DskipTests` — skip JUnit + Rust device-integration tests.
+   - `-DskipRustCrossCompile=true` — skip the two Linux cross-compile cargo executions (use on hosts without `cargo-zigbuild` + `zig`; host-arch cdylib still built). Only relevant for flavors #1 and #3.
+
+   ```bash
+   # Fastest full platform build
+   mvn -Drevision=oss -DskipTests clean install
+
+   # Fastest runtime build on a host without zig
+   mvn -Drevision=oss -DruntimeOnly=true -DskipRustCrossCompile=true -DskipTests clean install
+   ```
+
 5. **Create a branch** for your change (see [Branch Naming](#branch-naming) below).
 
 6. **Make your changes.** Write clean, focused commits.

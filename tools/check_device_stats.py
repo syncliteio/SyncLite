@@ -9,8 +9,8 @@ print("Tables:")
 for row in cur.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"):
     print('-', row[0])
     
-print("\nCheckpoint:")
-for row in cur.execute("SELECT * FROM checkpoint"):
+print("\nDevice statistics:")
+for row in cur.execute("SELECT * FROM device_statistics"):
     print(row)
 
 print("\nTable statistics rows:")

@@ -1,5 +1,10 @@
 """Python mirror of `synclite_rusqlite_store.rs`.
 
+PREVIEW-ONLY — this sample targets the upcoming `synclite-logger-python`
+PyO3 wheel. It will NOT run against the ctypes wrapper shipped today as
+`lib/python/synclite.py`. For a runnable Python sample, see
+`synclite_quickstart.py` in this folder.
+
 STORE-device sample. The runtime is the system of record, so we open
 the connection from a self-contained config file that carries
 `device-type=SQLITE_STORE`.
