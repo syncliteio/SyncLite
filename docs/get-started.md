@@ -77,7 +77,7 @@ SyncLite has **three** Maven build flavors, ordered from largest to smallest out
 |---|---|---|---|
 | 1 | **Full platform** (default) | `target/synclite-platform-<rev>.zip` — Tomcat scripts + WARs + tools + samples + multi-arch native | Required |
 | 2 | **Full platform, Java-only** | Same as #1 but no `lib/native/` | Not required |
-| 3 | **Runtime** | `target/synclite-runtime-<rev>.zip` — `lib/java/` (synclite jar) + multi-arch `lib/native/` (Rust cdylibs) + `lib/python/` (ctypes wrapper) + cross-language `sample-apps/{cpp,java,python,rust}` | Required |
+| 3 | **Runtime** | `target/synclite-runtime-<rev>.zip` — `lib/java/` (synclite jar) + multi-arch `lib/native/` (Rust cdylibs) + cross-language `sample-apps/{cpp,java,python,rust}` | Required |
 
 ```bash
 # 1. Full platform (default) — everything
@@ -112,7 +112,7 @@ Full platform flavors (#1 and #2):
 ```
 SyncLite/target/synclite-platform-oss/
 ├─ bin/          # deploy / start / stop scripts, Docker helpers
-├─ lib/          # synclite-logger JAR, consolidator WAR (+ native cdylibs + Python ctypes wrapper in #1)
+├─ lib/          # synclite-logger JAR, consolidator WAR (+ native cdylibs in #1)
 ├─ tools/        # synclite-db, dbreader, qreader, job-monitor, validator
 └─ sample-apps/  # Java, Python, and JSP/Servlet samples
 ```
@@ -123,8 +123,7 @@ Runtime flavor (#3):
 SyncLite/target/synclite-runtime-oss/
 ├─ lib/
 │  ├─ java/    # synclite-<version>.jar + synclite.conf
-│  ├─ native/  # libsynclite_<version>.{dll,lib,so,dylib} + synclite.conf
-│  └─ python/  # synclite.py — ctypes wrapper paired with lib/native/
+│  └─ native/  # libsynclite_<version>.{dll,lib,so,dylib} + synclite.conf
 ├─ sample-apps/  # cpp, java, python, rust
 ├─ LICENSE
 └─ synclite_platform_version.txt

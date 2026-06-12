@@ -3,8 +3,9 @@
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.2 http://maven.apache.org/xsd/assembly-1.1.2.xsd">
 	<!--
-	  Slim embeddable runtime: Java logger jar + Rust multi-arch cdylibs + Python ctypes wrapper
+	  Slim embeddable runtime: Java logger jar + Rust multi-arch cdylibs
 	  + cross-language sample apps. No Tomcat WARs, no consolidator/dbreader/qreader tooling.
+	  The Python story is the separate `synclite` PyO3 wheel under synclite-logger-rust/python/.
 	  Produced by `-DruntimeOnly=true`; see the runtime-only profile in the root pom.
 	-->
 	<id>dir</id>
@@ -54,15 +55,6 @@
 			</includes>
 			<fileMode>644</fileMode>
 			<outputDirectory>lib/native</outputDirectory>
-		</fileSet>
-		<!-- Python ctypes wrapper -->
-		<fileSet>
-			<directory>${project.basedir}/synclite-logger-rust/python</directory>
-			<includes>
-				<include>${rust.logger.include.python}</include>
-			</includes>
-			<fileMode>644</fileMode>
-			<outputDirectory>lib/python</outputDirectory>
 		</fileSet>
 		<!-- Cross-language sample apps (cpp / java / python / rust under synclite-runtime/) -->
 		<fileSet>

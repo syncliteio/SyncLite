@@ -1,69 +1,80 @@
-# SyncLite Logger — Python Samples
+# SyncLite Python samples
 
-There are **two** Python entry points to the SyncLite Rust runtime, at
-two different maturity levels — pick the one that matches what you
-need today.
+These mirror the Rust samples in `../rust/` and the C++ samples in
+`../cpp/` — same shapes, same flows, same destinations — built on the
+[`synclite`](../../../synclite-logger-rust/python/) Python package, a
+PyO3 binding over the SyncLite Rust runtime. The Python API matches the
+Rust crate and the C++ wrapper one-for-one: `Connection`, `Statement`,
+`DuckDBConnection`, `DuckDBStatement`, plus module-level `initialize`
+and `await_sync`.
 
-## 1. `synclite_quickstart.py` — ships today, works today
+## Layout
 
-A small, dependency-free sample driven by the
-[`synclite`](../../../synclite-logger-rust/python/synclite.py) ctypes
-wrapper. It uses the seven-function C ABI exposed by
-`synclite-bindings-c` (the same cdylib that backs the C / C++ / Java
-JNI / FFI bindings) and the platform-native binary already shipped in
-every release zip under `lib/native/`.
+| file                          | mirrors                      | device type     |
+| ----------------------------- | ---------------------------- | --------------- |
+| `synclite_rusqlite.py`        | `synclite_rusqlite.rs`       | `SQLITE`        |
+| `synclite_rusqlite_store.py`  | `synclite_rusqlite_store.rs` | `SQLITE_STORE`  |
+| `synclite_streaming.py`       | `synclite_streaming.rs`      | `STREAMING`     |
+| `synclite_duckdb.py`          | `synclite_duckdb.rs`         | `DUCKDB`        |
+| `synclite_duckdb_store.py`    | `synclite_duckdb_store.rs`   | `DUCKDB_STORE`  |
 
-```pwsh
-# from inside an unpacked release zip (no install step at all)
-cd sample-apps\python
-python synclite_quickstart.py
-```
+## Install the `synclite` package
 
-No `pip install`, no Rust toolchain, no maturin — the `synclite` Python
-module is the single file at `lib/python/synclite.py` and the quickstart
-imports it automatically by walking up to find the sibling `lib/python/`
-folder.
+You need the `synclite` Python package installed in the active
+environment. You can either **(A)** build it from source against the
+in-tree Rust workspace, or **(B)** install a published wheel.
 
-The C ABI surface today is intentionally small: `Runtime.open_config`,
-`log_sql`, `commit`, `flush_log`, `rollback`, `close`. Parameter binding
-is not yet plumbed through, so SQL values are inlined in the quickstart.
+### Option A — build from source (recommended for contributors)
 
-### Override the native library location
-
-The wrapper finds `libsynclite_oss.{dll,so,dylib}` automatically when run
-from a release zip. Outside that layout, point it explicitly:
+Useful when you have the platform repo checked out and want to track
+in-tree changes to the Rust runtime.
 
 ```pwsh
-$env:SYNCLITE_NATIVE_LIB = "C:\path\to\libsynclite_oss.dll"
-# or, equivalently:
-$env:SYNCLITE_NATIVE_DIR = "C:\path\to\synclite\lib\native"
-python synclite_quickstart.py
+pip install maturin
+cd ..\..\..\synclite-logger-rust\python
+maturin develop --release
 ```
 
-## 2. `synclite_rusqlite*.py`, `synclite_streaming.py`, `synclite_duckdb*.py` — future API preview
+This compiles `crates/logger/bindings-python` and installs the
+`synclite` package (with the `_native` cdylib) into the active virtual
+environment. Re-run after pulling new commits.
 
-These five samples target the upcoming **`synclite-logger-python`**
-package — a PyO3 wheel that will offer the same rich `Connection` /
-`Statement` / `await_sync` surface as the Rust crate, plus DB-API 2.0,
-SyncLiteStore, SyncLiteStream, and Redis / Kafka compatibility layers.
+### Option B — install a published wheel
 
-They will NOT run against today's `synclite` ctypes wrapper — they are
-checked in as the canonical reference for what the future Python API
-looks like, mirroring the corresponding Rust examples in
-`synclite-logger-rust/crates/synclite/examples/`.
+```pwsh
+pip install synclite
+```
 
-| Sample                            | Mirrors Rust example         | Device type     |
-| --------------------------------- | ---------------------------- | --------------- |
-| `synclite_rusqlite.py`            | `synclite_rusqlite.rs`       | `SQLITE`        |
-| `synclite_rusqlite_store.py`      | `synclite_rusqlite_store.rs` | `SQLITE_STORE`  |
-| `synclite_streaming.py`           | `synclite_streaming.rs`      | `STREAMING`     |
-| `synclite_duckdb.py`              | `synclite_duckdb.rs`         | `DUCKDB`        |
-| `synclite_duckdb_store.py`        | `synclite_duckdb_store.rs`   | `DUCKDB_STORE`  |
+A published PyPI release is on the roadmap; until then Option A is the
+canonical install path. Both options expose the exact same
+`synclite::` API — the sample sources run unchanged against either.
 
-## Future API shape (preview, not yet runnable)
+## Run a sample
+
+PostgreSQL destination prereq (matches the marquee samples):
+
+```sql
+CREATE DATABASE syncdb;
+\c syncdb
+CREATE SCHEMA syncschema;
+```
+
+```pwsh
+cd synclite-code-samples\synclite-runtime\python
+python synclite_rusqlite.py
+```
+
+Each sample prints rows locally, then `await_sync` blocks until the
+in-process shipper + embedded consolidator have drained the change log
+to the destination — same checkpoint semantics as the Rust and C++
+samples.
+
+## API surface at a glance
+
+Matches the Rust crate and the C++ header-only wrapper line-for-line:
 
 ```python
-import synclite as sl  # via the upcoming synclite-logger-python wheel
+import synclite as sl
 
 sl.initialize(
     device_type="SQLITE",
@@ -71,31 +82,41 @@ sl.initialize(
     db_path="myapp.db",
     destination=sl.DestinationOptions(
         dst_type="POSTGRES",
-        dst_connection_string="postgresql://user:pw@localhost:5432/syncdb",
+        dst_connection_string="postgresql://postgres:postgres@localhost:5432/syncdb",
         dst_database="syncdb",
-        dst_schema="public",
+        dst_schema="syncschema",
+        dst_sync_mode="CONSOLIDATION",
     ),
 )
 
-conn = sl.Connection.open("myapp.db")
-conn.execute("CREATE TABLE t(id INTEGER PRIMARY KEY, name TEXT)")
+with sl.Connection.open("myapp.db") as conn:
+    conn.execute("CREATE TABLE t(id INTEGER PRIMARY KEY, name TEXT)")
 
-stmt = conn.prepare("INSERT INTO t(id, name) VALUES(?, ?)")
-stmt.execute([1, "Alice"])
-stmt.add_batch([2, "Bob"])
-stmt.add_batch([3, "Carol"])
-stmt.execute_batch()
+    # unbatched
+    stmt = conn.prepare("INSERT INTO t(id, name) VALUES(?, ?)")
+    stmt.execute([1, "Alice"])
+    stmt.execute([2, "Bob"])
 
-for row in conn.query("SELECT id, name FROM t ORDER BY id"):
-    print(row)
+    # batched
+    stmt = conn.prepare("INSERT INTO t(id, name) VALUES(?, ?)")
+    stmt.add_batch([3, "Carol"])
+    stmt.add_batch([4, "Dave"])
+    stmt.execute_batch()
 
-conn.commit()
-conn.flush()
+    for row in conn.query("SELECT id, name FROM t ORDER BY id"):
+        print(row)
+
+    conn.commit()
+    conn.flush()
+
 sl.await_sync("myapp.db", 30.0)
-conn.close()
 ```
 
-`Connection` is the SQLite-family connection (txn / store / streaming).
-`DuckDBConnection` is the DuckDB-family equivalent. Both use the same
-`execute` / `query` / `prepare` / `commit` / `rollback` / `flush` /
-`close` surface as the Rust wrapper crate.
+For DuckDB, swap `Connection` for `DuckDBConnection` and use
+`device_type="DUCKDB"`. For STORE / STREAMING devices, write a config
+file with `device-type=SQLITE_STORE` (or `STREAMING`) and open with
+`Connection.open_with_config(conf_path)`.
+
+See the [`synclite` package README](../../../synclite-logger-rust/python/README.md)
+for the full type reference (parameter conversion, return shapes,
+enums accepted as case-insensitive strings).

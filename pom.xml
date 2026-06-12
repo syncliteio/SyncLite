@@ -44,12 +44,6 @@
 		<rust.logger.include.jni.lib>libsynclite_${revision}_jni*.lib</rust.logger.include.jni.lib>
 		<rust.logger.include.jni.so>libsynclite_${revision}_jni*.so</rust.logger.include.jni.so>
 		<rust.logger.include.jni.dylib>libsynclite_${revision}_jni*.dylib</rust.logger.include.jni.dylib>
-		<!--
-		  Python ctypes wrapper shipped under lib/python/ next to lib/native/.
-		  Useless without the cdylib it wraps, so the skip-nonjava-loggers profile
-		  blanks this out (Java-only build #4 has no native lib to pair with it).
-		-->
-		<rust.logger.include.python>synclite.py</rust.logger.include.python>
 	</properties>
   
   	<!--
@@ -331,7 +325,8 @@
 					</execution>
 					<!--
 					  Slim runtime zip: Java logger jar + multi-arch Rust cdylibs +
-					  Python ctypes wrapper + sample-apps/{cpp,java,python,rust}.
+					  sample-apps/{cpp,java,python,rust}. The Python story is the
+					  separate `synclite` PyO3 wheel under synclite-logger-rust/python/.
 					  Skipped by default; flipped on by the `runtime-only` profile
 					  when the build is invoked with -DruntimeOnly=true.
 					-->
@@ -389,13 +384,12 @@
 			<activation>
 				<property>
 					<name>skipNonJavaLoggers</name>
-					<value>true</value>
 				</property>
 			</activation>
 			<!--
 			  Activating this profile auto-deactivates default-modules (activeByDefault),
 			  so the full reactor list must be repeated here to keep the Java modules
-			  building under -DskipNonJavaLoggers=true.
+			  building under -DskipNonJavaLoggers.
 			-->
 			<modules>
 				<module>synclite-consolidator\root</module>
@@ -410,6 +404,16 @@
 			</modules>
 			<properties>
 				<revision>oss</revision>
+				<!--
+				  Force the property to a concrete truthy value. The CLI may pass
+				  `-DskipNonJavaLoggers` (no `=true`) which leaves it as empty
+				  string — enough to activate this profile (presence-only activator
+				  above), but NOT enough for `<skip>${skipNonJavaLoggers}</skip>`
+				  on the cargo executions, which parses empty as false. Forcing it
+				  here makes every CLI form (`-Dflag`, `-Dflag=`, `-Dflag=true`,
+				  `-Dflag=anything`) behave identically.
+				-->
+				<skipNonJavaLoggers>true</skipNonJavaLoggers>
 				<!-- No Rust toolchain → no Rust tests, and no cross-compile either. -->
 				<skipRustTests>true</skipRustTests>
 				<skipRustCrossCompile>true</skipRustCrossCompile>
@@ -421,8 +425,6 @@
 				<rust.logger.include.jni.lib>__skip_nonjava__</rust.logger.include.jni.lib>
 				<rust.logger.include.jni.so>__skip_nonjava__</rust.logger.include.jni.so>
 				<rust.logger.include.jni.dylib>__skip_nonjava__</rust.logger.include.jni.dylib>
-				<!-- Java-only build (#4): no native lib, so the ctypes wrapper would be dead weight. -->
-				<rust.logger.include.python>__skip_nonjava__</rust.logger.include.python>
 			</properties>
 		</profile>
 		<!--
@@ -459,7 +461,7 @@
 		<!--
 		  Runtime-only build: produces synclite-runtime-<rev>.zip containing
 		  lib/java (synclite jar + conf) + lib/native (Rust cdylibs, multi-arch)
-		  + lib/python (ctypes wrapper) + sample-apps/{cpp,java,python,rust}.
+		  + sample-apps/{cpp,java,python,rust}.
 		  Skips the platform assembly and every web/tool module; reactor builds
 		  only the Java logger module so the jar exists. Rust crates and their
 		  cdylibs are produced by the root-pom Cargo executions as usual.
@@ -474,7 +476,6 @@
 			<activation>
 				<property>
 					<name>runtimeOnly</name>
-					<value>true</value>
 				</property>
 			</activation>
 			<modules>

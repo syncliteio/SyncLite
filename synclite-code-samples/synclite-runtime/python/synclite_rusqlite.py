@@ -1,13 +1,10 @@
 """Python mirror of `synclite_rusqlite.rs`.
 
-PREVIEW-ONLY — this sample targets the upcoming `synclite-logger-python`
-PyO3 wheel (rich `Connection` / `Statement` / `await_sync` API). It will
-NOT run against the ctypes wrapper shipped today as `lib/python/synclite.py`.
-For a runnable Python sample, see `synclite_quickstart.py` in this folder.
+Drives the SyncLite Rust runtime via the `synclite` Python package —
+no JVM, no JAR, no DB-API adapter. The `Connection` / `Statement`
+objects below match the Rust and C++ samples one-for-one.
 
-Drives the SyncLite Rust runtime via the `synclite` PyO3
-bindings. No JVM, no JAR, no DB-API adapter — the `Connection` /
-`Statement` objects below are direct bindings of the Rust types.
+See ../README.md for the package install / setup.
 """
 
 import synclite as sl
@@ -35,8 +32,10 @@ def read_row_from_postgres(row_id: int) -> str | None:
 
 
 def main() -> None:
-    # PostgreSQL destination example. Comment out and uncomment one of
-    # the alternatives below for SQLite / DuckDB destinations.
+    # PostgreSQL destination (default). Comment out and uncomment one of
+    # the alternatives below for SQLite / DuckDB destinations, or for
+    # the no-inline-destination path that pairs with a centralized
+    # Consolidator service.
     sl.initialize(
         device_type="SQLITE",
         device_name=DEVICE_NAME,
@@ -69,6 +68,14 @@ def main() -> None:
     #     ),
     # )
 
+    # Centralized Consolidator path — no inline destination. The device
+    # only logs locally; a separate standalone Consolidator service
+    # reads the log segments from staging storage and applies them to
+    # the configured destination(s):
+    # sl.initialize(
+    #     device_type="SQLITE", device_name=DEVICE_NAME, db_path=DB_PATH,
+    # )
+
     conn = sl.Connection.open(DB_PATH)
 
     conn.execute("DROP TABLE IF EXISTS users")
@@ -95,9 +102,10 @@ def main() -> None:
     local_rows = conn.query("SELECT * FROM users WHERE id = 4")
     print(f"[READ FROM LOCAL DB] {local_rows[0] if local_rows else None}")
 
-    # Roll the active log segment, then block until the in-process
-    # shipper + consolidator have drained it. Without this a short
-    # script can exit before the background pipeline ships the changes.
+    # Force the active log segment to roll, then block until the
+    # in-process shipper + consolidator have fully applied it to
+    # PostgreSQL. Short-lived programs would otherwise exit before
+    # the background pipeline gets to drain.
     conn.flush()
     try:
         sl.await_sync(DB_PATH, 30.0)

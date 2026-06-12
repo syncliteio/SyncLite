@@ -1,12 +1,9 @@
 """Python mirror of `synclite_streaming.rs`.
 
-PREVIEW-ONLY — this sample targets the upcoming `synclite-logger-python`
-PyO3 wheel. It will NOT run against the ctypes wrapper shipped today as
-`lib/python/synclite.py`. For a runnable Python sample, see
-`synclite_quickstart.py` in this folder.
-
 STREAMING-device sample. Same `Connection` API as the txn / store
 samples; only `device-type` differs (configured in the conf file).
+
+See ../README.md for the `synclite` Python package install / setup.
 """
 
 import synclite as sl
@@ -14,6 +11,7 @@ import synclite as sl
 DB_PATH = "sample_streaming_sqlite.db"
 DEVICE_NAME = "sampledevice"
 CONF_PATH = "sample_streaming.conf"
+POSTGRES_CONN = "postgresql://postgres:postgres@localhost:5432/syncdb"
 
 
 def write_conf() -> None:
@@ -30,12 +28,50 @@ def write_conf() -> None:
 def main() -> None:
     write_conf()
 
+    # PostgreSQL destination (default). Comment out and uncomment one of
+    # the alternatives below for SQLite / DuckDB destinations, or for
+    # the no-inline-destination path that pairs with a centralized
+    # Consolidator service.
     sl.initialize(
         device_type="STREAMING",
         device_name=DEVICE_NAME,
         db_path=DB_PATH,
-        config_path=CONF_PATH,
+        destination=sl.DestinationOptions(
+            dst_type="POSTGRES",
+            dst_connection_string=POSTGRES_CONN,
+            dst_database="syncdb",
+            dst_schema="syncschema",
+            dst_sync_mode="CONSOLIDATION",
+        ),
     )
+
+    # SQLite destination example:
+    # sl.initialize(
+    #     device_type="STREAMING", device_name=DEVICE_NAME, db_path=DB_PATH,
+    #     destination=sl.DestinationOptions(
+    #         dst_type="SQLITE", dst_connection_string="dst_sqlite.db",
+    #     ),
+    # )
+
+    # DuckDB destination example:
+    # sl.initialize(
+    #     device_type="STREAMING", device_name=DEVICE_NAME, db_path=DB_PATH,
+    #     destination=sl.DestinationOptions(
+    #         dst_type="DUCKDB",
+    #         dst_connection_string="dst_duckdb.duckdb",
+    #         dst_database="dst_duckdb",
+    #         dst_schema="main",
+    #     ),
+    # )
+
+    # Centralized Consolidator path — no inline destination. The device
+    # only logs locally; a separate standalone Consolidator service
+    # reads the log segments from staging storage and applies them to
+    # the configured destination(s):
+    # sl.initialize(
+    #     device_type="STREAMING", device_name=DEVICE_NAME, db_path=DB_PATH,
+    #     config_path=CONF_PATH,
+    # )
 
     conn = sl.Connection.open_with_config(CONF_PATH)
 
@@ -53,6 +89,12 @@ def main() -> None:
         stmt.add_batch([1714200002000 + i, "HEARTBEAT", '{"i":%d}' % i])
     stmt.execute_batch()
 
+    # Force the active log segment to roll, then block until the
+    # in-process shipper + consolidator have fully applied it to
+    # PostgreSQL. Short-lived programs would otherwise exit before
+    # the background pipeline gets to drain.
+    conn.flush()
+    sl.await_sync(DB_PATH, 30.0)
     conn.close()
 
 

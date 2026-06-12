@@ -63,15 +63,6 @@
 			<outputDirectory>lib/native</outputDirectory>
 		</fileSet>
 		<fileSet>
-			<!-- Python ctypes wrapper. Single .py paired with lib/native/libsynclite_oss.*. -->
-			<directory>${project.basedir}/synclite-logger-rust/python</directory>
-			<includes>
-				<include>${rust.logger.include.python}</include>
-			</includes>
-			<fileMode>644</fileMode>
-			<outputDirectory>lib/python</outputDirectory>
-		</fileSet>
-		<fileSet>
 			<directory>${project.basedir}/synclite-code-samples</directory>
 			<outputDirectory>/sample-apps/</outputDirectory>
 			<excludes>

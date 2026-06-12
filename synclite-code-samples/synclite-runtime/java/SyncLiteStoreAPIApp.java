@@ -19,11 +19,16 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import io.synclite.DestinationOptions;
+import io.synclite.DstSyncMode;
+import io.synclite.DstType;
 import io.synclite.SQLiteStore;
+import io.synclite.SyncLite;
 import io.synclite.SyncLiteStore;
 
 /**
@@ -42,12 +47,52 @@ import io.synclite.SyncLiteStore;
  */
 public class SyncLiteStoreAPIApp {
 
+    private static final Path DB_PATH = Path.of("sample_store_api.db");
+    private static final String DEVICE_NAME = "sampledevicestoreapi";
+    private static final String POSTGRES_URL = "jdbc:postgresql://localhost:5432/syncdb";
+    private static final String POSTGRES_DB = "syncdb";
+    private static final String POSTGRES_SCHEMA = "syncschema";
+    private static final Duration AWAIT_TIMEOUT = Duration.ofSeconds(30);
+
     public static void main(String[] args) throws ClassNotFoundException, SQLException {
         Class.forName("io.synclite.SQLiteStore");
-        Path dbPath = Path.of("sample_store_api.db");
-        SQLiteStore.initialize(dbPath, Path.of("synclite.conf"));
 
-        try (SyncLiteStore store = SQLiteStore.open(dbPath)) {
+        // PostgreSQL destination (default). Comment out and uncomment one
+        // of the alternatives below for SQLite / DuckDB destinations, or
+        // for the no-inline-destination path that pairs with a
+        // centralized Consolidator service.
+        DestinationOptions destination = DestinationOptions.builder()
+                .dstType(DstType.POSTGRES)
+                .connectionString(POSTGRES_URL)
+                .database(POSTGRES_DB)
+                .schema(POSTGRES_SCHEMA)
+                .syncMode(DstSyncMode.CONSOLIDATION)
+                .build();
+        SQLiteStore.initialize(DB_PATH, DEVICE_NAME, destination);
+
+        // SQLite destination example:
+        // DestinationOptions destination = DestinationOptions.builder()
+        //         .dstType(DstType.SQLITE)
+        //         .connectionString("dst_sqlite.db")
+        //         .build();
+        // SQLiteStore.initialize(DB_PATH, DEVICE_NAME, destination);
+
+        // DuckDB destination example:
+        // DestinationOptions destination = DestinationOptions.builder()
+        //         .dstType(DstType.DUCKDB)
+        //         .connectionString("dst_duckdb.duckdb")
+        //         .database("dst_duckdb")
+        //         .schema("main")
+        //         .build();
+        // SQLiteStore.initialize(DB_PATH, DEVICE_NAME, destination);
+
+        // Centralized Consolidator path — no inline destination. The
+        // device only logs locally; a separate standalone Consolidator
+        // service reads the log segments from staging storage and
+        // applies them to the configured destination(s):
+        // SQLiteStore.initialize(DB_PATH, Path.of("synclite.conf"));
+
+        try (SyncLiteStore store = SQLiteStore.open(DB_PATH)) {
             // 1) CREATE TABLE via Store API
             Map<String, String> columns = new LinkedHashMap<>();
             columns.put("id", "INTEGER PRIMARY KEY");
@@ -79,7 +124,7 @@ public class SyncLiteStoreAPIApp {
 
             // 6) ALTER TABLE DROP COLUMN
             // High-level Store API does not expose drop-column directly; execute DDL via JDBC.
-            try (Connection conn = DriverManager.getConnection("jdbc:synclite_sqlite_store:sample_store_api.db");
+            try (Connection conn = DriverManager.getConnection("jdbc:synclite_sqlite_store:" + DB_PATH);
                  Statement ddl = conn.createStatement()) {
                 ddl.execute("ALTER TABLE players DROP COLUMN email");
             }
@@ -91,7 +136,7 @@ public class SyncLiteStoreAPIApp {
             System.out.println("Store API rows count: " + rows.size());
 
             // Optional query output for visibility
-            try (Connection conn = DriverManager.getConnection("jdbc:synclite_sqlite_store:sample_store_api.db");
+            try (Connection conn = DriverManager.getConnection("jdbc:synclite_sqlite_store:" + DB_PATH);
                  Statement stmt = conn.createStatement();
                  ResultSet rs = stmt.executeQuery("SELECT id, name, score FROM players ORDER BY id")) {
                 while (rs.next()) {
@@ -100,6 +145,11 @@ public class SyncLiteStoreAPIApp {
             }
         }
 
-        SQLiteStore.closeDevice(Path.of("sample_store_api.db"));
+        // Force the active log segment to roll, then block until the
+        // in-process shipper + consolidator have fully applied it to
+        // PostgreSQL. Short-lived programs would otherwise exit before
+        // the background pipeline gets to drain.
+        SyncLite.awaitSync(DB_PATH, AWAIT_TIMEOUT);
+        SQLiteStore.closeDevice(DB_PATH);
     }
 }

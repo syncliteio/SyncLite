@@ -52,6 +52,10 @@ fn write_pair(label: &str, a: (i64, &str), b: (i64, &str)) -> Result<()> {
         &[Value::Int(b.0), Value::Text(b.1.into())],
     )?;
     conn.commit()?;
+    // Force the active log segment to roll, then block until the
+    // in-process shipper + consolidator have fully applied it to
+    // PostgreSQL. Short-lived programs would otherwise exit before
+    // the background pipeline gets to drain.
     conn.flush()?;
     synclite::await_sync(DB_PATH, std::time::Duration::from_secs(30))?;
     conn.close()?;

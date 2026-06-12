@@ -87,7 +87,7 @@ Optional but recommended:
    |---|---|---|---|
    | 1 | Full platform (default) | `target/synclite-platform-<rev>.zip` | Required |
    | 2 | Full platform, Java-only | Same as #1 but no `lib/native/` | Not required |
-   | 3 | Runtime | `target/synclite-runtime-<rev>.zip` (just `lib/java/` + multi-arch `lib/native/` + Python ctypes wrapper) | Required |
+   | 3 | Runtime | `target/synclite-runtime-<rev>.zip` (just `lib/java/` + multi-arch `lib/native/` + cross-language `sample-apps/`) | Required |
 
    ```bash
    # 1. Full platform (default)
