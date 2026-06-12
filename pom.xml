@@ -417,6 +417,7 @@
 				<!-- No Rust toolchain → no Rust tests, and no cross-compile either. -->
 				<skipRustTests>true</skipRustTests>
 				<skipRustCrossCompile>true</skipRustCrossCompile>
+				<skipRustRuntime>true</skipRustRuntime>
 				<rust.logger.include.dll>__skip_nonjava__</rust.logger.include.dll>
 				<rust.logger.include.lib>__skip_nonjava__</rust.logger.include.lib>
 				<rust.logger.include.so>__skip_nonjava__</rust.logger.include.so>
