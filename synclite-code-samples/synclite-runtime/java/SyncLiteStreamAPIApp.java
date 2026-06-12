@@ -18,11 +18,16 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import io.synclite.DestinationOptions;
+import io.synclite.DstSyncMode;
+import io.synclite.DstType;
 import io.synclite.Streaming;
+import io.synclite.SyncLite;
 import io.synclite.SyncLiteStream;
 
 /**
@@ -39,12 +44,52 @@ import io.synclite.SyncLiteStream;
  */
 public class SyncLiteStreamAPIApp {
 
+    private static final Path DB_PATH = Path.of("sample_stream_api.db");
+    private static final String DEVICE_NAME = "sampledevicestreamapi";
+    private static final String POSTGRES_URL = "jdbc:postgresql://localhost:5432/syncdb";
+    private static final String POSTGRES_DB = "syncdb";
+    private static final String POSTGRES_SCHEMA = "syncschema";
+    private static final Duration AWAIT_TIMEOUT = Duration.ofSeconds(30);
+
     public static void main(String[] args) throws ClassNotFoundException, SQLException {
         Class.forName("io.synclite.Streaming");
-        Path dbPath = Path.of("sample_stream_api.db");
-        Streaming.initialize(dbPath, Path.of("synclite.conf"));
 
-        try (SyncLiteStream stream = SyncLiteStream.open(dbPath)) {
+        // PostgreSQL destination (default). Comment out and uncomment one
+        // of the alternatives below for SQLite / DuckDB destinations, or
+        // for the no-inline-destination path that pairs with a
+        // centralized Consolidator service.
+        DestinationOptions destination = DestinationOptions.builder()
+                .dstType(DstType.POSTGRES)
+                .connectionString(POSTGRES_URL)
+                .database(POSTGRES_DB)
+                .schema(POSTGRES_SCHEMA)
+                .syncMode(DstSyncMode.CONSOLIDATION)
+                .build();
+        Streaming.initialize(DB_PATH, DEVICE_NAME, destination);
+
+        // SQLite destination example:
+        // DestinationOptions destination = DestinationOptions.builder()
+        //         .dstType(DstType.SQLITE)
+        //         .connectionString("dst_sqlite.db")
+        //         .build();
+        // Streaming.initialize(DB_PATH, DEVICE_NAME, destination);
+
+        // DuckDB destination example:
+        // DestinationOptions destination = DestinationOptions.builder()
+        //         .dstType(DstType.DUCKDB)
+        //         .connectionString("dst_duckdb.duckdb")
+        //         .database("dst_duckdb")
+        //         .schema("main")
+        //         .build();
+        // Streaming.initialize(DB_PATH, DEVICE_NAME, destination);
+
+        // Centralized Consolidator path — no inline destination. The
+        // device only logs locally; a separate standalone Consolidator
+        // service reads the log segments from staging storage and
+        // applies them to the configured destination(s):
+        // Streaming.initialize(DB_PATH, Path.of("synclite.conf"));
+
+        try (SyncLiteStream stream = SyncLiteStream.open(DB_PATH)) {
             // 1) CREATE TABLE via Stream API
             stream.createTable("events", new LinkedHashMap<>(Map.of(
                 "ts", "BIGINT",
@@ -80,7 +125,7 @@ public class SyncLiteStreamAPIApp {
 
             // 4) ALTER TABLE DROP COLUMN
             // Stream API does not expose drop-column directly; execute DDL via JDBC.
-            try (Connection conn = DriverManager.getConnection("jdbc:synclite_streaming:sample_stream_api.db");
+            try (Connection conn = DriverManager.getConnection("jdbc:synclite_streaming:" + DB_PATH);
                  Statement ddl = conn.createStatement()) {
                 ddl.execute("ALTER TABLE events DROP COLUMN source");
 
@@ -101,6 +146,11 @@ public class SyncLiteStreamAPIApp {
             stream.dropTable("temp_events_archive");
         }
 
-        Streaming.closeDevice(Path.of("sample_stream_api.db"));
+        // Force the active log segment to roll, then block until the
+        // in-process shipper + consolidator have fully applied it to
+        // PostgreSQL. Short-lived programs would otherwise exit before
+        // the background pipeline gets to drain.
+        SyncLite.awaitSync(DB_PATH, AWAIT_TIMEOUT);
+        Streaming.closeDevice(DB_PATH);
     }
 }

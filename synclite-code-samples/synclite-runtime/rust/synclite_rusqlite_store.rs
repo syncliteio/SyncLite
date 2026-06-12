@@ -1,22 +1,72 @@
-//! SqliteStore device: same offline-first → PostgreSQL story as the
-//! canonical sample, using the STORE device variant. STORE devices are
-//! optimized for bulk write-through workloads.
+//! SqliteStore device: bulk-friendly variant of the SQLite sample.
+//! STORE devices are optimized for bulk write-through workloads.
+//!
+//! Defaults to a PostgreSQL destination; see the commented alternatives
+//! below to switch to SQLite / DuckDB destinations, or to drop the
+//! inline destination entirely and pair with a separate centralized
+//! Consolidator service.
 
 use synclite::{DeviceType, Result, Value};
 use synclite::rusqlite::Connection;
-use synclite::SyncLiteOptions;
+use synclite::{DestinationOptions, DstSyncMode, DstType, SyncLiteOptions};
 
 const DB_PATH: &str = "sample_rusqlite_store.db";
 const DEVICE_NAME: &str = "sampledevicestore";
 
 fn main() -> Result<()> {
+    // PostgreSQL destination (default). Comment out and uncomment one
+    // of the alternatives below for SQLite / DuckDB destinations, or
+    // for the no-inline-destination path that pairs with a centralized
+    // Consolidator service.
     synclite::initialize(
         DeviceType::SQLITE_STORE,
         DEVICE_NAME,
         DB_PATH,
-        None, // see synclite_rusqlite_postgres.rs for the PostgreSQL destination shape
+        Some(DestinationOptions {
+            dst_type: DstType::Postgres,
+            dst_connection_string:
+                "postgresql://postgres:postgres@localhost:5432/syncdb".into(),
+            dst_database: Some("syncdb".into()),
+            dst_schema: Some("syncschema".into()),
+            dst_sync_mode: DstSyncMode::Consolidation,
+        }),
         SyncLiteOptions::default(),
     )?;
+
+    // SQLite destination example:
+    // synclite::initialize(
+    //     DeviceType::SQLITE_STORE, DEVICE_NAME, DB_PATH,
+    //     Some(DestinationOptions {
+    //         dst_type: DstType::Sqlite,
+    //         dst_connection_string: "dst_sqlite.db".into(),
+    //         dst_database: None,
+    //         dst_schema: None,
+    //         dst_sync_mode: DstSyncMode::Consolidation,
+    //     }),
+    //     SyncLiteOptions::default(),
+    // )?;
+
+    // DuckDB destination example:
+    // synclite::initialize(
+    //     DeviceType::SQLITE_STORE, DEVICE_NAME, DB_PATH,
+    //     Some(DestinationOptions {
+    //         dst_type: DstType::DuckDb,
+    //         dst_connection_string: "dst_duckdb.duckdb".into(),
+    //         dst_database: Some("dst_duckdb".into()),
+    //         dst_schema: Some("main".into()),
+    //         dst_sync_mode: DstSyncMode::Consolidation,
+    //     }),
+    //     SyncLiteOptions::default(),
+    // )?;
+
+    // Centralized Consolidator path — no inline destination. The device
+    // only logs locally; a separate standalone Consolidator service
+    // reads the log segments from staging storage and applies them to
+    // the configured destination(s):
+    // synclite::initialize(
+    //     DeviceType::SQLITE_STORE, DEVICE_NAME, DB_PATH, None,
+    //     SyncLiteOptions::default(),
+    // )?;
 
     let mut conn = Connection::open(DB_PATH)?;
 
@@ -43,6 +93,10 @@ fn main() -> Result<()> {
         println!("{:?}", row);
     }
 
+    // Force the active log segment to roll, then block until the
+    // in-process shipper + consolidator have fully applied it to
+    // PostgreSQL. Short-lived programs would otherwise exit before
+    // the background pipeline gets to drain.
     conn.flush()?;
     synclite::await_sync(DB_PATH, std::time::Duration::from_secs(30))?;
     conn.close()?;

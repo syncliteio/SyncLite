@@ -680,8 +680,8 @@ field.event_time = <span class="str">$.ts</span>
 
     <!-- Python -->
     <div id="tab-python" class="tab-pane">
-<pre><span class="cmt"># Pure-Python via ctypes — single synclite.py wrapping the C ABI cdylib.</span>
-<span class="cmt"># Ships in every release zip (lib/python/synclite.py + lib/native/libsynclite_oss.*).</span>
+<pre><span class="cmt"># Python via the synclite PyO3 wheel — built from the in-tree Rust workspace.</span>
+<span class="cmt"># See synclite-logger-rust/python/ for install via `maturin develop --release`.</span>
 <span class="cmt"># No pip install, no Rust toolchain, no maturin.</span>
 <span class="kw">import</span> synclite <span class="kw">as</span> sl
 

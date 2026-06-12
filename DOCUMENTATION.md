@@ -938,69 +938,27 @@ try (KafkaProducer producer = new KafkaProducer(props)) {
 
 ### 6.8 Python Usage
 
-SyncLite supports two Python entry points at different maturity levels:
+The Python entry point is the [`synclite`](synclite-logger-rust/python/)
+PyO3 wheel — a native Python package built on top of the SyncLite Rust
+runtime. No JVM, no JAR, no `jaydebeapi` / `jpype` bridge.
 
-| | Today | Coming |
-|---|---|---|
-| Package | `synclite` ctypes wrapper (single file: `lib/python/synclite.py`) | `synclite-logger-python` PyO3 wheel |
-| Backed by | C ABI in `synclite-bindings-c` cdylib (same binary as C / C++ / Java JNI) | PyO3 over the Rust runtime |
-| Install | None \u2014 ships in every release zip alongside `lib/native/libsynclite_oss.*` | `pip install synclite-logger-python` |
-| Surface | `Runtime.open_config`, `log_sql`, `commit`, `flush_log`, `rollback`, `close` | Rich `Connection` / `Statement` / `await_sync`, plus DB-API 2.0, SyncLiteStore, SyncLiteStream, Redis / Kafka compatibility |
-| Parameter binding | No (values inlined in SQL) | Yes |
-| CPython matrix | Any 3.8+ on any OS/arch where `lib/native/` ships a binary | Per-(CPython \u00d7 OS \u00d7 arch) wheel |
-
-No JVM, no JAR, no `jaydebeapi` / `jpype` bridge in either case.
-
-#### Today \u2014 `synclite` ctypes wrapper
-
-The release zip already contains everything you need: a single Python
-file (`lib/python/synclite.py`) plus the platform cdylib in
-`lib/native/`. The wrapper finds the cdylib automatically when run from
-the unpacked zip layout; outside it, point at the library with
-`SYNCLITE_NATIVE_LIB` or `SYNCLITE_NATIVE_DIR`.
-
-```python
-import synclite as sl  # from lib/python/synclite.py
-
-# Minimal SQLite-device config shipping to PostgreSQL.
-with open("synclite_logger.conf", "w") as f:
-    f.write(
-        "device-name=sampledevice\n"
-        "db-engine=SQLITE\n"
-        "device-type=SQLITE\n"
-        "db-path=myapp.db\n"
-        "local-data-stage-directory=synclite-stage\n"
-        "dst-type=POSTGRES\n"
-        "dst-connection-string=postgresql://user:pw@localhost:5432/syncdb\n"
-        "dst-database=syncdb\n"
-        "dst-schema=public\n"
-        "dst-sync-mode=CONSOLIDATION\n"
-    )
-
-with sl.Runtime.open_config("synclite_logger.conf") as rt:
-    rt.log_sql("CREATE TABLE IF NOT EXISTS events(id INT PRIMARY KEY, payload TEXT)")
-    rt.log_sql("INSERT INTO events(id, payload) VALUES(1, 'hello from Python')")
-    rt.log_sql("INSERT INTO events(id, payload) VALUES(2, 'row two')")
-    rt.commit()
-    rt.flush_log()
-# \u2191 logged locally; the in-process shipper + consolidator drain to PostgreSQL.
-```
-
-The C ABI logs SQL strings only \u2014 there is no parameter binding yet \u2014
-so values are inlined. The richer `Connection` / `Statement` API below is
-where this is heading.
-
-#### Coming \u2014 `synclite-logger-python` (PyO3 wheel)
+| | `synclite` (PyO3 wheel) |
+|---|---|
+| Backed by | PyO3 over the SyncLite Rust runtime |
+| Install (source) | `pip install maturin && cd synclite-logger-rust/python && maturin develop --release` |
+| Install (wheel) | `pip install synclite` (PyPI release on the roadmap) |
+| Surface | `Connection` / `Statement`, `DuckDBConnection` / `DuckDBStatement`, plus module-level `initialize`, `await_sync`, `pause_sync`, `resume_sync` |
+| Parameter binding | Yes (full SQL parameter binding, batched and unbatched) |
+| CPython matrix | Any 3.8+ on any OS/arch the Rust runtime supports |
 
 The five samples under
 [`synclite-code-samples/synclite-runtime/python/`](synclite-code-samples/synclite-runtime/python/)
 (`synclite_rusqlite*.py`, `synclite_streaming.py`, `synclite_duckdb*.py`)
-are the canonical reference for the upcoming PyO3 wheel \u2014 mirroring the
-Rust API 1:1 (`Connection`, `Statement`, `DuckDBConnection`,
-`DuckDBStatement`, plus module-level `initialize` and `await_sync`):
+mirror the Rust API 1:1 — same shapes as the C++ samples in
+[`synclite-code-samples/synclite-runtime/cpp/`](synclite-code-samples/synclite-runtime/cpp/):
 
 ```python
-import synclite as sl  # via the upcoming synclite-logger-python wheel
+import synclite as sl
 
 DB_PATH = "myapp.db"
 
@@ -2302,8 +2260,8 @@ synclite-platform-oss/
     |   |   +-- SyncLiteStreamAPIApp.java
     |   |   +-- SyncLiteKafkaProduceApp.java
     |   |   +-- SyncLiteJedisAPIApp.java
-    |   +-- python/                     # Python samples (ctypes wrapper today;
-    |   |                               #   PyO3 synclite-logger-python on the roadmap)
+    |   +-- python/                     # Python samples (built on the synclite PyO3 wheel
+    |   |                               #   under synclite-logger-rust/python/)
     |   |   +-- synclite_device_app.py
     |   |   +-- synclite_store_device_app.py
     |   |   +-- synclite_streaming_app.py

@@ -43,14 +43,14 @@ If you're a developer building an app, you only need group 1. If you're standing
 |---|---|
 | **SyncLite for Java** (`synclite-<version>.jar`) | One jar = JDBC / Store / Stream APIs + logger + shipper + (optional) in-process consolidator via bundled `synclite_jni` native. |
 | **SyncLite Rust Runtime** | Same runtime in Rust as a single `cdylib`. Consumable from Rust, Python, Node.js, C/C++, Go, Ruby, C#. |
-| **SyncLite DB** | Wraps the runtime as a tiny local-first HTTP/JSON service for any language that doesn't (yet) embed the native lib. |
-| **SyncLite Client** | Interactive CLI for inspecting and querying SyncLite devices. |
 
 **Optional tooling — built on top of the runtime**
 
 | Component | What It Does |
 |---|---|
-| **SyncLite Consolidator** | Standalone consolidation service for the central topology — accepts log segments from many devices and applies them to destinations. |
+| **SyncLite DB** | Wraps the runtime as a tiny local-first HTTP/JSON service for any language that doesn't (yet) embed the native lib. |
+| **SyncLite Client** | Interactive CLI for inspecting and querying SyncLite devices. |
+| **SyncLite Consolidator** | Standalone consolidation service for the central topology — accepts log segments from many embedded devices / edge applications and applies them to destinations. |
 | **SyncLite DBReader** | Database ETL / replication / migration jobs (source DB → SyncLite devices → destinations). |
 | **SyncLite QReader** | IoT MQTT connector (Eclipse Paho; works with any MQTT v3.1 broker). |
 | **SyncLite Job Monitor** | Unified job management and scheduling UI for DBReader / QReader / Consolidator jobs. |
@@ -110,7 +110,7 @@ SyncLite has **three** Maven build flavors, ordered from largest to smallest out
 |---|---|---|---|
 | 1 | **Full platform** (default) | `target/synclite-platform-<rev>.zip` — Tomcat scripts + WARs + tools + samples + multi-arch native runtime | Required |
 | 2 | **Full platform, Java-only** | Same as #1 but no `lib/native/` | Not required |
-| 3 | **Runtime** (recommended for app developers) | `target/synclite-runtime-<rev>.zip` — `lib/java/` (synclite jar) + multi-arch `lib/native/` (Rust cdylibs) + `lib/python/` (ctypes wrapper) + cross-language `sample-apps/{cpp,java,python,rust}` | Required |
+| 3 | **Runtime** (recommended for app developers) | `target/synclite-runtime-<rev>.zip` — `lib/java/` (synclite jar) + multi-arch `lib/native/` (Rust cdylibs) + cross-language `sample-apps/{cpp,java,python,rust}` | Required |
 
 ```bash
 # 1. Full platform (default) — Tomcat platform zip with WARs, tools, all language samples, and the multi-arch Rust runtime
@@ -168,8 +168,6 @@ synclite-runtime-oss/
 |   |   +-- libsynclite_<version>_linux_aarch64.so    # cross-compiled (omitted if -DskipRustCrossCompile=true)
 |   |   +-- libsynclite_<version>.dylib               # only if built on macOS
 |   |   +-- synclite.conf
-|   +-- python/
-|       +-- synclite.py                               # ctypes wrapper around the native cdylib
 +-- sample-apps/                                      # Language samples: cpp, java, python, rust
 +-- LICENSE
 +-- synclite_platform_version.txt

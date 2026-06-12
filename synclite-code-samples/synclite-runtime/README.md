@@ -14,19 +14,14 @@ This folder contains the canonical sample set requested for this repository.
 
 ## Python
 
-Python samples drive the SyncLite Rust runtime two ways:
+Five Python samples drive the SyncLite Rust runtime via the
+[`synclite`](../../synclite-logger-rust/python/) PyO3 wheel —
+mirroring the Rust API 1:1 (`Connection`, `Statement`,
+`DuckDBConnection`, `DuckDBStatement`, plus module-level `initialize`
+and `await_sync`). No JVM, no JAR — install the wheel with
+`maturin develop --release` from `synclite-logger-rust/python/`.
 
-- `synclite_quickstart.py` runs **today** against the C ABI via the
-  thin [`synclite`](../../synclite-logger-rust/python/synclite.py) ctypes
-  wrapper. No `pip install`, no JVM, no JAR — just the cdylib already in
-  `lib/native/` and one Python file in `lib/python/`.
-- The other five samples (`synclite_rusqlite*.py`, `synclite_streaming.py`,
-  `synclite_duckdb*.py`) preview the future
-  [`synclite-logger-python`](https://github.com/synclite) PyO3 wheel
-  (richer `Connection` / `Statement` / `await_sync` API, DB-API 2.0,
-  SyncLiteStore, SyncLiteStream, Redis / Kafka compatibility).
-
-See `python/README.md` for run instructions.
+See `python/README.md` for full install + run instructions.
 
 - `synclite_rusqlite.py` (SQLITE)
 - `synclite_rusqlite_store.py` (SQLITE_STORE)

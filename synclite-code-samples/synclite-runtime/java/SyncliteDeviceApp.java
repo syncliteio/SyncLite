@@ -20,8 +20,13 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.time.Duration;
 
+import io.synclite.DestinationOptions;
+import io.synclite.DstSyncMode;
+import io.synclite.DstType;
 import io.synclite.SQLite;
+import io.synclite.SyncLite;
 
 /**
  * SQL device sample.
@@ -39,6 +44,13 @@ import io.synclite.SQLite;
  */
 public class SyncliteDeviceApp {
 
+    private static final Path DB_PATH = Path.of("sample_txn_sqlite.db");
+    private static final String DEVICE_NAME = "sampledevice";
+    private static final String POSTGRES_URL = "jdbc:postgresql://localhost:5432/syncdb";
+    private static final String POSTGRES_DB = "syncdb";
+    private static final String POSTGRES_SCHEMA = "syncschema";
+    private static final Duration AWAIT_TIMEOUT = Duration.ofSeconds(30);
+
     public static void main(String[] args) throws ClassNotFoundException, SQLException {
         appStartup();
         SyncliteDeviceApp app = new SyncliteDeviceApp();
@@ -53,12 +65,45 @@ public class SyncliteDeviceApp {
         // 3) JDBC URL prefix in runBusinessLogic():
         //    jdbc:synclite_sqlite: -> jdbc:synclite_derby:, jdbc:synclite_duckdb:, jdbc:synclite_h2:, jdbc:synclite_hsqldb:
         Class.forName("io.synclite.SQLite");
-        Path dbPath = Path.of("sample_txn_sqlite.db");
-        SQLite.initialize(dbPath, Path.of("synclite.conf"));
+
+        // PostgreSQL destination (default). Comment out and uncomment one
+        // of the alternatives below for SQLite / DuckDB destinations, or
+        // for the no-inline-destination path that pairs with a
+        // centralized Consolidator service.
+        DestinationOptions destination = DestinationOptions.builder()
+                .dstType(DstType.POSTGRES)
+                .connectionString(POSTGRES_URL)
+                .database(POSTGRES_DB)
+                .schema(POSTGRES_SCHEMA)
+                .syncMode(DstSyncMode.CONSOLIDATION)
+                .build();
+        SQLite.initialize(DB_PATH, DEVICE_NAME, destination);
+
+        // SQLite destination example:
+        // DestinationOptions destination = DestinationOptions.builder()
+        //         .dstType(DstType.SQLITE)
+        //         .connectionString("dst_sqlite.db")
+        //         .build();
+        // SQLite.initialize(DB_PATH, DEVICE_NAME, destination);
+
+        // DuckDB destination example:
+        // DestinationOptions destination = DestinationOptions.builder()
+        //         .dstType(DstType.DUCKDB)
+        //         .connectionString("dst_duckdb.duckdb")
+        //         .database("dst_duckdb")
+        //         .schema("main")
+        //         .build();
+        // SQLite.initialize(DB_PATH, DEVICE_NAME, destination);
+
+        // Centralized Consolidator path — no inline destination. The
+        // device only logs locally; a separate standalone Consolidator
+        // service reads the log segments from staging storage and
+        // applies them to the configured destination(s):
+        // SQLite.initialize(DB_PATH, Path.of("synclite.conf"));
     }
 
     public void runBusinessLogic() throws SQLException {
-        try (Connection conn = DriverManager.getConnection("jdbc:synclite_sqlite:sample_txn_sqlite.db")) {
+        try (Connection conn = DriverManager.getConnection("jdbc:synclite_sqlite:" + DB_PATH)) {
             try (Statement stmt = conn.createStatement()) {
                 stmt.execute("CREATE TABLE IF NOT EXISTS feedback(rating INT, comment TEXT)");
                 // Separate table for explicit DROP TABLE demonstration.
@@ -114,6 +159,11 @@ public class SyncliteDeviceApp {
             }
         }
 
-        SQLite.closeDevice(Path.of("sample_txn_sqlite.db"));
+        // Force the active log segment to roll, then block until the
+        // in-process shipper + consolidator have fully applied it to
+        // PostgreSQL. Short-lived programs would otherwise exit before
+        // the background pipeline gets to drain.
+        SyncLite.awaitSync(DB_PATH, AWAIT_TIMEOUT);
+        SQLite.closeDevice(DB_PATH);
     }
 }
