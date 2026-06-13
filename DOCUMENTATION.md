@@ -135,8 +135,14 @@ Both produce the same `.sqllog` segments, so you can mix devices (some logger-on
 | Java (JDK) | 25 |
 | Apache Maven | 3.8.6+ |
 | Rust toolchain (`rustup`, `cargo`) | stable |
+| Native C/C++ toolchain (system linker) — see callout below | platform default |
 | Zig compiler (for cross-arch Rust runtime packaging) | latest stable |
 | cargo-zigbuild (for Linux cross-compiled cdylibs) | latest |
+
+> **Rust alone is not sufficient — you also need the platform's native C/C++ toolchain** so `cargo` can invoke the system linker and so the DuckDB / SQLite crates can build their native code:
+> - **Windows**: install [Microsoft C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) ("Desktop development with C++" workload, MSVC v143 + Windows 10/11 SDK). Without it, the build fails with `error: linker 'link.exe' not found`. Run the build from the **"x64 Native Tools Command Prompt for VS"** (or any shell where `link.exe` is on `PATH`).
+> - **Linux**: install `build-essential`, `cmake`, and `pkg-config` (e.g. `sudo apt install build-essential cmake pkg-config`).
+> - **macOS**: `xcode-select --install`.
 
 > The `bin/deploy.sh` / `bin/deploy.bat` scripts download Apache Tomcat 9.0.117 and OpenJDK 25 automatically. No manual installation needed for a quick start.
 

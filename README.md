@@ -190,6 +190,10 @@ All three surfaces produce the same log format and use the same shipper + consol
 **Additional prerequisites (build all loggers including Rust):**
 - Rust toolchain 1.86.0
 - Cargo 1.86.0 (bundled with Rust 1.86.0)
+- **Native C/C++ toolchain (system linker)** — required by Rust to link the cdylibs:
+  - **Windows**: Microsoft C++ Build Tools (provides `link.exe`). The default Rust target `x86_64-pc-windows-msvc` will fail with `error: linker 'link.exe' not found` if MSVC is missing. Install from <https://visualstudio.microsoft.com/visual-cpp-build-tools/> and select the **"Desktop development with C++"** workload (MSVC v143 + Windows 10/11 SDK). Open the **"x64 Native Tools Command Prompt for VS"** (or any shell where `link.exe` is on `PATH`) before running the build.
+  - **Linux**: `build-essential` (provides `gcc`/`ld`) — e.g. `sudo apt install build-essential pkg-config` (Debian/Ubuntu) or `sudo dnf groupinstall "Development Tools"` (Fedora/RHEL). Also install `cmake` (`sudo apt install cmake`) for the DuckDB native build.
+  - **macOS**: Xcode Command Line Tools — `xcode-select --install`.
 - [`cargo-zigbuild`](https://github.com/rust-cross/cargo-zigbuild) and the [Zig](https://ziglang.org/download/) compiler on `PATH`
 - Rust standard libraries for Linux x86_64 and aarch64
 

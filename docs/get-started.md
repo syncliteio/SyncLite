@@ -62,6 +62,13 @@ Edge Sources (SyncLite Logger / DB / DBReader / QReader)
 
 > The `deploy.sh` / `deploy.bat` scripts download **Apache Tomcat 9.0.117** and **OpenJDK 25** automatically — no manual JDK installation required for a quick start.
 
+> **Building the Rust loggers? You also need a native C/C++ toolchain (system linker) in addition to Rust:**
+> - **Windows**: [Microsoft C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) ("Desktop development with C++" workload, MSVC v143 + Windows 10/11 SDK). Without it, `cargo` fails with `error: linker 'link.exe' not found`. Run the build from the **"x64 Native Tools Command Prompt for VS"**.
+> - **Linux**: `build-essential`, `cmake`, `pkg-config` (e.g. `sudo apt install build-essential cmake pkg-config`).
+> - **macOS**: `xcode-select --install`.
+>
+> Skip this entirely with `-DskipNonJavaLoggers=true` for a Java-only build.
+
 ---
 
 ## Step 1 — Clone and Build
