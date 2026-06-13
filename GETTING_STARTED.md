@@ -76,9 +76,16 @@ If you're a developer building an app, you only need group 1. If you're standing
 | Requirement | Version |
 |---|---|
 | Rust toolchain (`rustup`, `cargo`) | 1.86.0 |
+| Native C/C++ toolchain (system linker) — see callout below | platform default |
 | [`cargo-zigbuild`](https://github.com/rust-cross/cargo-zigbuild) | latest |
 | [Zig](https://ziglang.org/download/) compiler on `PATH` | latest stable |
 | Rust standard libraries for Linux x86_64 and aarch64 | — |
+
+> **Native C/C++ toolchain is required in addition to Rust.** Rust shells out to the platform linker to produce the cdylibs, and the DuckDB / SQLite crates ship native code that needs a C/C++ compiler.
+>
+> - **Windows**: install [Microsoft C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) and select the **"Desktop development with C++"** workload (MSVC v143 + Windows 10/11 SDK). Without this, `cargo build` fails with `error: linker 'link.exe' not found`. Run the build from the **"x64 Native Tools Command Prompt for VS"** (or any shell where `link.exe` is on `PATH`).
+> - **Linux**: install `build-essential` (gcc, ld, make) plus `cmake` and `pkg-config`. Debian/Ubuntu: `sudo apt install build-essential cmake pkg-config`. Fedora/RHEL: `sudo dnf groupinstall "Development Tools" && sudo dnf install cmake pkgconf-pkg-config`.
+> - **macOS**: `xcode-select --install` (Xcode Command Line Tools).
 
 The Rust cdylibs for **Linux x86_64 and aarch64** are cross-compiled on every host so a single `mvn package` produces a complete, multi-arch `lib/native/` payload. Install the cross-compile toolchain once on the build host:
 

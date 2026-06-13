@@ -54,6 +54,14 @@ Before contributing code, ensure you have the following installed:
 | Apache Maven | 3.8.6 | https://maven.apache.org/download.cgi |
 | Git | 2.x | |
 
+Required only if you build the Rust loggers (default build flavor; not needed when you pass `-DskipNonJavaLoggers=true`):
+
+| Tool | Minimum Version | Notes |
+|---|---|---|
+| Rust toolchain (`rustup`, `cargo`) | 1.86.0 | Install via https://rustup.rs |
+| Native C/C++ toolchain (system linker) | platform default | **Windows**: [Microsoft C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) — "Desktop development with C++" workload (MSVC v143 + Windows 10/11 SDK). Required by the default `x86_64-pc-windows-msvc` Rust target; without it the build fails with `error: linker 'link.exe' not found`. Run the build from the **"x64 Native Tools Command Prompt for VS"**. **Linux**: `build-essential`, `cmake`, `pkg-config`. **macOS**: `xcode-select --install`. |
+| [`cargo-zigbuild`](https://github.com/rust-cross/cargo-zigbuild) + [Zig](https://ziglang.org/download/) | latest | Only for multi-arch Linux cross-compile from a non-Linux host. Skip with `-DskipRustCrossCompile=true`. |
+
 Optional but recommended:
 - An IDE with Java and Maven support (IntelliJ IDEA, Eclipse, VS Code + Extension Pack for Java)
 - Docker (for running integration test dependencies: PostgreSQL, MySQL, MinIO, SFTP)
