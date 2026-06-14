@@ -22,7 +22,64 @@ your app  ──►  SyncLite Runtime (embedded DB + log + shipper + sync)  ─�
 - **Pick your language.** First-class **Java** (jar) and **Rust** (crate) runtimes; the Rust runtime is embeddable from **Python, Node.js, C/C++, Go, Ruby, C#** via a single `cdylib`.
 - **Pick your local DB.** SQLite, DuckDB, Apache Derby, H2, HyperSQL — all behind the same APIs.
 - **Pick your write style.** Plain **JDBC / SQL**, a typed **Store CRUD** API (`insert` / `update` / `delete` / `selectAll`), a fluent **Stream** append-only API, or a drop-in **Jedis** subclass for Redis users.
+- **Offline-first, single binary.** Works on laptops, edge boxes, mobile-class hardware, and inside containers without any external dependency.
 - **Sync is just config.** Point the runtime at a destination and writes start flowing — no separate CDC tool, no Kafka, no replication agent.
+
+### Runtime — what your app embeds
+
+Any number of apps / devices each embed their own runtime, in any
+supported language, all sharing a stage and applying to the same
+destinations — no central server in the hot path.
+
+```mermaid
+flowchart LR
+    classDef app fill:#eef6ff,stroke:#2b6cb0,stroke-width:1px,color:#1a365d
+    classDef rt  fill:#fff8e6,stroke:#c98a00,stroke-width:1.5px,color:#5c3a00
+    classDef dst fill:#f0fff4,stroke:#2f855a,stroke-width:1px,color:#22543d
+
+    subgraph Fleet["Many apps · many devices — laptops · servers · edge boxes · containers · phones · IoT"]
+        direction TB
+
+        subgraph App1["App / Device 1 — Java"]
+            API1["SQL · Store · Stream"]:::app
+            RT1["SyncLite Runtime<br/>DB → Log → Shipper → Consolidator"]:::rt
+            API1 --> RT1
+        end
+
+        subgraph App2["App / Device 2 — Python"]
+            API2["SQL · Store · Stream"]:::app
+            RT2["SyncLite Runtime<br/>DB → Log → Shipper → Consolidator"]:::rt
+            API2 --> RT2
+        end
+
+        subgraph App3["App / Device 3 — Rust"]
+            API3["SQL · Store · Stream"]:::app
+            RT3["SyncLite Runtime<br/>DB → Log → Shipper → Consolidator"]:::rt
+            API3 --> RT3
+        end
+
+        subgraph AppN["App / Device N — Node · C/C++ · Go · Ruby · C# ..."]
+            APIN["SQL · Store · Stream"]:::app
+            RTN["SyncLite Runtime<br/>DB → Log → Shipper → Consolidator"]:::rt
+            APIN --> RTN
+        end
+    end
+
+    Stage[("Shared Stage<br/>FS · S3 · MinIO · SFTP")]
+    RT1 -- async --> Stage
+    RT2 -- async --> Stage
+    RT3 -- async --> Stage
+    RTN -- async --> Stage
+
+    Stage -- apply --> Dst
+
+    Dst["Destinations<br/>Postgres · MySQL · MSSQL · MongoDB<br/>Iceberg · DuckDB · S3"]:::dst
+```
+
+<sub>Inside each runtime: SQL (JDBC for Java, rusqlite for Rust, native
+bindings for Python / Node / C/C++ / Go / Ruby / C#) plus the Store
+CRUD and Stream APIs all sit on top of the same embedded DB, WAL
+logger, shipper, and in-process consolidator.</sub>
 
 ---
 
@@ -39,23 +96,81 @@ If you're a developer building an app, you only need group 1. If you're standing
 
 **Embeddable runtime — link it into your app**
 
-| Component | What It Does |
-|---|---|
-| **SyncLite for Java** (`synclite-<version>.jar`) | One jar = JDBC / Store / Stream APIs + logger + shipper + (optional) in-process consolidator via bundled `synclite_jni` native. |
-| **SyncLite Rust Runtime** | Same runtime in Rust as a single `cdylib`. Consumable from Rust, Python, Node.js, C/C++, Go, Ruby, C#. |
+| Component | What It Does | README |
+|---|---|---|
+| **SyncLite for Java** (`synclite-<version>.jar`) | One jar = JDBC / Store / Stream APIs + logger + shipper + (optional) **in-process consolidator** (via bundled `synclite_jni` native). Call `initialize(dbPath, deviceName, destinationOptions)` for the single-jar topology, or `initialize(dbPath, conf)` for logger-only mode paired with the standalone Consolidator WAR. | [→](synclite-logger-java/README.md) |
+| **SyncLite Rust Runtime** | Same runtime in Rust (logger + in-process consolidator) as a single `cdylib`. Consumable from **Rust, Python, Node.js, C/C++, Go, Ruby, C#** — anywhere you can load a native library. | [→](synclite-logger-rust/README.md) |
 
 **Optional tooling — built on top of the runtime**
 
-| Component | What It Does |
-|---|---|
-| **SyncLite DB** | Wraps the runtime as a tiny local-first HTTP/JSON service for any language that doesn't (yet) embed the native lib. |
-| **SyncLite Client** | Interactive CLI for inspecting and querying SyncLite devices. |
-| **SyncLite Consolidator** | Standalone consolidation service for the central topology — accepts log segments from many embedded devices / edge applications and applies them to destinations. |
-| **SyncLite DBReader** | Database ETL / replication / migration jobs (source DB → SyncLite devices → destinations). |
-| **SyncLite QReader** | IoT MQTT connector (Eclipse Paho; works with any MQTT v3.1 broker). |
-| **SyncLite Job Monitor** | Unified job management and scheduling UI for DBReader / QReader / Consolidator jobs. |
-| **SyncLite Validator** | End-to-end integration test harness. |
-| **Sample Web App** | JSP/Servlet demo showing the Java runtime embedded inside a real web app. |
+Deploy these only when you want a managed platform. They are standard webapps that consume the same runtime under the hood.
+
+| Component | What It Does | README |
+|---|---|---|
+| **SyncLite DB** | Wraps the runtime as a tiny local-first HTTP/JSON service. Use it when you want the runtime accessible from a language that doesn't (yet) embed the native lib, or when multiple processes share one device. | [→](https://github.com/syncliteio/synclite-db/blob/main/README.md) |
+| **SyncLite Client** | Interactive CLI for inspecting and querying SyncLite devices. | [→](https://github.com/syncliteio/synclite-client/blob/main/README.md) |
+| **SyncLite Consolidator** | Standalone consolidation service for the central topology — accepts log segments from many embedded devices / edge applications and applies them to destinations. | [→](https://github.com/syncliteio/synclite-consolidator/blob/main/README.md) |
+| **SyncLite DBReader** | Configurable database ETL / replication / migration jobs (source DB → SyncLite devices → destinations). | [→](https://github.com/syncliteio/synclite-dbreader/blob/main/README.md) |
+| **SyncLite QReader** | MQTT / IoT connector that lands broker traffic into SyncLite devices. | [→](https://github.com/syncliteio/synclite-qreader/blob/main/README.md) |
+| **SyncLite Job Monitor** | Unified job management and scheduling UI for DBReader / QReader / Consolidator jobs. | [→](https://github.com/syncliteio/synclite-job-monitor/blob/main/README.md) |
+| **SyncLite Validator** | End-to-end integration test harness for SyncLite pipelines. | [→](https://github.com/syncliteio/synclite-validator/blob/main/README.md) |
+| **Sample Web App** | JSP/Servlet demo showing the Java runtime embedded inside a real web app. | [→](https://github.com/syncliteio/synclite-sample-web-app/blob/main/README.md) |
+
+#### Tooling — how it fits together
+
+```mermaid
+flowchart LR
+    classDef src   fill:#eef6ff,stroke:#2b6cb0,color:#1a365d
+    classDef tool  fill:#fef5ff,stroke:#805ad5,stroke-width:1.5px,color:#44337a
+    classDef dev   fill:#fff8e6,stroke:#c98a00,color:#5c3a00
+    classDef ops   fill:#edf2f7,stroke:#4a5568,color:#1a202c
+    classDef dst   fill:#f0fff4,stroke:#2f855a,color:#22543d
+
+    SrcDB["Source DBs<br/>Oracle · MySQL · SQL Server<br/>Postgres · DB2 · MongoDB"]:::src
+    Brokers["IoT / MQTT brokers<br/>Mosquitto · HiveMQ · ..."]:::src
+    Apps["Your Apps<br/>(running embedded runtime)"]:::dev
+
+    DBReader["SyncLite DBReader<br/><sub>scheduled DB → device replication / ETL</sub>"]:::tool
+    QReader["SyncLite QReader<br/><sub>broker → device ingest</sub>"]:::tool
+
+    Devices[("SyncLite Stage")]:::ops
+
+    Consolidator["SyncLite Consolidator<br/><sub>standalone service<br/>applies log segments to destinations</sub>"]:::tool
+
+    JobMon["Job Monitor UI<br/><sub>schedule · monitor · alert<br/>DBReader · QReader · Consolidator jobs</sub>"]:::ops
+    Client["SyncLite Client<br/><sub>CLI — inspect / query devices</sub>"]:::ops
+
+    Dst["Destinations<br/>Postgres · MySQL · MSSQL · MongoDB<br/>Iceberg · DuckDB · S3"]:::dst
+
+    SrcDB   --> DBReader  --> Devices
+    Brokers --> QReader   --> Devices
+    Apps    --> Devices
+    Devices --> Consolidator --> Dst
+
+    JobMon -. orchestrates .-> DBReader
+    JobMon -. orchestrates .-> QReader
+    JobMon -. orchestrates .-> Consolidator
+    Client -. inspects .-> Devices
+```
+
+<sub>Solid lines are data flow. Dashed lines are the control plane.
+Nothing in this diagram is required by the runtime — reach for these
+only when you want a managed platform on top of the embedded
+runtime.</sub>
+
+---
+
+## SyncLite Devices — three APIs over one runtime
+
+A "device" is just a logical embedded DB that the runtime owns end-to-end (storage + log + sync). Pick the API surface that fits your code, not the other way around:
+
+- **SQL Devices** — full SQL via JDBC (`SQLite`, `DuckDB`, `Derby`, `H2`, `HyperSQL`). Run arbitrary `CREATE` / `ALTER` / `SELECT` / `INSERT` / `UPDATE` / `DELETE`. Use this when you want a real embedded SQL DB and just happen to also want it synced.
+- **Store Devices** — `SyncLiteStore` typed CRUD (`SQLITE_STORE`, `DUCKDB_STORE`, `DERBY_STORE`, `H2_STORE`, `HYPERSQL_STORE`). `insert` / `update` / `delete` / `selectAll` against plain maps; schema evolves automatically. Use this when you want a simple, stable replication contract without writing SQL.
+- **Streaming Device** — `SyncLiteStream` fluent `insert` / `insertBatch` over the append-only `STREAMING` device. Use this for high-throughput event capture where UPDATE/DELETE are not needed.
+
+All three surfaces produce the same log format and use the same shipper + consolidator under the covers, so you can mix and match devices inside a single application.
+
+> **Which device should I pick?** Store devices (`*_STORE`) and the `STREAMING` device emit pre-formed row events that the Consolidator applies directly to the destination — no SQL-log parsing or CDC-deduction step on the apply path, so they deliver the highest end-to-end consolidation throughput. Reach for a SQL device when your app actually needs raw SQL, JOINs, multi-statement transactions in one connection, or ad-hoc DDL beyond the schema-evolution the Store API handles for you. For a brand-new app, `SQLITE_STORE` is usually the fastest *and* simplest starting point.
 
 ---
 
@@ -267,10 +382,75 @@ Full source: [synclite-logger-java/samples/SyncliteSqlitePostgresApp.java](syncl
 
 ### Same thing in Rust → PostgreSQL
 
+```rust
+use synclite::rusqlite::Connection;
+use synclite::{DestinationOptions, DeviceType, DstSyncMode, DstType, Result, SyncLiteOptions, Value};
+use postgres::{Client, NoTls};
+
+const DB_PATH:        &str = "orders.db";
+const DEVICE_NAME:    &str = "orders-device";
+const POSTGRES_URL:   &str = "postgresql://postgres:postgres@localhost:5432/syncdb";
+const POSTGRES_SCHEMA: &str = "syncschema";
+
+fn main() -> Result<()> {
+    // One call: local SQLite logger + segment shipper + in-process consolidator -> PostgreSQL.
+    synclite::initialize(
+        DeviceType::SQLITE,
+        DEVICE_NAME,
+        DB_PATH,
+        Some(DestinationOptions {
+            dst_type: DstType::Postgres,
+            dst_connection_string: POSTGRES_URL.into(),
+            dst_database: Some("syncdb".into()),
+            dst_schema:   Some(POSTGRES_SCHEMA.into()),
+            dst_sync_mode: DstSyncMode::Consolidation,
+        }),
+        SyncLiteOptions::default(),
+    )?;
+
+    let mut conn = Connection::open(DB_PATH)?;
+    conn.execute("DROP TABLE IF EXISTS orders", &[])?;
+    conn.execute(
+        "CREATE TABLE orders(id INTEGER PRIMARY KEY, item TEXT, qty INTEGER)",
+        &[],
+    )?;
+    conn.execute(
+        "INSERT INTO orders VALUES(?, ?, ?)",
+        &[Value::Int(1), Value::Text("widget".into()), Value::Int(100)],
+    )?;
+    conn.commit()?;
+
+    // Block until the in-flight segment has been applied to PostgreSQL.
+    conn.flush()?;
+    synclite::await_sync(DB_PATH, std::time::Duration::from_secs(30))?;
+
+    // Read back from PostgreSQL.
+    let mut pg = Client::connect(POSTGRES_URL, NoTls)
+        .map_err(|e| synclite::Error::Config(format!("{e}")))?;
+    let pg_row = pg
+        .query_opt(
+            &format!(
+                "SELECT row_to_json(t)::text FROM (SELECT * FROM {}.orders WHERE id = $1) t",
+                POSTGRES_SCHEMA
+            ),
+            &[&1_i64],
+        )
+        .map_err(|e| synclite::Error::Config(format!("{e}")))?;
+    println!("[PG] {:?}", pg_row.map(|r| r.get::<usize, String>(0)));
+
+    conn.close()?;
+    Ok(())
+}
+```
+
+Run it:
+
 ```bash
 cd synclite-code-samples/synclite-runtime/rust
 cargo run --example synclite_rusqlite_postgres
 ```
+
+Full source: [synclite-code-samples/synclite-runtime/rust/synclite_rusqlite_postgres.rs](synclite-code-samples/synclite-runtime/rust/synclite_rusqlite_postgres.rs).
 
 The Rust runtime is the same `cdylib` consumable from Python, Node.js, C/C++, Go, Ruby, and C#. See [Step 4 — Choose Your Use Case](#step-4--choose-your-use-case) for per-language snippets.
 
