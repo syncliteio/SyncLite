@@ -1,58 +1,184 @@
 # Getting Started with SyncLite
 
-> **Build Anything, Sync Anywhere** — open-source, low-code relational data synchronization and consolidation platform.
+> **Build Anything, Sync Anywhere** — the embeddable database runtime with built-in sync.
 >
-> Full interactive guide: https://www.synclite.io/resources/get-started  
 > Full documentation: https://github.com/syncliteio/SyncLite/blob/main/DOCUMENTATION.md
 
 ---
 
 ## What Is SyncLite?
 
-SyncLite gives developers a single toolkit to:
+**SyncLite is a lightweight, embeddable database runtime.** Drop one library into your app and you get a fully-featured embedded database (SQLite, DuckDB, Apache Derby, H2, or HyperSQL) whose every write is durably logged and continuously synced to wherever you want — another database, a data warehouse, a data lake, or just a file in object storage.
 
-- Build **offline-first, sync-ready edge and desktop applications** using embedded databases (SQLite, DuckDB, Apache Derby, H2, HyperSQL) that automatically replicate changes to any cloud destination.
-- Stand up **last-mile data streaming pipelines** with high-throughput event ingestion delivered into any database, data warehouse, or data lake.
-- Configure **database ETL, replication, and migration** pipelines across heterogeneous systems with minimal code.
-- Connect **IoT / MQTT message brokers** to analytical databases in minutes.
+No server to install. No daemon to babysit. No CDC pipeline to wire up. Your application links a jar, a crate, or a native library and ships.
 
-All flows follow one unified architecture:
-
+```text
+your app  ──►  SyncLite Runtime (embedded DB + log + shipper + sync)  ──►  Postgres / MySQL / Snowflake / S3 / ...
 ```
-Edge Sources (SyncLite Logger / DB / DBReader / QReader)
-     │
-      v  compact binary log files
-  Staging Storage  (local dir / SFTP / S3 / MinIO / Kafka / OneDrive / Google Drive)
-     │
-      v
-  SyncLite Consolidator  (always-on sink)
-     │
-      v
-  Destination DB / Data Warehouse / Data Lake
+
+### What you get without installing anything
+
+- **One library, full stack.** Embedded SQL database + write-ahead logger + segment shipper + (optional) in-process consolidator — all inside your process.
+- **Pick your language.** First-class **Java** (jar) and **Rust** (crate) runtimes; the Rust runtime is embeddable from **Python, Node.js, C/C++, Go, Ruby, C#** via a single `cdylib`.
+- **Pick your local DB.** SQLite, DuckDB, Apache Derby, H2, HyperSQL — all behind the same APIs.
+- **Pick your write style.** Plain **JDBC / SQL**, a typed **Store CRUD** API (`insert` / `update` / `delete` / `selectAll`), a fluent **Stream** append-only API, or a drop-in **Jedis** subclass for Redis users.
+- **Offline-first, single binary.** Works on laptops, edge boxes, mobile-class hardware, and inside containers without any external dependency.
+- **Sync is just config.** Point the runtime at a destination and writes start flowing — no separate CDC tool, no Kafka, no replication agent.
+
+### Runtime — what your app embeds
+
+Any number of apps / devices each embed their own runtime, in any
+supported language, all sharing a stage and applying to the same
+destinations — no central server in the hot path.
+
+```mermaid
+flowchart LR
+    classDef app fill:#eef6ff,stroke:#2b6cb0,stroke-width:1px,color:#1a365d
+    classDef rt  fill:#fff8e6,stroke:#c98a00,stroke-width:1.5px,color:#5c3a00
+    classDef dst fill:#f0fff4,stroke:#2f855a,stroke-width:1px,color:#22543d
+
+    subgraph Fleet["Many apps · many devices — laptops · servers · edge boxes · containers · phones · IoT"]
+        direction TB
+
+        subgraph App1["App / Device 1 — Java"]
+            API1["SQL · Store · Stream"]:::app
+            RT1["SyncLite Runtime<br/>DB → Log → Shipper → Consolidator"]:::rt
+            API1 --> RT1
+        end
+
+        subgraph App2["App / Device 2 — Python"]
+            API2["SQL · Store · Stream"]:::app
+            RT2["SyncLite Runtime<br/>DB → Log → Shipper → Consolidator"]:::rt
+            API2 --> RT2
+        end
+
+        subgraph App3["App / Device 3 — Rust"]
+            API3["SQL · Store · Stream"]:::app
+            RT3["SyncLite Runtime<br/>DB → Log → Shipper → Consolidator"]:::rt
+            API3 --> RT3
+        end
+
+        subgraph AppN["App / Device N — Node · C/C++ · Go · Ruby · C# ..."]
+            APIN["SQL · Store · Stream"]:::app
+            RTN["SyncLite Runtime<br/>DB → Log → Shipper → Consolidator"]:::rt
+            APIN --> RTN
+        end
+    end
+
+    Stage[("Shared Stage<br/>FS · S3 · MinIO · SFTP")]
+    RT1 -- async --> Stage
+    RT2 -- async --> Stage
+    RT3 -- async --> Stage
+    RTN -- async --> Stage
+
+    Stage -- apply --> Dst
+
+    Dst["Destinations<br/>Postgres · MySQL · MSSQL · MongoDB<br/>Iceberg · DuckDB · S3"]:::dst
 ```
+
+<sub>Inside each runtime: SQL (JDBC for Java, rusqlite for Rust, native
+bindings for Python / Node / C/C++ / Go / Ruby / C#) plus the Store
+CRUD and Stream APIs all sit on top of the same embedded DB, WAL
+logger, shipper, and in-process consolidator.</sub>
 
 ---
 
-## Platform Components
+## Runtime first, tools on top
 
-| Component | What It Does |
-|---|---|
-| **SyncLite Logger** | Embeddable JDBC driver for Java edge apps — wraps SQLite, DuckDB, Derby, H2, HyperSQL |
-| **SyncLite Runtime** | Full SyncLite runtime in Rust (logger + consolidator), consumable from Rust, Python, and C++ |
-| **SyncLite DB** | Standalone HTTP/JSON database server for any language |
-| **SyncLite Client** | Interactive CLI for managing SyncLite devices |
-| **SyncLite Consolidator** | Central real-time consolidation engine — delivers data to destinations |
-| **SyncLite DBReader** | Database ETL / replication / migration tool |
-| **SyncLite QReader** | IoT MQTT connector (Eclipse Paho; works with any MQTT v3.1 broker) |
-| **SyncLite Job Monitor** | Unified job management and scheduling UI |
-| **SyncLite Validator** | End-to-end integration testing |
-| **Sample Web App** | JSP/Servlet demo showing SyncLite Logger in action |
+SyncLite ships as two things:
+
+1. **The Runtime** — what your application embeds. This is the core of the project: a small library that owns the local DB, the log, the shipper, and (in the full-runtime jar / Rust crate) the in-process consolidator that pushes data to destinations.
+2. **Optional tooling** — webapps and CLIs built **on top of** the same runtime, for teams who want centralized ops, scheduled ETL jobs, IoT ingest, or end-to-end test harnesses. None of them are required to use the runtime in your code.
+
+If you're a developer building an app, you only need group 1. If you're standing up a data platform, group 2 is there when you need it.
+
+### Components
+
+**Embeddable runtime — link it into your app**
+
+| Component | What It Does | README |
+|---|---|---|
+| **SyncLite for Java** (`synclite-<version>.jar`) | One jar = JDBC / Store / Stream APIs + logger + shipper + (optional) **in-process consolidator** (via bundled `synclite_jni` native). Call `initialize(dbPath, deviceName, destinationOptions)` for the single-jar topology, or `initialize(dbPath, conf)` for logger-only mode paired with the standalone Consolidator WAR. | [→](synclite-logger-java/README.md) |
+| **SyncLite Rust Runtime** | Same runtime in Rust (logger + in-process consolidator) as a single `cdylib`. Consumable from **Rust, Python, Node.js, C/C++, Go, Ruby, C#** — anywhere you can load a native library. | [→](synclite-logger-rust/README.md) |
+
+**Optional tooling — built on top of the runtime**
+
+Deploy these only when you want a managed platform. They are standard webapps that consume the same runtime under the hood.
+
+| Component | What It Does | README |
+|---|---|---|
+| **SyncLite DB** | Wraps the runtime as a tiny local-first HTTP/JSON service. Use it when you want the runtime accessible from a language that doesn't (yet) embed the native lib, or when multiple processes share one device. | [→](https://github.com/syncliteio/synclite-db/blob/main/README.md) |
+| **SyncLite Client** | Interactive CLI for inspecting and querying SyncLite devices. | [→](https://github.com/syncliteio/synclite-client/blob/main/README.md) |
+| **SyncLite Consolidator** | Standalone consolidation service for the central topology — accepts log segments from many embedded devices / edge applications and applies them to destinations. | [→](https://github.com/syncliteio/synclite-consolidator/blob/main/README.md) |
+| **SyncLite DBReader** | Configurable database ETL / replication / migration jobs (source DB → SyncLite devices → destinations). | [→](https://github.com/syncliteio/synclite-dbreader/blob/main/README.md) |
+| **SyncLite QReader** | MQTT / IoT connector that lands broker traffic into SyncLite devices. | [→](https://github.com/syncliteio/synclite-qreader/blob/main/README.md) |
+| **SyncLite Job Monitor** | Unified job management and scheduling UI for DBReader / QReader / Consolidator jobs. | [→](https://github.com/syncliteio/synclite-job-monitor/blob/main/README.md) |
+| **SyncLite Validator** | End-to-end integration test harness for SyncLite pipelines. | [→](https://github.com/syncliteio/synclite-validator/blob/main/README.md) |
+| **Sample Web App** | JSP/Servlet demo showing the Java runtime embedded inside a real web app. | [→](https://github.com/syncliteio/synclite-sample-web-app/blob/main/README.md) |
+
+#### Tooling — how it fits together
+
+```mermaid
+flowchart LR
+    classDef src   fill:#eef6ff,stroke:#2b6cb0,color:#1a365d
+    classDef tool  fill:#fef5ff,stroke:#805ad5,stroke-width:1.5px,color:#44337a
+    classDef dev   fill:#fff8e6,stroke:#c98a00,color:#5c3a00
+    classDef ops   fill:#edf2f7,stroke:#4a5568,color:#1a202c
+    classDef dst   fill:#f0fff4,stroke:#2f855a,color:#22543d
+
+    SrcDB["Source DBs<br/>Oracle · MySQL · SQL Server<br/>Postgres · DB2 · MongoDB"]:::src
+    Brokers["IoT / MQTT brokers<br/>Mosquitto · HiveMQ · ..."]:::src
+    Apps["Your Apps<br/>(running embedded runtime)"]:::dev
+
+    DBReader["SyncLite DBReader<br/><sub>scheduled DB → device replication / ETL</sub>"]:::tool
+    QReader["SyncLite QReader<br/><sub>broker → device ingest</sub>"]:::tool
+
+    Devices[("SyncLite Stage")]:::ops
+
+    Consolidator["SyncLite Consolidator<br/><sub>standalone service<br/>applies log segments to destinations</sub>"]:::tool
+
+    JobMon["Job Monitor UI<br/><sub>schedule · monitor · alert<br/>DBReader · QReader · Consolidator jobs</sub>"]:::ops
+    Client["SyncLite Client<br/><sub>CLI — inspect / query devices</sub>"]:::ops
+
+    Dst["Destinations<br/>Postgres · MySQL · MSSQL · MongoDB<br/>Iceberg · DuckDB · S3"]:::dst
+
+    SrcDB   --> DBReader  --> Devices
+    Brokers --> QReader   --> Devices
+    Apps    --> Devices
+    Devices --> Consolidator --> Dst
+
+    JobMon -. orchestrates .-> DBReader
+    JobMon -. orchestrates .-> QReader
+    JobMon -. orchestrates .-> Consolidator
+    Client -. inspects .-> Devices
+```
+
+<sub>Solid lines are data flow. Dashed lines are the control plane.
+Nothing in this diagram is required by the runtime — reach for these
+only when you want a managed platform on top of the embedded
+runtime.</sub>
 
 ---
 
-## Prerequisites
+## SyncLite Devices — three APIs over one runtime
+
+A "device" is just a logical embedded DB that the runtime owns end-to-end (storage + log + sync). Pick the API surface that fits your code, not the other way around:
+
+- **SQL Devices** — full SQL via JDBC (`SQLite`, `DuckDB`, `Derby`, `H2`, `HyperSQL`). Run arbitrary `CREATE` / `ALTER` / `SELECT` / `INSERT` / `UPDATE` / `DELETE`. Use this when you want a real embedded SQL DB and just happen to also want it synced.
+- **Store Devices** — `SyncLiteStore` typed CRUD (`SQLITE_STORE`, `DUCKDB_STORE`, `DERBY_STORE`, `H2_STORE`, `HYPERSQL_STORE`). `insert` / `update` / `delete` / `selectAll` against plain maps; schema evolves automatically. Use this when you want a simple, stable replication contract without writing SQL.
+- **Streaming Device** — `SyncLiteStream` fluent `insert` / `insertBatch` over the append-only `STREAMING` device. Use this for high-throughput event capture where UPDATE/DELETE are not needed.
+
+All three surfaces produce the same log format and use the same shipper + consolidator under the covers, so you can mix and match devices inside a single application.
+
+> **Which device should I pick?** Store devices (`*_STORE`) and the `STREAMING` device emit pre-formed row events that the Consolidator applies directly to the destination — no SQL-log parsing or CDC-deduction step on the apply path, so they deliver the highest end-to-end consolidation throughput. Reach for a SQL device when your app actually needs raw SQL, JOINs, multi-statement transactions in one connection, or ad-hoc DDL beyond the schema-evolution the Store API handles for you. For a brand-new app, `SQLITE_STORE` is usually the fastest *and* simplest starting point.
+
+---
+
+## Step 1 — Build SyncLite
 
 > **Architecture support.** SyncLite is **64-bit only** — `x86_64` and `aarch64` on Windows / Linux / macOS. 32-bit hosts are not supported because the embedded Rust runtime depends on the DuckDB engine, which requires a 64-bit host.
+
+### Prerequisites (Java-only build)
 
 | Requirement | Version |
 |---|---|
@@ -60,49 +186,75 @@ Edge Sources (SyncLite Logger / DB / DBReader / QReader)
 | Apache Maven | 3.8.6+ |
 | Git | any recent version |
 
-> The `deploy.sh` / `deploy.bat` scripts download **Apache Tomcat 9.0.117** and **OpenJDK 25** automatically — no manual JDK installation required for a quick start.
+### Additional prerequisites (build all loggers including the Rust runtime)
 
-> **Building the Rust loggers? You also need a native C/C++ toolchain (system linker) in addition to Rust:**
-> - **Windows**: [Microsoft C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) ("Desktop development with C++" workload, MSVC v143 + Windows 10/11 SDK). Without it, `cargo` fails with `error: linker 'link.exe' not found`. Run the build from the **"x64 Native Tools Command Prompt for VS"**.
-> - **Linux**: `build-essential`, `cmake`, `pkg-config` (e.g. `sudo apt install build-essential cmake pkg-config`).
-> - **macOS**: `xcode-select --install`.
+| Requirement | Version |
+|---|---|
+| Rust toolchain (`rustup`, `cargo`) | 1.86.0 |
+| Native C/C++ toolchain (system linker) — see callout below | platform default |
+| [`cargo-zigbuild`](https://github.com/rust-cross/cargo-zigbuild) | latest |
+| [Zig](https://ziglang.org/download/) compiler on `PATH` | latest stable |
+| Rust standard libraries for Linux x86_64 and aarch64 | — |
+
+> **Native C/C++ toolchain is required in addition to Rust.** Rust shells out to the platform linker to produce the cdylibs, and the DuckDB / SQLite crates ship native code that needs a C/C++ compiler.
 >
-> Skip this entirely with `-DskipNonJavaLoggers=true` for a Java-only build.
+> - **Windows**: install [Microsoft C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) and select the **"Desktop development with C++"** workload (MSVC v143 + Windows 10/11 SDK). Without this, `cargo build` fails with `error: linker 'link.exe' not found`. Run the build from the **"x64 Native Tools Command Prompt for VS"** (or any shell where `link.exe` is on `PATH`).
+> - **Linux**: install `build-essential` (gcc, ld, make) plus `cmake` and `pkg-config`. Debian/Ubuntu: `sudo apt install build-essential cmake pkg-config`. Fedora/RHEL: `sudo dnf groupinstall "Development Tools" && sudo dnf install cmake pkgconf-pkg-config`.
+> - **macOS**: `xcode-select --install` (Xcode Command Line Tools).
 
----
-
-## Step 1 — Clone and Build
+The Rust cdylibs for **Linux x86_64 and aarch64** are cross-compiled on every host so a single `mvn package` produces a complete, multi-arch `lib/native/` payload. Install the cross-compile toolchain once on the build host:
 
 ```bash
-git clone --recurse-submodules git@github.com:syncliteio/SyncLite.git SyncLite
+cargo install cargo-zigbuild
+rustup target add x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu
+# zig must be on PATH — download from https://ziglang.org/download/
+zig version
+```
+
+> If `mvn package` fails with `error: no such command: zigbuild`, you are missing `cargo-zigbuild` — run `cargo install cargo-zigbuild` and retry.
+
+macOS (`libsynclite_<rev>.dylib`) still requires running the build on a macOS host — the Apple SDK isn't redistributable so it cannot be cross-compiled from Windows or Linux.
+
+> The `bin/deploy.sh` / `bin/deploy.bat` scripts download **Apache Tomcat 9.0.117** and **OpenJDK 25** automatically — no manual JDK installation required for a quick start of the optional platform.
+
+### Clone
+
+```bash
+git clone --recurse-submodules https://github.com/syncliteio/SyncLite.git SyncLite
 cd SyncLite
 ```
+
+### Build flavors
 
 SyncLite has **three** Maven build flavors, ordered from largest to smallest output. Pick the smallest one that meets your need.
 
 | # | Flavor | Produces | Rust toolchain? |
 |---|---|---|---|
-| 1 | **Full platform** (default) | `target/synclite-platform-<rev>.zip` — Tomcat scripts + WARs + tools + samples + multi-arch native | Required |
+| 1 | **Full platform** (default) | `target/synclite-platform-<rev>.zip` — Tomcat scripts + WARs + tools + samples + multi-arch native runtime | Required |
 | 2 | **Full platform, Java-only** | Same as #1 but no `lib/native/` | Not required |
-| 3 | **Runtime** | `target/synclite-runtime-<rev>.zip` — `lib/java/` (synclite jar) + multi-arch `lib/native/` (Rust cdylibs) + cross-language `sample-apps/{cpp,java,python,rust}` | Required |
+| 3 | **Runtime** (recommended for app developers) | `target/synclite-runtime-<rev>.zip` — `lib/java/` (synclite jar) + multi-arch `lib/native/` (Rust cdylibs) + cross-language `sample-apps/{cpp,java,python,rust}` | Required |
 
 ```bash
-# 1. Full platform (default) — everything
+# 1. Full platform (default) — Tomcat platform zip with WARs, tools, all language samples, and the multi-arch Rust runtime
 mvn -Drevision=oss clean install
 
-# 2. Full platform, Java-only — same as #1 but no native libraries
+# 2. Full platform, Java-only — same Tomcat platform zip as #1 but no lib/native/ (no Rust toolchain required)
 mvn -Drevision=oss -DskipNonJavaLoggers=true clean install
 
 # 3. Runtime — slim embeddable zip: synclite jar + multi-arch native cdylibs + sample-apps/{cpp,java,python,rust}
 mvn -Drevision=oss -DruntimeOnly=true clean install
 ```
 
+> **What `-DruntimeOnly=true` does:** activates a Maven profile that reduces the reactor to just the `synclite-logger-java/logger` module and switches the assembly from the full `synclite-platform-<rev>.zip` to the slim `synclite-runtime-<rev>.zip`. Skips the consolidator, dbreader, qreader, job-monitor, validator, sample-web-app, db, and client modules.
+
+> **What `-DskipNonJavaLoggers=true` does:** skips all parent-pom Rust executions (host build + Linux x86_64 + Linux aarch64) and excludes `lib/native/` from the assembly. It also auto-activates `-DskipRustCrossCompile=true` and `-DskipRustTests=true`. Use whenever you don't have a Rust toolchain on the build host.
+
 ### Build accelerators
 
 These switches combine with any flavor above:
 
-- `-DskipTests` — skip JUnit + Rust device-integration tests.
-- `-DskipRustCrossCompile=true` — skip the two Linux cross-compile cargo executions (use on hosts without `cargo-zigbuild` + `zig`; host-arch cdylib still built). Only relevant for flavors #1 and #3.
+- **`-DskipTests`** — skip JUnit + Rust device-integration tests.
+- **`-DskipRustCrossCompile=true`** — skip the two Linux cross-compile cargo executions (`x86_64-unknown-linux-gnu` + `aarch64-unknown-linux-gnu`). Use on hosts without `cargo-zigbuild` + `zig` on `PATH`; the host-arch cdylib is still built. Only relevant for flavors #1 and #3 (flavor #2 already skips all Rust).
 
 ```bash
 # Fastest full platform build (skips all tests)
@@ -112,33 +264,201 @@ mvn -Drevision=oss -DskipTests clean install
 mvn -Drevision=oss -DruntimeOnly=true -DskipRustCrossCompile=true -DskipTests clean install
 ```
 
-### Output layouts
+### Build the Rust runtime directly (no Maven packaging)
 
-Full platform flavors (#1 and #2):
+If you only need the Rust crate / cdylib for embedding in Rust, Python, Node.js, C/C++, Go, Ruby, or C#, you can skip Maven entirely and build the Rust workspace directly:
 
-```
-SyncLite/target/synclite-platform-oss/
-├─ bin/          # deploy / start / stop scripts, Docker helpers
-├─ lib/          # synclite-logger JAR, consolidator WAR (+ native cdylibs in #1)
-├─ tools/        # synclite-db, dbreader, qreader, job-monitor, validator
-└─ sample-apps/  # Java, Python, and JSP/Servlet samples
+```bash
+cd synclite-logger-rust
+cargo build --workspace
 ```
 
-Runtime flavor (#3):
+### Release structure
+
+The **runtime** flavor (#3) assembles under `SyncLite/target/synclite-runtime-oss/`:
 
 ```
-SyncLite/target/synclite-runtime-oss/
-├─ lib/
-│  ├─ java/    # synclite-<version>.jar + synclite.conf
-│  └─ native/  # libsynclite_<version>.{dll,lib,so,dylib} + synclite.conf
-├─ sample-apps/  # cpp, java, python, rust
-├─ LICENSE
-└─ synclite_platform_version.txt
+synclite-runtime-oss/
++-- lib/
+|   +-- java/
+|   |   +-- synclite-<version>.jar                    # Add to your app classpath
+|   |   +-- synclite.conf                             # Default logger configuration
+|   +-- native/                                       # Multi-arch Rust runtime cdylibs
+|   |   +-- libsynclite_<version>.dll                 # Windows host build
+|   |   +-- libsynclite_<version>.lib                 # Windows import library
+|   |   +-- libsynclite_<version>_linux_x86_64.so     # cross-compiled (omitted if -DskipRustCrossCompile=true)
+|   |   +-- libsynclite_<version>_linux_aarch64.so    # cross-compiled (omitted if -DskipRustCrossCompile=true)
+|   |   +-- libsynclite_<version>.dylib               # only if built on macOS
+|   |   +-- synclite.conf
++-- sample-apps/                                      # Language samples: cpp, java, python, rust
++-- LICENSE
++-- synclite_platform_version.txt
+```
+
+The **full platform** flavors (#1 and #2) assemble under `SyncLite/target/synclite-platform-oss/`:
+
+```
+synclite-platform-oss/
++-- bin/                                              # deploy / start / stop, Docker helpers
++-- lib/                                              # Same as runtime zip above
+|   +-- java/
+|   +-- native/                                       # Present in flavor #1 only
++-- tools/                                            # synclite-db, dbreader, qreader, job-monitor, validator
++-- sample-apps/                                      # Java, Python, and JSP/Servlet samples
 ```
 
 ---
 
-## Step 2 — Deploy and Start
+## Step 2 — Try the Embedded Runtime (Java → PostgreSQL)
+
+The fastest way to see SyncLite in action is to drop the single jar into a Java app and sync writes straight into PostgreSQL — no Tomcat, no separate Consolidator service.
+
+### Spin up a local PostgreSQL destination
+
+Use the bundled Docker helper:
+
+```bash
+cd target/synclite-platform-oss/bin/dst/postgresql/
+./docker-deploy.sh    # starts PostgreSQL on localhost:5432 (user: postgres / pwd: postgres)
+```
+
+Or use any existing PostgreSQL with a database `syncdb` and schema `syncschema`.
+
+### Run the bundled sample
+
+```bash
+JAR=synclite-logger-java/logger/target/synclite-oss.jar
+(cd synclite-logger-java/samples \
+   && javac -cp ../logger/target/synclite-oss.jar SyncliteSqlitePostgresApp.java)
+java -cp "$JAR:synclite-logger-java/samples" SyncliteSqlitePostgresApp
+```
+
+### What the sample does
+
+```java
+import io.synclite.*;
+import java.nio.file.Path;
+import java.sql.*;
+import java.time.Duration;
+
+public class SyncliteSqlitePostgresApp {
+    public static void main(String[] args) throws Exception {
+        Path  dbPath  = Path.of("orders.db");
+        String pgUrl  = "jdbc:postgresql://localhost:5432/syncdb";
+        String schema = "syncschema";
+
+        DestinationOptions dst = DestinationOptions.builder()
+                .dstType(DstType.POSTGRES)
+                .connectionString(pgUrl)
+                .database("syncdb").schema(schema)
+                .syncMode(DstSyncMode.CONSOLIDATION).build();
+
+        // One call: local SQLite logger + segment shipper + in-process consolidator -> PostgreSQL.
+        SQLite.initialize(dbPath, "orders-device", dst);
+        try {
+            try (Connection c = DriverManager.getConnection("jdbc:synclite_sqlite:" + dbPath);
+                 Statement  s = c.createStatement()) {
+                s.execute("DROP TABLE IF EXISTS orders");
+                s.execute("CREATE TABLE orders(id INTEGER PRIMARY KEY, item TEXT, qty INTEGER)");
+                s.execute("INSERT INTO orders VALUES(1, 'widget', 100)");
+            }
+            SyncLite.awaitSync(dbPath, Duration.ofSeconds(30));   // wait for PG apply
+
+            try (Connection pg = DriverManager.getConnection(pgUrl, "postgres", "postgres");
+                 PreparedStatement ps = pg.prepareStatement(
+                     "SELECT row_to_json(t)::text FROM (SELECT * FROM "
+                   + schema + ".orders WHERE id = ?) t")) {
+                ps.setLong(1, 1);
+                try (ResultSet rs = ps.executeQuery()) {
+                    System.out.println("[PG] " + (rs.next() ? rs.getString(1) : "no row"));
+                }
+            }
+        } finally { SQLite.closeDevice(dbPath); }
+    }
+}
+```
+
+Full source: [synclite-logger-java/samples/SyncliteSqlitePostgresApp.java](synclite-logger-java/samples/SyncliteSqlitePostgresApp.java).
+
+### Same thing in Rust → PostgreSQL
+
+```rust
+use synclite::rusqlite::Connection;
+use synclite::{DestinationOptions, DeviceType, DstSyncMode, DstType, Result, SyncLiteOptions, Value};
+use postgres::{Client, NoTls};
+
+const DB_PATH:        &str = "orders.db";
+const DEVICE_NAME:    &str = "orders-device";
+const POSTGRES_URL:   &str = "postgresql://postgres:postgres@localhost:5432/syncdb";
+const POSTGRES_SCHEMA: &str = "syncschema";
+
+fn main() -> Result<()> {
+    // One call: local SQLite logger + segment shipper + in-process consolidator -> PostgreSQL.
+    synclite::initialize(
+        DeviceType::SQLITE,
+        DEVICE_NAME,
+        DB_PATH,
+        Some(DestinationOptions {
+            dst_type: DstType::Postgres,
+            dst_connection_string: POSTGRES_URL.into(),
+            dst_database: Some("syncdb".into()),
+            dst_schema:   Some(POSTGRES_SCHEMA.into()),
+            dst_sync_mode: DstSyncMode::Consolidation,
+        }),
+        SyncLiteOptions::default(),
+    )?;
+
+    let mut conn = Connection::open(DB_PATH)?;
+    conn.execute("DROP TABLE IF EXISTS orders", &[])?;
+    conn.execute(
+        "CREATE TABLE orders(id INTEGER PRIMARY KEY, item TEXT, qty INTEGER)",
+        &[],
+    )?;
+    conn.execute(
+        "INSERT INTO orders VALUES(?, ?, ?)",
+        &[Value::Int(1), Value::Text("widget".into()), Value::Int(100)],
+    )?;
+    conn.commit()?;
+
+    // Block until the in-flight segment has been applied to PostgreSQL.
+    conn.flush()?;
+    synclite::await_sync(DB_PATH, std::time::Duration::from_secs(30))?;
+
+    // Read back from PostgreSQL.
+    let mut pg = Client::connect(POSTGRES_URL, NoTls)
+        .map_err(|e| synclite::Error::Config(format!("{e}")))?;
+    let pg_row = pg
+        .query_opt(
+            &format!(
+                "SELECT row_to_json(t)::text FROM (SELECT * FROM {}.orders WHERE id = $1) t",
+                POSTGRES_SCHEMA
+            ),
+            &[&1_i64],
+        )
+        .map_err(|e| synclite::Error::Config(format!("{e}")))?;
+    println!("[PG] {:?}", pg_row.map(|r| r.get::<usize, String>(0)));
+
+    conn.close()?;
+    Ok(())
+}
+```
+
+Run it:
+
+```bash
+cd synclite-code-samples/synclite-runtime/rust
+cargo run --example synclite_rusqlite_postgres
+```
+
+Full source: [synclite-code-samples/synclite-runtime/rust/synclite_rusqlite_postgres.rs](synclite-code-samples/synclite-runtime/rust/synclite_rusqlite_postgres.rs).
+
+The Rust runtime is the same `cdylib` consumable from Python, Node.js, C/C++, Go, Ruby, and C#. See [Step 4 — Choose Your Use Case](#step-4--choose-your-use-case) for per-language snippets.
+
+---
+
+## Step 3 — (Optional) Deploy the Full Platform
+
+Skip this step if all you need is the embedded runtime. Use it when you want the central **Consolidator + DBReader + QReader + Job Monitor + Sample Web App** running as services.
 
 ### Native (Windows / Linux / macOS)
 
@@ -187,9 +507,17 @@ bin/dst/mysql/docker-deploy.sh      # MySQL destination
 | http://localhost:8080/synclite-job-monitor | Manage and schedule all SyncLite jobs |
 | http://localhost:8080/manager | Tomcat manager (`synclite` / `synclite`) |
 
+### Try the Sample Web App
+
+The sample web app shows the Java runtime embedded inside a real JSP/Servlet app, with live sync to a destination configured in the Consolidator.
+
+1. Open [http://localhost:8080/synclite-consolidator](http://localhost:8080/synclite-consolidator) and configure a destination database (e.g., the PostgreSQL container you started in Step 2).
+2. Open [http://localhost:8080/synclite-sample-app](http://localhost:8080/synclite-sample-app)
+3. Create a device, run SQL workloads, and watch live sync to your configured destination — all from your browser.
+
 ---
 
-## Step 3 — Choose Your Use Case
+## Step 4 — Choose Your Use Case
 
 ### 🦀 Rust — Pure Native Library (NEW)
 
@@ -210,7 +538,7 @@ fn main() -> Result<()> {
     const DB_PATH: &str = "orders.db";
     const DEVICE_NAME: &str = "orders-device";
 
-    // Wire up logger + shipper + embedded consolidator in one call.
+    // Offline-first SQLite device that syncs every change to PostgreSQL.
     synclite::initialize(
         DeviceType::SQLITE,
         DEVICE_NAME,
@@ -240,7 +568,8 @@ fn main() -> Result<()> {
         println!("[READ FROM LOCAL DB] {:?}", row);
     }
 
-    // Roll the active log segment + wait for PostgreSQL apply.
+    // Demo only: await_sync is used here to make the sample deterministic.
+    // In production, sync runs in the background after commit/flush.
     conn.flush()?;
     match synclite::await_sync(DB_PATH, std::time::Duration::from_secs(30)) {
         Ok(()) => {
@@ -257,6 +586,11 @@ fn main() -> Result<()> {
         }
         Err(e) => println!("[SYNC] await_sync failed: {e}"),
     }
+
+    // Optional runtime controls:
+    // synclite::pause_sync(DB_PATH)?;
+    // synclite::resume_sync(DB_PATH)?;
+
     conn.close()?;
     Ok(())
 }
@@ -265,31 +599,41 @@ fn main() -> Result<()> {
 **Supported devices:** `Sqlite` (SQL + STORE + STREAMING), `Duckdb` (SQL + STORE).
 **Supported destinations:** `Sqlite`, `Duckdb`, `Postgres`.
 
-**Reset a device** with `synclite::reinitialize(db_path, clean_destination)` —
+**Device encryption:** not supported in the Rust runtime yet.
+
+**Need to reset a device?** `synclite::reinitialize(db_path, clean_destination)`
 wipes per-device local state and the device's destination metadata so the next
-`synclite::initialize` re-seeds from scratch. `clean_destination=true` drops
-this device's user tables on the destination in `REPLICATION` mode and is a
-safe no-op in `CONSOLIDATION` mode. A trigger-file protocol
-(`reinitialize.<device-name>` / `reinitialize_with_clean_destination.<device-name>`)
-lets out-of-process tooling force a reinit on the next bring-up.
+`synclite::initialize` re-seeds from scratch under the same UUID and device name.
+With `clean_destination=true` in `REPLICATION` mode the user tables owned by
+this device are dropped too; in `CONSOLIDATION` mode dropping is a no-op so
+sibling devices on a shared destination stay safe. Drop a
+`reinitialize.<device-name>` or
+`reinitialize_with_clean_destination.<device-name>` file alongside the database
+to trigger a reinit on the next bring-up without writing code.
 
-**Pause sync** with `synclite::pause_sync(db_path)` — halts only the
-consolidator's apply step; the logger keeps appending segments and the shipper
-keeps publishing them locally. `synclite::resume_sync(db_path)` drains the
-queue. A `pause_sync.<device-name>` / `resume_sync.<device-name>` trigger-file
-pair toggles state on the next `initialize`.
+**Need to pause sync?** `synclite::pause_sync(db_path)` halts only the
+consolidator's apply step — the logger keeps appending segments and the shipper
+keeps publishing them locally. Call `synclite::resume_sync(db_path)` to drain
+the queue. State is persisted in a sentinel file, and a
+`pause_sync.<device-name>` / `resume_sync.<device-name>` trigger-file pair
+toggles state on the next `initialize` without writing code.
 
-**Inspect sync state.** `synclite::sync_status(db_path)` reports the run state
-(`NotInitialized` / `Paused` / `Running`) plus the consolidator's last
-heartbeat. `synclite::sync_statistics(db_path)` returns segments-applied / ops /
-txns / bytes / last consolidated commit id. `synclite::sync_latency(db_path)`
-returns the wall-clock lag in milliseconds (`source − applied`); `-1` when the
-applied side is unknown.
+**Inspecting sync state.** `synclite::sync_status(db_path)` returns the run
+state (`NotInitialized` / `Paused` / `Running`) plus the consolidator's last
+heartbeat row. `synclite::sync_statistics(db_path)` reports segments-applied,
+ops, txns, bytes, and the last consolidated commit id. `synclite::sync_latency(db_path)`
+returns `source - applied` as wall-clock milliseconds (every `commit_id` is a
+`System.currentTimeMillis()` value); `-1` means the applied side is unknown
+(destination unreachable, consolidator not running yet, etc.).
 
-Runnable samples live under `synclite-code-samples/synclite-runtime/rust/` —
-`cargo run --example synclite_rusqlite` from that folder gets you the
-rusqlite-style example, with `synclite_duckdb_store` and
-`synclite_streaming` covering the other device shapes.
+Runnable samples live in [`synclite-code-samples/synclite-runtime/rust/`](synclite-code-samples/synclite-runtime/rust/):
+
+```sh
+cd synclite-code-samples/synclite-runtime/rust
+cargo run --example synclite_rusqlite
+cargo run --example synclite_duckdb_store
+cargo run --example synclite_streaming
+```
 
 ---
 
@@ -342,11 +686,12 @@ Run with the SyncLite jar on the classpath (no extra fat jar — the in-process 
 java -cp synclite-logger-java/logger/target/synclite-oss.jar:. App
 ```
 
-**Section A below** describes the *logger-only* mode (`synclite-<version>.jar`) which works
-with a separate standalone Consolidator WAR — useful when many devices fan in to one
-central pipeline.
+**Section A below** describes the *logger-only* mode (same `synclite-<version>.jar`, just
+called via `initialize(dbPath, conf)` instead of `initialize(dbPath, deviceName, dst)`)
+which works with a separate standalone Consolidator WAR — useful when many devices fan in
+to one central pipeline.
 
-Runnable embedded-runtime sample: `synclite-logger-java/samples/SyncliteSqlitePostgresApp.java`.
+Runnable embedded-runtime sample: [`synclite-logger-java/samples/SyncliteSqlitePostgresApp.java`](synclite-logger-java/samples/SyncliteSqlitePostgresApp.java).
 
 ---
 
@@ -447,17 +792,36 @@ try (SyncLiteStream stream = SyncLiteStream.open(dbPath)) {
 
 ---
 
-### D. SyncLite DB — Any Language via HTTP/JSON
 
-Start the server, then send plain HTTP POST requests — no SDK needed.
+---
+
+### G. SyncLite DB — Local-First HTTP/JSON Database (Any Language)
+
+SyncLite DB is a local-first, sync-enabled database server. The recommended way to run it is as a web application (WAR) with a browser-based GUI:
+
+1. **Deploy the WAR:**  
+   - Copy `synclite-db-oss.war` (from `tools/synclite-db/` or `root/web/target/`) into the `webapps/` directory of your Apache Tomcat server.
+   - Start Tomcat (see platform or Tomcat documentation).
+
+2. **Access the Web UI:**  
+   - Open your browser and go to:  
+     `http://localhost:8080/synclite-db`  
+     (Adjust port if your Tomcat uses a different one.)
+
+3. **Configure & Start:**  
+   - Use the web interface to configure databases, logger options, and start/stop the SyncLite DB server.
+   - All management, monitoring, and job setup is now available via the GUI.
+
+> **Note:** The legacy CLI scripts (`synclite-db.sh` / `.bat`) are still available for advanced/manual use:
 
 ```bash
-# Start
-./tools/synclite-db/synclite-db.sh --config synclite_db.conf   # Linux/macOS
-tools\synclite-db\synclite-db.bat --config synclite_db.conf    # Windows
+# Linux / macOS
+./tools/synclite-db/synclite-db.sh --config synclite_db.conf
+# Windows
+tools\synclite-db\synclite-db.bat --config synclite_db.conf
 ```
 
-**Python example:**
+Once running, you can send plain HTTP POST requests — no SDK needed. Example (Python):
 
 ```python
 import requests
@@ -469,8 +833,7 @@ requests.post(BASE, json={
     "db-type": "SQLITE",
     "db-name": "myapp",
     "synclite-logger-options": {
-        "local-data-stage-directory": "/tmp/synclite/stageDir",
-        "device-stage-type": "FS"
+        "local-data-stage-directory": "/tmp/stage"
     },
     "sql": "initialize"
 })
@@ -517,29 +880,39 @@ QReader subscribes to MQTT topics and lands data in your destination database in
 
 ---
 
-## Step 4 — Configure the Consolidator
-
-Open **http://localhost:8080/synclite-consolidator** and:
-
-1. **Configure Job** — set the staging storage path (or SFTP/S3/MinIO/Kafka URL).
-2. Add a **Destination** — choose from PostgreSQL, MySQL, MariaDB, SQL Server, Oracle, Amazon Redshift, ClickHouse, MongoDB, Apache Iceberg, Delta Lake, Apache Hudi, Parquet/CSV.
-3. Start the job. The dashboard shows per-device replication lag, throughput, and errors in real time.
 
 ---
 
-## Step 5 — Staging Storage Options
+## Configure the Consolidator
 
-Configure `local-data-stage-directory` in `synclite.conf` for local or NFS staging.  
-For remote staging, set the appropriate properties in the same config file:
+To enable sync from the sample app or any SyncLite device, you must configure the SyncLite Consolidator:
 
-| Staging Backend | Docker helper |
-|---|---|
-| SFTP | `bin/stage/sftp/docker-deploy.sh` |
-| MinIO | `bin/stage/minio/docker-deploy.sh` |
-| Amazon S3 | configure `s3-*` properties in conf |
-| Apache Kafka | configure `kafka-*` properties in conf |
-| Microsoft OneDrive | configure `onedrive-*` properties in conf |
-| Google Drive | configure `gdrive-*` properties in conf |
+1. Open [http://localhost:8080/synclite-consolidator](http://localhost:8080/synclite-consolidator)
+2. Click **Configure Job** and set the staging storage path (e.g., a local directory, or SFTP/S3/MinIO/Kafka URL).
+3. Add a **Destination** — choose from PostgreSQL, MySQL, MariaDB, SQL Server, Oracle, Amazon Redshift, ClickHouse, MongoDB, Apache Iceberg, Delta Lake, Apache Hudi, Parquet/CSV, and more.
+4. Start the job. The dashboard will show per-device replication lag, throughput, and errors in real time.
+
+---
+
+## Staging Storage Options
+
+SyncLite supports a variety of staging backends for log shipping:
+
+- **Local/NFS:** Set `local-data-stage-directory` in your `synclite.conf` or SyncLite DB configuration.
+- **SFTP:** Use the provided helper script:  
+    `bin/stage/sftp/docker-deploy.sh`
+- **MinIO:**  
+    `bin/stage/minio/docker-deploy.sh`
+- **Amazon S3:**  
+    Configure `s3-*` properties in your config file.
+- **Apache Kafka:**  
+    Configure `kafka-*` properties in your config file.
+- **Microsoft OneDrive:**  
+    Configure `onedrive-*` properties in your config file.
+- **Google Drive:**  
+    Configure `gdrive-*` properties in your config file.
+
+> See the [full documentation](https://github.com/syncliteio/SyncLite/blob/main/DOCUMENTATION.md) for advanced staging and destination configuration.
 
 ---
 
@@ -559,12 +932,11 @@ For remote staging, set the appropriate properties in the same config file:
 
 | Resource | Link |
 |---|---|
-| Interactive Get Started guide | https://www.synclite.io/resources/get-started |
 | Full platform documentation | https://github.com/syncliteio/SyncLite/blob/main/DOCUMENTATION.md |
 | Website | https://www.synclite.io |
 | GitHub repository | https://github.com/syncliteio/SyncLite |
-| Support email | support@synclite.io |
-| Patent | about.html#patent |
+| Community | https://github.com/syncliteio/SyncLite/issues |
+| Patent | https://www.synclite.io/about |
 | Contribution guide | [CONTRIBUTING.md](CONTRIBUTING.md) |
 | License (Apache 2.0) | [LICENSE](LICENSE) |
 
