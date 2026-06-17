@@ -273,6 +273,8 @@ cd synclite-logger-rust
 cargo build --workspace
 ```
 
+> On Windows, root-level Cargo commands such as `cargo test --manifest-path synclite-logger-rust/Cargo.toml ...` also inherit the repository's `.cargo/config.toml`, which keeps `DUCKDB_DOWNLOAD_LIB=true` enabled so DuckDB's prebuilt `duckdb.dll` / `duckdb.lib` artifacts are resolved automatically.
+
 ### Release structure
 
 The **runtime** flavor (#3) assembles under `SyncLite/target/synclite-runtime-oss/`:
