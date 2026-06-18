@@ -24,7 +24,7 @@ your app  ──►  SyncLite Runtime (embedded DB + log + shipper + sync)  ─�
 ### What you get without installing anything
 
 - **One library, full stack.** Embedded SQL database + write-ahead logger + segment shipper + (optional) in-process consolidator — all inside your process.
-- **Pick your language.** First-class **Java** (jar) and **Rust** (crate) runtimes; the Rust runtime is embeddable from **Python, Node.js, C/C++, Go, Ruby, C#** via a single `cdylib`.
+- **Pick your language.** Two first-class SyncLite Runtimes — **Java** (jar) and **Rust** (crate); the Rust build is embeddable from **Python, Node.js, C/C++, Go, Ruby, C#** via a single `cdylib`.
 - **Pick your local DB.** SQLite, DuckDB, Apache Derby, H2, HyperSQL — all behind the same APIs.
 - **Pick your write style.** Plain **JDBC / SQL**, a typed **Store CRUD** API (`insert` / `update` / `delete` / `selectAll`), a fluent **Stream** append-only API, or a drop-in **Jedis** subclass for Redis users.
 - **Offline-first, single binary.** Works on laptops, edge boxes, mobile-class hardware, and inside containers without any external dependency.
@@ -105,8 +105,8 @@ If you're a developer building an app, you only need group 1. If you're standing
 
 | Component | Description | README |
 |---|---|---|
-| **SyncLite for Java** (`synclite-<version>.jar`) | One jar = JDBC / Store / Stream APIs + logger + shipper + (optional) **in-process consolidator** (via bundled `synclite_jni` native). Call `initialize(dbPath, deviceName, destinationOptions)` for the single-jar topology, or `initialize(dbPath, conf)` for logger-only mode paired with the standalone Consolidator WAR. | [→](synclite-logger-java/README.md) |
-| **SyncLite Rust Runtime** | Same runtime in Rust (logger + in-process consolidator) as a single `cdylib`. Consumable from **Rust, Python, Node.js, C/C++, Go, Ruby, C#** — anywhere you can load a native library. | [→](synclite-logger-rust/README.md) |
+| **SyncLite Runtime (Java)** (`synclite-<version>.jar`) | One jar = JDBC / Store / Stream APIs + logger + shipper + (optional) **in-process consolidator** (via bundled `synclite_jni` native). Call `initialize(dbPath, deviceName, destinationOptions)` for the single-jar topology, or `initialize(dbPath, conf)` for logger-only mode paired with the standalone Consolidator WAR. | [→](synclite-logger-java/README.md) |
+| **SyncLite Runtime (Rust)** | Same runtime in Rust (logger + in-process consolidator) as a single `cdylib`. Consumable from **Rust, Python, Node.js, C/C++, Go, Ruby, C#** — anywhere you can load a native library. | [→](synclite-logger-rust/README.md) |
 
 ### Optional tooling — built on top of the runtime
 
@@ -121,7 +121,7 @@ Deploy these only when you want a managed platform. They are standard webapps th
 | **SyncLite QReader** | MQTT / IoT connector that lands broker traffic into SyncLite devices. | [→](https://github.com/syncliteio/synclite-qreader/blob/main/README.md) |
 | **SyncLite Job Monitor** | Unified job management and scheduling UI for DBReader / QReader / Consolidator jobs. | [→](https://github.com/syncliteio/synclite-job-monitor/blob/main/README.md) |
 | **SyncLite Validator** | End-to-end integration test harness for SyncLite pipelines. | [→](https://github.com/syncliteio/synclite-validator/blob/main/README.md) |
-| **Sample Web App** | JSP/Servlet demo showing the Java runtime embedded inside a real web app. | [→](https://github.com/syncliteio/synclite-sample-web-app/blob/main/README.md) |
+| **Sample Web App** | JSP/Servlet demo that embeds SyncLite (Java) in **logger-only** mode and pairs with the standalone Consolidator WAR for sync. | [→](https://github.com/syncliteio/synclite-sample-web-app/blob/main/README.md) |
 
 #### Tooling — how it fits together
 
@@ -183,7 +183,7 @@ All three surfaces produce the same log format and use the same shipper + consol
 
 ## Build SyncLite
 
-> **Architecture support.** SyncLite is **64-bit only** — `x86_64` and `aarch64` on Windows / Linux / macOS. 32-bit hosts are not supported because the embedded Rust runtime depends on the DuckDB engine, which requires a 64-bit host.
+> **Architecture support.** SyncLite is **64-bit only** — `x86_64` and `aarch64` on Windows / Linux / macOS. 32-bit hosts are not supported because SyncLite Runtime (Rust) depends on the DuckDB engine, which requires a 64-bit host.
 
 **Prerequisites (Java-only build):** Java 25, Apache Maven 3.8.6+
 
@@ -394,7 +394,7 @@ Full runnable sample: [`synclite-logger-java/samples/SyncliteSqlitePostgresApp.j
 #### Rust / Python / C++ (embedded runtime)
 
 ```bash
-# Build the Rust runtime and run a sample directly
+# Build SyncLite Runtime (Rust) and run a sample directly
 cd synclite-code-samples/synclite-runtime/rust
 cargo run --example synclite_rusqlite
 
