@@ -56,9 +56,32 @@
 			<fileMode>644</fileMode>
 			<outputDirectory>lib/native</outputDirectory>
 		</fileSet>
-		<!-- Cross-language sample apps (cpp / java / python / rust under synclite-runtime/) -->
 		<fileSet>
-			<directory>${project.basedir}/synclite-code-samples/synclite-runtime</directory>
+			<!-- Host-platform PyO3 wheel built by maturin (see pom.xml build-python-wheel). -->
+			<directory>${project.basedir}/synclite-logger-rust/python/dist</directory>
+			<includes>
+				<include>synclite-${revision}-*.whl</include>
+			</includes>
+			<fileMode>644</fileMode>
+			<outputDirectory>lib/python</outputDirectory>
+		</fileSet>
+		<fileSet>
+			<!--
+			  Self-contained Rust SDK source tree staged by pom.xml's
+			  `stage-rust-source-tree` antrun step. Cargo workspace with all
+			  SyncLite crates needed by the Rust sample (synclite facade +
+			  logger + consolidator + observability), minus the language-binding
+			  crates. The release Rust sample uses path dependencies into this
+			  tree so `cargo run` works offline.
+			-->
+			<directory>${project.basedir}/synclite-logger-rust/target/lib-rust-release/synclite-source</directory>
+			<fileMode>644</fileMode>
+			<directoryMode>755</directoryMode>
+			<outputDirectory>lib/rust/synclite-source</outputDirectory>
+		</fileSet>
+		<!-- Cross-language sample apps: cpp / java / python / rust -->
+		<fileSet>
+			<directory>${project.basedir}/synclite-code-samples</directory>
 			<outputDirectory>/sample-apps/</outputDirectory>
 			<excludes>
 				<exclude>**/target/**</exclude>

@@ -16,7 +16,7 @@
 2. [Architecture](#2-architecture)
 3. [Components](#3-components)
 4. [Prerequisites & Build](#4-prerequisites--build)
-5. [Installation & Quick Start](#5-installation--quick-start)
+5. [Filesystem Layout](#5-filesystem-layout)
 6. [SyncLite Logger (Java JDBC) + SyncLite Runtime (Rust/Python/C++)](#6-synclite-logger-java-jdbc--synclite-runtime-rustpythonc)
    - [Device Types](#61-device-types)
    - [Configuration Reference](#62-configuration-reference-syncliteconf)
@@ -40,6 +40,7 @@
    - [Supported Staging Storages](#92-supported-staging-storages)
    - [Web UI](#93-web-ui)
    - [Consolidator Configuration](#94-consolidator-configuration)
+   - [Sync Modes: Replication vs Consolidation](#95-sync-modes-replication-vs-consolidation)
 10. [SyncLite DBReader](#10-synclite-dbreader)
     - [Supported Sources](#101-supported-sources)
     - [Replication Modes](#102-replication-modes)
@@ -138,6 +139,9 @@ Both produce the same `.sqllog` segments, so you can mix devices (some logger-on
 | Native C/C++ toolchain (system linker) — see callout below | platform default |
 | Zig compiler (for cross-arch Rust runtime packaging) | latest stable |
 | cargo-zigbuild (for Linux cross-compiled cdylibs) | latest |
+| Python interpreter (`python` on `PATH`) | 3.8+ |
+| [`maturin`](https://www.maturin.rs/) (PyO3 wheel builder; `python -m pip install maturin`) | latest stable |
+| Per-OS wheel-repair tool (bundles native DLL/SO/dylib deps into the wheel) | Windows: `pip install delvewheel` — Linux: `pip install auditwheel` — macOS: `pip install delocate` |
 
 > **Rust alone is not sufficient — you also need the platform's native C/C++ toolchain** so `cargo` can invoke the system linker and so the DuckDB / SQLite crates can build their native code:
 > - **Windows**: install [Microsoft C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) ("Desktop development with C++" workload, MSVC v143 + Windows 10/11 SDK). Without it, the build fails with `error: linker 'link.exe' not found`. Run the build from the **"x64 Native Tools Command Prompt for VS"** (or any shell where `link.exe` is on `PATH`).
@@ -151,7 +155,7 @@ Both produce the same `.sqllog` segments, so you can mix devices (some logger-on
 ```bash
 git clone --recurse-submodules git@github.com:syncliteio/SyncLite.git SyncLite
 cd SyncLite
-mvn -Drevision=oss clean install
+mvn -Drevision=1.0.0 clean install
 ```
 
 ### Build flavors
@@ -166,13 +170,13 @@ SyncLite has **three** top-level reactor build flavors, ordered from largest to 
 
 ```bash
 # 1. Full platform (default)
-mvn -Drevision=oss clean install
+mvn -Drevision=1.0.0 clean install
 
 # 2. Full platform, Java-only
-mvn -Drevision=oss -DskipNonJavaLoggers=true clean install
+mvn -Drevision=1.0.0 -DskipNonJavaLoggers=true clean install
 
 # 3. Runtime — fastest path for embedded use
-mvn -Drevision=oss -DruntimeOnly=true clean install
+mvn -Drevision=1.0.0 -DruntimeOnly=true clean install
 ```
 
 > For just the synclite logger jar, or just the Rust cdylibs, build the subproject directly (`cd synclite-logger-java && mvn install`, or `cd synclite-logger-rust && cargo build --workspace --release`).
@@ -186,14 +190,14 @@ These switches combine with any flavor above:
 
 ```bash
 # Fastest full platform build
-mvn -Drevision=oss -DskipTests clean install
+mvn -Drevision=1.0.0 -DskipTests clean install
 
 # Fastest runtime build on a host without zig
-mvn -Drevision=oss -DruntimeOnly=true -DskipRustCrossCompile=true -DskipTests clean install
+mvn -Drevision=1.0.0 -DruntimeOnly=true -DskipRustCrossCompile=true -DskipTests clean install
 ```
 
-The full platform release is assembled under `SyncLite/target/synclite-platform-oss/`.
-The runtime build produces `SyncLite/target/synclite-runtime-oss/` (and `.zip`).
+The full platform release is assembled under `SyncLite/target/synclite-platform-1.0.0/`.
+The runtime build produces `SyncLite/target/synclite-runtime-1.0.0/` (and `.zip`).
 
 If you only want the embedded Rust runtime (`synclite` crate) and not the full Tomcat web stack, build just the Rust workspace:
 
@@ -219,35 +223,35 @@ To build specific SyncLite components individually (useful for development or fa
 
 ```bash
 cd synclite-logger-java/logger
-mvn -Drevision=oss clean install
+mvn -Drevision=1.0.0 clean install
 ```
 
 - Build the Consolidator (server):
 
 ```bash
 cd synclite-consolidator
-mvn -Drevision=oss clean install
+mvn -Drevision=1.0.0 clean install
 ```
 
 - Build SyncLite DB server (root module):
 
 ```bash
 cd synclite-db/root
-mvn -Drevision=oss clean install
+mvn -Drevision=1.0.0 clean install
 ```
 
 - Build the CLI client:
 
 ```bash
 cd synclite-client/client
-mvn -Drevision=oss clean install
+mvn -Drevision=1.0.0 clean install
 ```
 
 - Build the Job Monitor web app:
 
 ```bash
 cd synclite-job-monitor/root
-mvn -Drevision=oss clean install
+mvn -Drevision=1.0.0 clean install
 ```
 
 - Build the Rust runtime workspace and bindings:
@@ -261,16 +265,16 @@ cargo build --workspace
 
 ```bash
 cd synclite-dbreader/root
-mvn -Drevision=oss clean install
+mvn -Drevision=1.0.0 clean install
 
 cd synclite-qreader/root
-mvn -Drevision=oss clean install
+mvn -Drevision=1.0.0 clean install
 
 cd synclite-validator/root
-mvn -Drevision=oss clean install
+mvn -Drevision=1.0.0 clean install
 ```
 
-When these individual builds complete, their artifacts appear under their respective `target/` directories. The full platform assembly is produced by running `mvn -Drevision=oss clean install` from the repository root.
+When these individual builds complete, their artifacts appear under their respective `target/` directories. The full platform assembly is produced by running `mvn -Drevision=1.0.0 clean install` from the repository root.
 
 `deploy.sh` / `deploy.bat` automatically:
 - Downloads Apache Tomcat 9.0.117
@@ -295,6 +299,66 @@ To stop:
 | `http://localhost:8080/synclite-qreader` | Set up IoT MQTT connector pipelines |
 | `http://localhost:8080/synclite-job-monitor` | Manage and schedule all SyncLite jobs |
 | `http://localhost:8080/manager` | Tomcat manager (user: `synclite` / pwd: `synclite`) |
+
+---
+
+## 5. Filesystem Layout
+
+SyncLite uses **three** roots on disk. Only the first is chosen by your application; the other two are derived from sensible defaults under `<userHome>/synclite/job1/` and are overridable via `synclite.conf`.
+
+> **Why the shared `<userHome>/synclite/job1/` root?** Keeping `stageDir/` and `workDir/` under a single shared root (rather than alongside each DB) means the embedded runtime and the standalone Consolidator WAR can point at the **same** directories with zero file moves. Switching a deployment from in-process consolidation to the central Consolidator topology — or back — is just a call-site change (`initialize(dbPath, deviceName, dst)` ↔ `initialize(dbPath, conf)`) plus starting / stopping the Consolidator app; the on-disk segments and consolidator state remain in place.
+
+### The three roots
+
+| What lives here | Path | Who picks it | Who reads/writes it |
+|---|---|---|---|
+| Your local DB file | `<dbPath>` (whatever path you pass to `initialize(dbPath, ...)`) | **You** | Your app + the SyncLite logger |
+| Per-DB logger trace + trigger files | `<dbPath>.synclite/` (sibling of the DB file) | SyncLite, derived from `dbPath` | Logger writes the trace; you drop trigger files (`reinitialize.<dev>`, `pause_sync.<dev>`, `resume_sync.<dev>`, …) here |
+| Outbound log segments | `<userHome>/synclite/job1/stageDir/synclite_<deviceName>_<uuid>/` | SyncLite default; override via `local-data-stage-directory` in `synclite.conf` | Logger writes `.sqllog` segments; shipper / Consolidator reads them |
+| In-process consolidator state + `synclite_device.trace` | `<userHome>/synclite/job1/workDir/synclite_<deviceName>_<uuid>/` | SyncLite default; override via `work-dir` in `synclite.conf` | In-process consolidator (embedded runtime) **or** standalone Consolidator |
+| Standalone Consolidator global trace | `<workDir>/synclite_consolidator.trace` | Standalone Consolidator app | **Standalone Consolidator only** — the embedded runtime never writes this file |
+
+### Two traces to know about when something breaks
+
+For the **embedded runtime** (Java jar with `initialize(dbPath, deviceName, dst)` or the Rust crate) there are exactly two trace files:
+
+1. **Logger trace** — `<dbPath>.synclite/<dbName>.trace`, rotated at 10 KB × 10 backups. Captures local-DB / logger / shipper errors: config parse failures, log-write errors, schema-evolution problems against the local DB, staging-storage upload failures.
+2. **Device (in-process consolidator) trace** — `<userHome>/synclite/job1/workDir/synclite_<deviceName>_<uuid>/synclite_device.trace`, rotated at 10 MB × 10 backups. Captures destination-side errors: PostgreSQL auth failures, missing destination schema, DDL conflicts, retry attempts, idempotent-ingest warnings.
+
+For the **standalone Consolidator app**, both of the above are still produced per device, **plus** a process-wide `synclite_consolidator.trace` under the consolidator's work directory.
+
+### Example layout on disk
+
+For a sample whose DB is `orders.db` and `deviceName = "orders-device"`:
+
+```text
+<your app's cwd>/
++-- orders.db                                 # your local SQLite / DuckDB / ... DB
++-- orders.db.synclite/
+    +-- orders.db.trace                       # logger trace (per-DB)
+    +-- reinitialize.orders-device            # (optional) trigger file you drop here
+    +-- pause_sync.orders-device              # (optional)
+    +-- resume_sync.orders-device             # (optional)
+
+<userHome>/synclite/job1/
++-- stageDir/
+|   +-- synclite_orders-device_<uuid>/        # outbound .sqllog segments
++-- workDir/
+    +-- synclite_orders-device_<uuid>/
+        +-- synclite_device.trace             # in-process consolidator trace
+        +-- ... (consolidator metadata / sentinel files)
+```
+
+### Customising the roots
+
+Drop a `synclite.conf` next to your DB (or pass an explicit `Path` to `initialize(dbPath, conf)`) and set:
+
+```properties
+local-data-stage-directory=/var/synclite/stage
+work-dir=/var/synclite/work
+```
+
+Everything else — the per-device sub-directory naming `synclite_<deviceName>_<uuid>`, the `.synclite/` sidecar next to the DB, the trace-file names — is fixed and not configurable.
 
 ---
 
@@ -958,10 +1022,10 @@ runtime. No JVM, no JAR, no `jaydebeapi` / `jpype` bridge.
 | CPython matrix | Any 3.8+ on any OS/arch the Rust runtime supports |
 
 The five samples under
-[`synclite-code-samples/synclite-runtime/python/`](synclite-code-samples/synclite-runtime/python/)
+[`synclite-code-samples/python/`](synclite-code-samples/python/)
 (`synclite_rusqlite*.py`, `synclite_streaming.py`, `synclite_duckdb*.py`)
 mirror the Rust API 1:1 — same shapes as the C++ samples in
-[`synclite-code-samples/synclite-runtime/cpp/`](synclite-code-samples/synclite-runtime/cpp/):
+[`synclite-code-samples/cpp/`](synclite-code-samples/cpp/):
 
 ```python
 import synclite as sl
@@ -1351,11 +1415,11 @@ emitted by the logger, `latency_ms` is the actual wall-clock sync lag.
 
 **Runnable samples**
 
-[`synclite-code-samples/synclite-runtime/rust/`](synclite-code-samples/synclite-runtime/rust/)
+[`synclite-code-samples/rust/`](synclite-code-samples/rust/)
 is a self-contained Cargo project with one example per device shape:
 
 ```sh
-cd synclite-code-samples/synclite-runtime/rust
+cd synclite-code-samples/rust
 cargo run --example synclite_rusqlite        # SQLite SQL device
 cargo run --example synclite_duckdb          # DuckDB SQL device
 cargo run --example synclite_duckdb_store    # DuckDB STORE device
@@ -1908,6 +1972,40 @@ Key configuration options set through the web UI (stored internally by Consolida
 | **Device encryption key** | Required if edge devices use `enable-encryption=true` |
 | **Job statistics publishing** | Publish throughput metrics to an external monitoring system |
 
+### 9.5 Sync Modes: Replication vs Consolidation
+
+Every destination in a Consolidator job runs in exactly one of two **sync modes**, set via `dst-sync-mode-N` (default `CONSOLIDATION` when the source is a logger / SyncLite DB, default `REPLICATION` when the source is DBReader). The mode controls how operations from one or more source devices are mapped to objects on the destination — and therefore what schema you see, how DDL is handled, and how multi-device topologies coexist.
+
+**`REPLICATION`** — one schema per device. Each source device gets its own destination schema named after its UUID and/or device name (configurable via `dst-device-schema-name-policy-N`). The destination tables mirror the source 1:1 — same columns, same primary keys, no extra bookkeeping columns. Best fit for **1-source → 1-destination** mirroring or for keeping each edge device's data physically separated on the destination.
+
+**`CONSOLIDATION`** — one shared schema, fan-in. All source devices write into the same destination schema (`dst-schema-N`), into the same physical tables. Each destination table gets three additional system columns prepended — `synclite_device_id`, `synclite_device_name`, `synclite_update_timestamp` — and `(synclite_device_id, synclite_device_name, <source PK columns>)` becomes the composite primary key, so rows from different devices never collide. Best fit for **many-source → 1-destination** fan-in where you want a unified analytical view across all edge devices.
+
+The mode also changes how individual operations are handled. The table below lists every operation type the Consolidator sees, the action taken in each mode, and the reasoning behind the consolidation-mode behavior:
+
+| Operation | REPLICATION mode | CONSOLIDATION mode | Why CONSOLIDATION differs |
+|---|---|---|---|
+| `INSERT` | Inserts the row 1:1 into the per-device schema. | Prepends `(synclite_device_id, synclite_device_name, synclite_update_timestamp)` to the row, then inserts into the shared table. | Rows from many devices coexist in one table; the device-id columns are required to keep them distinguishable and to make `(device_id, device_name, source_pk)` the effective primary key. |
+| `UPDATE` | Forwarded 1:1 against the per-device table. | `SET` and `WHERE` clauses are rewritten to include the device-id columns; `synclite_update_timestamp` is refreshed. | The shared table holds rows from many devices, so every UPDATE must be scoped to a single device or it would silently overwrite rows belonging to other devices. |
+| `DELETE` | Forwarded 1:1 against the per-device table. | `WHERE` clause is rewritten to include the device-id columns. | Same reason as UPDATE — a DELETE without a device-id predicate would delete rows from other devices that happen to match the source PK. |
+| `UPSERT` / `REPLACE` | Forwarded 1:1. | Device-id columns added to both the conflict-target and the inserted row. | Conflict resolution must use the composite key `(device_id, device_name, source_pk)`; otherwise a write from device A would overwrite the conflicting row from device B. |
+| `DELETE WHERE <predicate>` (bulk) | Predicate forwarded verbatim. | Predicate is rewritten to `( <original predicate> ) AND synclite_device_name = '<name>' AND synclite_device_id = '<id>'`. | A bulk DELETE issued on one edge device must not affect rows owned by other devices in the shared table. |
+| `UPDATE WHERE <predicate>` (bulk) | Predicate forwarded verbatim. | Predicate is rewritten with the same device-id `AND` clause. | Same scoping concern as bulk DELETE — the update must remain device-local even though the table is shared. |
+| `CREATE TABLE` | Creates the table inside the per-device schema. | Creates the table in the shared schema **with the three system columns prepended** and `(device_id, device_name, …)` as the leading PK. Honors `dst-object-init-mode-N` (`OVERWRITE_OBJECT` / `TRY_CREATE_DELETE_DATA` / `TRY_CREATE_APPEND_DATA` / `APPEND_DATA`). | Brand-new tables must be schema-compatible with multi-device writes from day one, otherwise the first INSERT from a second device would fail with a column or PK mismatch. |
+| `ADD COLUMN` | Forwarded 1:1. | Forwarded 1:1; the new column is added to the shared table and immediately available to every device. | A new column is purely additive and safe to share — no other device's data is affected. |
+| `ALTER COLUMN` (widen type) | Forwarded 1:1. | Forwarded 1:1. | Widening a type is safe for all coexisting devices; existing rows from other devices remain valid under the wider type. |
+| `RENAME COLUMN` | Forwarded 1:1. | Treated as `ADD COLUMN <new>`. The old column is left in place; only this device's subsequent writes land in the new column. | Renaming would corrupt data written by other devices that still expect the old column name. Adding the new column keeps both schemas valid. |
+| `RENAME TABLE` | Forwarded 1:1. | Treated as `CREATE TABLE <new>`. The old table is left in place; only this device's subsequent writes land in the new table. | Renaming would orphan rows written by other devices into the old table. Creating the new table keeps both targets valid. |
+| `DROP TABLE` | Forwarded 1:1 — the per-device table is dropped. | **Silently ignored.** A trace line is logged: `Ignoring DROPTABLE on table … in consolidation mode - other devices may still use this table`. | The shared table is reachable by every device; dropping it on behalf of one device would destroy data owned by the others. Operators who genuinely want to remove the shared table should do so manually. |
+| `DROP COLUMN` | Forwarded 1:1 — the per-device column is dropped. | **Silently ignored.** A trace line is logged: `Ignoring DROPCOLUMN on table … in consolidation mode - other devices may still use this column`. | Same reason as DROP TABLE — the column may hold data written by other devices. Drop it manually if you have verified no other device depends on it. |
+| `TRUNCATE` (DDL-driven, e.g. as part of `OVERWRITE_OBJECT`) | Forwarded 1:1 — only this device's per-device table is truncated. | Forwarded but scoped — the shared table is not bulk-truncated; instead the per-device rows are deleted via predicate. | Truncating the shared table would wipe rows owned by other devices. The Consolidator scopes the delete by the device-id columns to preserve cross-device isolation. |
+
+**Picking a mode**
+
+- Use `REPLICATION` when each source device's data should remain physically separate on the destination — for example when you want one Postgres schema per branch office, per IoT gateway, or per tenant; or when you are migrating exactly one source database and expect a faithful 1:1 mirror including DDL.
+- Use `CONSOLIDATION` when you want a single unified view of data from many devices — for example one analytical Postgres table per business entity that contains rows from every device, or when you want to run cross-device SQL aggregations on the destination without UNIONing many per-device schemas.
+
+The Rust runtime and the Java Consolidator implement the same mode contract; samples in `synclite-code-samples/` use `REPLICATION` because each sample drives a single device, but flipping `dst_sync_mode` (or `dst-sync-mode=CONSOLIDATION` in a `.conf` file) at any point — even before starting a brand-new job — switches the destination to the consolidation behavior described above.
+
 ---
 
 ## 10. SyncLite DBReader
@@ -2226,7 +2324,7 @@ bin/dst/mysql/docker-start.sh
 ## 17. Release Structure
 
 ```
-synclite-platform-oss/
+synclite-platform-1.0.0/
 +-- bin/
 |   +-- deploy.sh / deploy.bat          # One-command setup: downloads Tomcat + JDK, deploys WARs
 |   +-- start.sh / start.bat            # Start Tomcat + all SyncLite apps
@@ -2242,11 +2340,19 @@ synclite-platform-oss/
 |       +-- mysql/                      # Docker scripts for MySQL destination
 |
 +-- lib/
-|   +-- logger/
-|   |   +-- java/
-|   |       +-- synclite-${revision}.jar  # synclite jar (add to edge app classpath)
-|   +-- consolidator/
-|       +-- synclite-consolidator-<version>.war
+|   +-- java/
+|   |   +-- synclite-${revision}.jar    # synclite jar (add to edge app classpath)
+|   |   +-- synclite.conf
+|   +-- native/                         # Multi-arch Rust runtime cdylibs
+|   |   +-- include/                    # C / C++ ABI headers (synclite.h, synclite.hpp)
+|   |   +-- libsynclite_${revision}.dll
+|   |   +-- libsynclite_${revision}.lib
+|   |   +-- libsynclite_${revision}_linux_x86_64.so
+|   |   +-- libsynclite_${revision}_linux_aarch64.so
+|   +-- python/
+|   |   +-- synclite-${revision}-cp38-abi3-*.whl
+|   +-- rust/
+|       +-- synclite-source/            # Cargo workspace consumed offline by sample-apps/rust
 |
 +-- tools/
 |   +-- synclite-client/                # CLI client (synclite-cli.sh / .bat)
@@ -2255,26 +2361,14 @@ synclite-platform-oss/
 |   +-- synclite-qreader/               # QReader WAR + launcher
 |   +-- synclite-job-monitor/           # Job Monitor WAR
 |   +-- synclite-validator/             # Validator WAR
+|   +-- synclite-sample-app/            # JSP/Servlet sample webapp (auto-deployed by bin/deploy.*)
 |
-+-- sample-apps/
-    +-- synclite-logger/
-    |   +-- java/                       # Java sample apps
-    |   |   +-- SyncliteDeviceApp.java
-    |   |   +-- SyncLiteStoreDeviceApp.java
-    |   |   +-- SyncLiteStreamingApp.java
-    |   |   +-- SyncLiteStoreAPIApp.java
-    |   |   +-- SyncLiteStreamAPIApp.java
-    |   |   +-- SyncLiteKafkaProduceApp.java
-    |   |   +-- SyncLiteJedisAPIApp.java
-    |   +-- python/                     # Python samples (built on the synclite PyO3 wheel
-    |   |                               #   under synclite-logger-rust/python/)
-    |   |   +-- synclite_device_app.py
-    |   |   +-- synclite_store_device_app.py
-    |   |   +-- synclite_streaming_app.py
-    |   |   +-- synclite_duckdb_app.py
-    |   +-- jsp-servlet/                # Sample web app WAR
-    +-- synclite-db/
-        +-- (language SDK samples)
++-- sample-apps/                        # Cross-language SyncLite runtime samples
+    +-- README.md                       # Overview, sync modes, postgres prereq
+    +-- cpp/                            # synclite_rusqlite_postgres.cpp + CMakeLists.txt
+    +-- java/                           # SyncliteSqlitePostgresApp.java
+    +-- python/                         # synclite_rusqlite_postgres.py
+    +-- rust/                           # synclite_rusqlite_postgres.rs (Cargo workspace)
 ```
 
 ---

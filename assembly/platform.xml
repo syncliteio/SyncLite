@@ -21,6 +21,16 @@
 			<outputDirectory>tools/synclite-consolidator</outputDirectory>
 		</fileSet>
 		<fileSet>
+			<directory>${project.basedir}/synclite-sample-web-app/web/target
+			</directory>
+			<includes>
+				<include>*.war</include>
+			</includes>
+			<fileMode>755</fileMode>
+			<directoryMode>755</directoryMode>
+			<outputDirectory>tools/synclite-sample-app</outputDirectory>
+		</fileSet>
+		<fileSet>
 			<directory>${project.basedir}/synclite-logger-java/logger/target
 			</directory>
 			<includes>
@@ -51,6 +61,39 @@
 			<outputDirectory>lib/native</outputDirectory>
 		</fileSet>
 		<fileSet>
+			<!-- C/C++ ABI headers consumed by sample-apps/cpp. -->
+			<directory>${project.basedir}/synclite-logger-rust/include</directory>
+			<includes>
+				<include>synclite.h</include>
+				<include>synclite.hpp</include>
+			</includes>
+			<fileMode>644</fileMode>
+			<outputDirectory>lib/native/include</outputDirectory>
+		</fileSet>
+		<fileSet>
+			<!-- Host-platform PyO3 wheel built by maturin (see pom.xml build-python-wheel). -->
+			<directory>${project.basedir}/synclite-logger-rust/python/dist</directory>
+			<includes>
+				<include>synclite-${revision}-*.whl</include>
+			</includes>
+			<fileMode>644</fileMode>
+			<outputDirectory>lib/python</outputDirectory>
+		</fileSet>
+		<fileSet>
+			<!--
+			  Self-contained Rust SDK source tree staged by pom.xml's
+			  `stage-rust-source-tree` antrun step. Cargo workspace with all
+			  SyncLite crates needed by the Rust sample (synclite facade +
+			  logger + consolidator + observability), minus the language-binding
+			  crates. The release Rust sample uses path dependencies into this
+			  tree so `cargo run` works offline.
+			-->
+			<directory>${project.basedir}/synclite-logger-rust/target/lib-rust-release/synclite-source</directory>
+			<fileMode>644</fileMode>
+			<directoryMode>755</directoryMode>
+			<outputDirectory>lib/rust/synclite-source</outputDirectory>
+		</fileSet>
+		<fileSet>
 			<directory>${project.build.directory}</directory>
 			<includes>
 				<include>synclite.conf</include>
@@ -76,13 +119,6 @@
 			</excludes>
 		</fileSet>
 		<fileSet>
-			<directory>${project.basedir}/synclite-sample-web-app/web
-			</directory>
-			<fileMode>755</fileMode>
-			<directoryMode>755</directoryMode>
-			<outputDirectory>/sample-apps/synclite-logger/jsp-servlet/web</outputDirectory>
-		</fileSet>
-		<fileSet>
 			<directory>${project.basedir}/synclite-client/client/target
 			</directory>
 			<includes>
@@ -103,6 +139,19 @@
 			<fileMode>755</fileMode>
 			<directoryMode>755</directoryMode>
 			<outputDirectory>tools/synclite-db</outputDirectory>
+		</fileSet>
+		<fileSet>
+			<!-- SyncLite DB client SDK sources (per-language quickstarts). -->
+			<directory>${project.basedir}/synclite-db/sdk-source</directory>
+			<fileMode>644</fileMode>
+			<directoryMode>755</directoryMode>
+			<outputDirectory>tools/synclite-db/sdk-source</outputDirectory>
+			<excludes>
+				<exclude>**/target/**</exclude>
+				<exclude>**/Cargo.lock</exclude>
+				<exclude>**/*.log</exclude>
+				<exclude>**/*.class</exclude>
+			</excludes>
 		</fileSet>
 		<fileSet>
 			<directory>${project.basedir}/synclite-dbreader/root/web/target
@@ -160,6 +209,18 @@
 			<includes>
 				<include>**/*</include>
 			</includes>
+			<excludes>
+				<!-- Runtime artifacts from local Tomcat runs - bin/deploy.* copies WARs from
+				     tools/synclite-*/ into webapps/ at first start; Tomcat re-explodes on boot. -->
+				<exclude>apache-tomcat-*/webapps/synclite-*/**</exclude>
+				<exclude>apache-tomcat-*/webapps/synclite-*.war</exclude>
+				<exclude>apache-tomcat-*/work/**</exclude>
+				<exclude>apache-tomcat-*/temp/**</exclude>
+				<exclude>apache-tomcat-*/logs/**</exclude>
+				<exclude>**/*.trace</exclude>
+				<exclude>**/*.log</exclude>
+				<exclude>derby.log</exclude>
+			</excludes>
 			<fileMode>755</fileMode>
 			<directoryMode>755</directoryMode>
 			<outputDirectory>/bin</outputDirectory>

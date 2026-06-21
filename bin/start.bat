@@ -111,17 +111,17 @@ echo !INFO!Using JRE_HOME=%JRE_HOME%!RESET!
 echo !INFO!Using Tomcat: %TOMCAT_DIR%!RESET!
 
 echo !STEP![3/4] Refreshing WAR deployments...!RESET!
-call :refresh_war "SyncLite Consolidator" "synclite-consolidator" "..\tools\synclite-consolidator\synclite-consolidator-*.war" "..\tools\synclite-consolidator\*.war" "..\target\synclite-platform-oss\tools\synclite-consolidator\synclite-consolidator-*.war" "..\synclite-consolidator\root\web\target\synclite-consolidator-*.war" "..\synclite-consolidator\root\web\target\*.war"
+call :refresh_war "SyncLite Consolidator" "synclite-consolidator" "..\tools\synclite-consolidator\synclite-consolidator-*.war" "..\tools\synclite-consolidator\*.war" "..\target\synclite-platform-1.0.0\tools\synclite-consolidator\synclite-consolidator-*.war" "..\synclite-consolidator\root\web\target\synclite-consolidator-*.war" "..\synclite-consolidator\root\web\target\*.war"
 if errorlevel 1 exit /b 1
-call :refresh_war "SyncLite Sample App" "synclite-sample-app" "..\sample-apps\synclite-logger\jsp-servlet\web\target\*.war" "..\synclite-sample-web-app\web\target\*.war"
+call :refresh_war "SyncLite Sample App" "synclite-sample-app" "..\tools\synclite-sample-app\*.war" "..\target\synclite-platform-1.0.0\tools\synclite-sample-app\*.war" "..\synclite-sample-web-app\web\target\*.war"
 if errorlevel 1 exit /b 1
-call :refresh_war "SyncLite DB" "synclite-db" "..\tools\synclite-db\*.war" "..\target\synclite-platform-oss\tools\synclite-db\*.war" "..\synclite-db\root\web\target\synclite-db-*.war" "..\synclite-db\root\web\target\*.war"
+call :refresh_war "SyncLite DB" "synclite-db" "..\tools\synclite-db\*.war" "..\target\synclite-platform-1.0.0\tools\synclite-db\*.war" "..\synclite-db\root\web\target\synclite-db-*.war" "..\synclite-db\root\web\target\*.war"
 if errorlevel 1 exit /b 1
-call :refresh_war "SyncLite DBReader" "synclite-dbreader" "..\tools\synclite-dbreader\*.war" "..\target\synclite-platform-oss\tools\synclite-dbreader\*.war" "..\synclite-dbreader\root\web\target\synclite-dbreader-*.war" "..\synclite-dbreader\root\web\target\*.war"
+call :refresh_war "SyncLite DBReader" "synclite-dbreader" "..\tools\synclite-dbreader\*.war" "..\target\synclite-platform-1.0.0\tools\synclite-dbreader\*.war" "..\synclite-dbreader\root\web\target\synclite-dbreader-*.war" "..\synclite-dbreader\root\web\target\*.war"
 if errorlevel 1 exit /b 1
-call :refresh_war "SyncLite QReader" "synclite-qreader" "..\tools\synclite-qreader\*.war" "..\target\synclite-platform-oss\tools\synclite-qreader\*.war" "..\synclite-qreader\root\web\target\synclite-qreader-*.war" "..\synclite-qreader\root\web\target\*.war"
+call :refresh_war "SyncLite QReader" "synclite-qreader" "..\tools\synclite-qreader\*.war" "..\target\synclite-platform-1.0.0\tools\synclite-qreader\*.war" "..\synclite-qreader\root\web\target\synclite-qreader-*.war" "..\synclite-qreader\root\web\target\*.war"
 if errorlevel 1 exit /b 1
-call :refresh_war "SyncLite Job Monitor" "synclite-jobmonitor" "..\tools\synclite-jobmonitor\*.war" "..\target\synclite-platform-oss\tools\synclite-jobmonitor\*.war" "..\synclite-job-monitor\root\web\target\synclite-jobmonitor-*.war" "..\synclite-job-monitor\root\web\target\*.war"
+call :refresh_war "SyncLite Job Monitor" "synclite-jobmonitor" "..\tools\synclite-jobmonitor\*.war" "..\target\synclite-platform-1.0.0\tools\synclite-jobmonitor\*.war" "..\synclite-job-monitor\root\web\target\synclite-jobmonitor-*.war" "..\synclite-job-monitor\root\web\target\*.war"
 if errorlevel 1 exit /b 1
 echo !OK![3/4] WAR refresh completed.!RESET!
 

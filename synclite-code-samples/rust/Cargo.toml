@@ -1,0 +1,33 @@
+[package]
+name = "synclite-logger-rust-samples"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+# Empty [workspace] makes this Cargo.toml a stand-alone package, so the
+# sample is not pulled into any ambient workspace cargo might discover by
+# walking up the directory tree (e.g. when the release zip is extracted
+# inside the user's own Rust workspace).
+[workspace]
+
+# Path dependencies into the self-contained Rust SDK source tree shipped
+# with the platform release at lib/rust/synclite-source/. This sample
+# folder lives at sample-apps/rust/ in the release, so
+# ../../lib/rust/synclite-source/ resolves into the bundled crates
+# regardless of where the user extracts the release zip.
+#
+# IN-REPO DEV: if you cloned the platform repo and have not run
+# `mvn package` yet (so the bundled tree doesn't exist), use the
+# in-tree sample at synclite-logger-rust/samples/rust/ instead — it
+# points directly at the workspace crates under
+# synclite-logger-rust/crates/.
+[dependencies]
+synclite          = { path = "../../lib/rust/synclite-source/crates/synclite" }
+logger-core       = { path = "../../lib/rust/synclite-source/crates/logger/core" }
+logger-db-traits  = { path = "../../lib/rust/synclite-source/crates/logger/db-traits" }
+rusqlite = { version = "0.39", features = ["bundled"] }
+postgres = "0.19"
+
+[[example]]
+name = "synclite_rusqlite_postgres"
+path = "synclite_rusqlite_postgres.rs"

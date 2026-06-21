@@ -527,7 +527,7 @@
             dst_connection_string: <span class="str">"postgresql://postgres:postgres@localhost:5432/syncdb"</span>.into(),
             dst_database: <span class="cls">Some</span>(<span class="str">"syncdb"</span>.into()),
             dst_schema:   <span class="cls">Some</span>(<span class="str">"syncschema"</span>.into()),
-            dst_sync_mode: <span class="cls">DstSyncMode</span>::Consolidation,
+            dst_sync_mode: <span class="cls">DstSyncMode</span>::Replication,
         }),
         <span class="cls">SyncLiteOptions</span>::default(),
     )?;
@@ -564,7 +564,7 @@
         .<span class="fn">connectionString</span>(<span class="str">"jdbc:postgresql://localhost:5432/syncdb"</span>)
         .<span class="fn">database</span>(<span class="str">"syncdb"</span>)
         .<span class="fn">schema</span>(<span class="str">"syncschema"</span>)
-        .<span class="fn">syncMode</span>(<span class="cls">DstSyncMode</span>.CONSOLIDATION)
+        .<span class="fn">syncMode</span>(<span class="cls">DstSyncMode</span>.REPLICATION)
         .<span class="fn">build</span>());
 
 <span class="cmt">// From here on the app talks to a plain local SQLite database via JDBC.</span>
@@ -713,7 +713,7 @@ qreader-default-synclite-table-name = <span class="str">iot_events</span>
         <span class="str">"dst-connection-string=postgresql://postgres:postgres@localhost:5432/syncdb\n"</span>
         <span class="str">"dst-database=syncdb\n"</span>
         <span class="str">"dst-schema=syncschema\n"</span>
-        <span class="str">"dst-sync-mode=CONSOLIDATION\n"</span>
+        <span class="str">"dst-sync-mode=REPLICATION\n"</span>
     )
 
 <span class="kw">with</span> sl.Runtime.open_config(<span class="str">"synclite_logger.conf"</span>) <span class="kw">as</span> rt:
@@ -737,7 +737,7 @@ qreader-default-synclite-table-name = <span class="str">iot_events</span>
     dst.dst_connection_string = <span class="str">"postgresql://postgres:postgres@localhost:5432/syncdb"</span>;
     dst.dst_database          = <span class="str">"syncdb"</span>;
     dst.dst_schema            = <span class="str">"syncschema"</span>;
-    dst.dst_sync_mode         = SYNCLITE_SYNC_CONSOLIDATION;
+    dst.dst_sync_mode         = <span class="str">"REPLICATION"</span>;
 
     synclite::initialize(SYNCLITE_DEVICE_SQLITE, <span class="str">"orders-device"</span>, <span class="str">"orders.db"</span>, &amp;dst);
 

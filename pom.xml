@@ -6,7 +6,7 @@
   <packaging>pom</packaging>
 
 	<properties>
-		<revision>oss</revision>
+		<revision>1.0.0</revision>
 		<!-- Set -DskipNonJavaLoggers=true to skip non-Java logger build and packaging. -->
 		<skipNonJavaLoggers>false</skipNonJavaLoggers>
 		<!--
@@ -32,6 +32,34 @@
 		  build only the host-arch cdylib (libsynclite_<rev>.{dll,lib,so,dylib}).
 		-->
 		<skipRustCrossCompile>false</skipRustCrossCompile>
+		<!--
+		  Skip building the host-platform PyO3 wheel via maturin. Defaults to
+		  false; set -DskipPythonWheel=true on build hosts without Python +
+		  maturin available. Also implicitly skipped when -DskipNonJavaLoggers=true.
+		  Prereq on the build host:
+		    <pythonExecutable> -m pip install maturin
+		-->
+		<skipPythonWheel>false</skipPythonWheel>
+		<!--
+		  Skip staging the self-contained Rust source tree under
+		  lib/rust/synclite-source/ in the platform/runtime zips. Defaults to
+		  false; set -DskipRustSourceBundle=true on hosts that don't need to
+		  ship the Rust SDK source. Also implicitly skipped when
+		  -DskipNonJavaLoggers=true. The staged tree lets end users build the
+		  Rust sample offline (no crates.io publish required) with `cargo run`
+		  against bundled path dependencies.
+		-->
+		<skipRustSourceBundle>false</skipRustSourceBundle>
+		<!--
+		  Skip the apply-revision-version antrun step that rewrites the Rust
+		  workspace + Python wheel versions to match ${revision}. Defaults to
+		  false; set -DskipRevisionVersionSync=true on hosts that drive cargo
+		  / maturin independently of Maven (e.g. a Rust-only CI lane that
+		  doesn't want the file mutated).
+		-->
+		<skipRevisionVersionSync>false</skipRevisionVersionSync>
+		<!-- Python interpreter used to drive `python -m maturin`. Override with -DpythonExecutable=python3 on linux/macos if needed. -->
+		<pythonExecutable>python</pythonExecutable>
 		<!-- Rust logger native deps: keep DuckDB prebuilt/downloaded to avoid heavy native builds. -->
 		<duckdbDownloadLib>true</duckdbDownloadLib>
 		<!-- Globs so per-arch variants (e.g. libsynclite_<rev>_linux_x86_64.so) coexist. -->
@@ -185,6 +213,73 @@
 							</arguments>
 						</configuration>
 					</execution>
+					<!--
+					  Build the host-platform `synclite` Python wheel via maturin.
+					  PyO3 is configured with the `abi3-py38` feature, so one wheel
+					  covers CPython 3.8+ on the build host's OS/arch. The wheel is
+					  picked up by assembly/platform.xml + assembly/runtime_zip.xml
+					  and shipped under lib/python/, so end users can run the Python
+					  sample with `pip install lib/python/synclite-*.whl` without a
+					  Rust toolchain.
+
+					  Prerequisite (one-time, on the build host):
+					    pip install maturin
+					-->
+					<execution>
+						<id>build-python-wheel</id>
+						<phase>package</phase>
+						<goals>
+							<goal>exec</goal>
+						</goals>
+						<configuration>
+							<skip>${skipPythonWheel}</skip>
+							<workingDirectory>${project.basedir}/synclite-logger-rust/python</workingDirectory>
+							<executable>${pythonExecutable}</executable>
+							<environmentVariables>
+								<SYNCLITE_RUST_ARTIFACT_VERSION>${revision}</SYNCLITE_RUST_ARTIFACT_VERSION>
+								<DUCKDB_DOWNLOAD_LIB>${duckdbDownloadLib}</DUCKDB_DOWNLOAD_LIB>
+							</environmentVariables>
+							<arguments>
+								<argument>-m</argument>
+								<argument>maturin</argument>
+								<argument>build</argument>
+								<argument>--release</argument>
+								<argument>--out</argument>
+								<argument>${project.basedir}/synclite-logger-rust/python/dist</argument>
+							</arguments>
+						</configuration>
+					</execution>
+					<!--
+					  Bundle the wheel's native DLL/SO/dylib dependencies into the
+					  wheel itself so end users can `pip install` it on a vanilla
+					  box without a separate duckdb / SyncLite Rust runtime
+					  install. Uses delvewheel on Windows, auditwheel on Linux,
+					  delocate on macOS \u2014 see scripts/repair_wheel.py for the
+					  per-platform logic. Skips with a warning (not a failure) if
+					  the per-platform repair tool isn't installed.
+
+					  Prerequisite (one-time, on the build host \u2014 platform-specific):
+					    Windows: pip install delvewheel
+					    Linux:   pip install auditwheel
+					    macOS:   pip install delocate
+					-->
+					<execution>
+						<id>repair-python-wheel</id>
+						<phase>package</phase>
+						<goals>
+							<goal>exec</goal>
+						</goals>
+						<configuration>
+							<skip>${skipPythonWheel}</skip>
+							<workingDirectory>${project.basedir}/synclite-logger-rust/python</workingDirectory>
+							<executable>${pythonExecutable}</executable>
+							<arguments>
+								<argument>${project.basedir}/synclite-logger-rust/python/scripts/repair_wheel.py</argument>
+								<argument>${project.basedir}/synclite-logger-rust/python/dist</argument>
+								<argument>${project.basedir}/synclite-logger-rust/target/release/deps</argument>
+							</arguments>
+						</configuration>
+					</execution>
 				</executions>
 			</plugin>
 			<plugin>
@@ -192,6 +287,21 @@
 				<artifactId>maven-antrun-plugin</artifactId>
 				<version>3.1.0</version>
 				<executions>
+					<execution>
+						<id>clean-python-wheel-output</id>
+						<phase>prepare-package</phase>
+						<goals>
+							<goal>run</goal>
+						</goals>
+						<configuration>
+							<target>
+								<delete includeemptydirs="true">
+									<fileset dir="${project.basedir}/synclite-logger-rust/python/dist" includes="**/*"/>
+								</delete>
+								<mkdir dir="${project.basedir}/synclite-logger-rust/python/dist"/>
+							</target>
+						</configuration>
+					</execution>
 					<execution>
 						<id>version-rust-logger-artifacts</id>
 						<phase>package</phase>
@@ -293,6 +403,104 @@
 								<concat destfile="${project.build.directory}/synclite.conf" append="yes" fixlastline="yes">
 									<fileset file="${project.basedir}/assembly/synclite_consolidator.conf"/>
 								</concat>
+							</target>
+						</configuration>
+					</execution>
+					<!--
+					  Align the Rust workspace + Python wheel version with the
+					  Maven ${revision} property so a single `-Drevision=X.Y.Z`
+					  rebrands Java jar, Rust cdylib name, Cargo crate version,
+					  AND the Python wheel filename consistently. The regex
+					  rewrites are idempotent — they always set the version to
+					  ${revision}, no matter what it currently is. Runs in the
+					  validate phase so it lands before any cargo/maturin step
+					  reads the file. NOTE: this DOES mutate the working tree
+					  on disk; commit any unrelated version changes before
+					  building. Skip with -DskipRevisionVersionSync=true on
+					  hosts that drive Cargo independently of Maven.
+					-->
+					<execution>
+						<id>apply-revision-version</id>
+						<phase>validate</phase>
+						<goals>
+							<goal>run</goal>
+						</goals>
+						<configuration>
+							<skip>${skipRevisionVersionSync}</skip>
+							<target>
+								<!-- Rust workspace.package version -->
+								<replaceregexp file="${project.basedir}/synclite-logger-rust/Cargo.toml"
+								               match='(\[workspace\.package\][^\[]*?\nversion\s*=\s*)"[^"]+"'
+								               replace='\1"${revision}"'
+								               flags="s"
+								               byline="false"/>
+								<!-- Python wheel version (PEP 621 [project] table) -->
+								<replaceregexp file="${project.basedir}/synclite-logger-rust/python/pyproject.toml"
+								               match='(\[project\][^\[]*?\nversion\s*=\s*)"[^"]+"'
+								               replace='\1"${revision}"'
+								               flags="s"
+								               byline="false"/>
+							</target>
+						</configuration>
+					</execution>
+					<!--
+					  Stage the self-contained Rust SDK source tree into
+					  synclite-logger-rust/target/lib-rust-release/synclite-source/
+					  so assembly/{platform,runtime_zip,platform_zip}.xml can ship it
+					  under lib/rust/synclite-source/. The shipped tree is a Cargo
+					  workspace with all SyncLite crates needed by the Rust sample
+					  (synclite facade + logger + consolidator + observability),
+					  but excludes the language-binding crates (bindings-c,
+					  bindings-python, bindings-java) which are not consumed by
+					  Rust users directly. The release sample's Cargo.toml uses
+					  path dependencies into this tree so `cargo run` works
+					  offline without requiring SyncLite crates to be published
+					  to crates.io.
+					-->
+					<execution>
+						<id>stage-rust-source-tree</id>
+						<phase>package</phase>
+						<goals>
+							<goal>run</goal>
+						</goals>
+						<configuration>
+							<skip>${skipRustSourceBundle}</skip>
+							<target>
+								<property name="rustSrcStage"
+								          value="${project.basedir}/synclite-logger-rust/target/lib-rust-release/synclite-source"/>
+								<delete dir="${rustSrcStage}" quiet="true"/>
+								<mkdir dir="${rustSrcStage}/crates"/>
+								<copy todir="${rustSrcStage}/crates" overwrite="true">
+									<fileset dir="${project.basedir}/synclite-logger-rust/crates">
+										<exclude name="**/target/**"/>
+										<exclude name="logger/bindings-c/**"/>
+										<exclude name="logger/bindings-python/**"/>
+										<exclude name="logger/bindings-java/**"/>
+										<exclude name="**/tests/**"/>
+										<exclude name="**/examples/**"/>
+										<exclude name="**/benches/**"/>
+									</fileset>
+								</copy>
+								<copy file="${project.basedir}/synclite-logger-rust/Cargo.toml"
+								      tofile="${rustSrcStage}/Cargo.toml"
+								      overwrite="true"/>
+								<copy file="${project.basedir}/synclite-logger-rust/Cargo.lock"
+								      tofile="${rustSrcStage}/Cargo.lock"
+								      overwrite="true"
+								      failonerror="false"/>
+								<!--
+								  Strip the binding members from the staged workspace toml.
+								  Cargo refuses to load a workspace whose `members =` lists
+								  paths that don't exist on disk, and we just excluded the
+								  three binding-* dirs in the copy above. `replaceregexp`
+								  removes each `"crates/logger/bindings-*"` member line
+								  (with trailing comma + newline) wherever it appears.
+								-->
+								<replaceregexp file="${rustSrcStage}/Cargo.toml"
+								               match='^\s*"crates/logger/bindings-(c|python|java)",?\s*\r?\n'
+								               replace=""
+								               flags="gm"
+								               byline="false"/>
 							</target>
 						</configuration>
 					</execution>
@@ -412,7 +620,7 @@
 				<module>synclite-validator\root</module>
 			</modules>
 			<properties>
-				<revision>oss</revision>
+				<revision>1.0.0</revision>
 				<!--
 				  Force the property to a concrete truthy value. The CLI may pass
 				  `-DskipNonJavaLoggers` (no `=true`) which leaves it as empty
@@ -427,6 +635,12 @@
 				<skipRustTests>true</skipRustTests>
 				<skipRustCrossCompile>true</skipRustCrossCompile>
 				<skipRustRuntime>true</skipRustRuntime>
+				<!-- No Rust toolchain → can't build the PyO3 wheel either. -->
+				<skipPythonWheel>true</skipPythonWheel>
+				<!-- No Rust toolchain → no point staging the Rust source tree. -->
+				<skipRustSourceBundle>true</skipRustSourceBundle>
+				<!-- No Rust toolchain → no point rewriting Rust/wheel version files either. -->
+				<skipRevisionVersionSync>true</skipRevisionVersionSync>
 				<rust.logger.include.dll>__skip_nonjava__</rust.logger.include.dll>
 				<rust.logger.include.lib>__skip_nonjava__</rust.logger.include.lib>
 				<rust.logger.include.so>__skip_nonjava__</rust.logger.include.so>
@@ -477,7 +691,7 @@
 		  cdylibs are produced by the root-pom Cargo executions as usual.
 
 		  Usage:
-		    mvn -Drevision=oss -DruntimeOnly=true clean install
+		    mvn -Drevision=1.0.0 -DruntimeOnly=true clean install
 
 		  Output: target/synclite-runtime-<rev>.zip
 		-->

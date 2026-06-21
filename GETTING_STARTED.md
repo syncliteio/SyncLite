@@ -195,6 +195,9 @@ All three surfaces produce the same log format and use the same shipper + consol
 | [`cargo-zigbuild`](https://github.com/rust-cross/cargo-zigbuild) | latest |
 | [Zig](https://ziglang.org/download/) compiler on `PATH` | latest stable |
 | Rust standard libraries for Linux x86_64 and aarch64 | — |
+| Python interpreter (`python` on `PATH`) | 3.8+ |
+| [`maturin`](https://www.maturin.rs/) (PyO3 wheel builder) | latest stable; install with `python -m pip install maturin` |
+| Per-OS wheel-repair tool (bundles native DLL/SO/dylib deps into the wheel) | Windows: `pip install delvewheel` — Linux: `pip install auditwheel` — macOS: `pip install delocate` |
 
 > **Native C/C++ toolchain is required in addition to Rust.** Rust shells out to the platform linker to produce the cdylibs, and the DuckDB / SQLite crates ship native code that needs a C/C++ compiler.
 >
@@ -236,13 +239,13 @@ SyncLite has **three** Maven build flavors, ordered from largest to smallest out
 
 ```bash
 # 1. Full platform (default) — Tomcat platform zip with WARs, tools, all language samples, and the multi-arch Rust runtime
-mvn -Drevision=oss clean install
+mvn -Drevision=1.0.0 clean install
 
 # 2. Full platform, Java-only — same Tomcat platform zip as #1 but no lib/native/ (no Rust toolchain required)
-mvn -Drevision=oss -DskipNonJavaLoggers=true clean install
+mvn -Drevision=1.0.0 -DskipNonJavaLoggers=true clean install
 
 # 3. Runtime — slim embeddable zip: synclite jar + multi-arch native cdylibs + sample-apps/{cpp,java,python,rust}
-mvn -Drevision=oss -DruntimeOnly=true clean install
+mvn -Drevision=1.0.0 -DruntimeOnly=true clean install
 ```
 
 > **What `-DruntimeOnly=true` does:** activates a Maven profile that reduces the reactor to just the `synclite-logger-java/logger` module and switches the assembly from the full `synclite-platform-<rev>.zip` to the slim `synclite-runtime-<rev>.zip`. Skips the consolidator, dbreader, qreader, job-monitor, validator, sample-web-app, db, and client modules.
@@ -258,10 +261,10 @@ These switches combine with any flavor above:
 
 ```bash
 # Fastest full platform build (skips all tests)
-mvn -Drevision=oss -DskipTests clean install
+mvn -Drevision=1.0.0 -DskipTests clean install
 
 # Fastest runtime build on a host without zig — host-arch cdylib only, no Linux cross-compile, no tests
-mvn -Drevision=oss -DruntimeOnly=true -DskipRustCrossCompile=true -DskipTests clean install
+mvn -Drevision=1.0.0 -DruntimeOnly=true -DskipRustCrossCompile=true -DskipTests clean install
 ```
 
 ### Build SyncLite Runtime (Rust) directly (no Maven packaging)
@@ -277,36 +280,39 @@ cargo build --workspace
 
 ### Release structure
 
-The **runtime** flavor (#3) assembles under `SyncLite/target/synclite-runtime-oss/`:
+The **runtime** flavor (#3) assembles under `SyncLite/target/synclite-runtime-1.0.0/`:
 
 ```
-synclite-runtime-oss/
+synclite-runtime-1.0.0/
 +-- lib/
 |   +-- java/
 |   |   +-- synclite-<version>.jar                    # Add to your app classpath
 |   |   +-- synclite.conf                             # Default logger configuration
 |   +-- native/                                       # Multi-arch Rust runtime cdylibs
+|   |   +-- include/                                  # C / C++ ABI headers (synclite.h, synclite.hpp)
 |   |   +-- libsynclite_<version>.dll                 # Windows host build
 |   |   +-- libsynclite_<version>.lib                 # Windows import library
 |   |   +-- libsynclite_<version>_linux_x86_64.so     # cross-compiled (omitted if -DskipRustCrossCompile=true)
 |   |   +-- libsynclite_<version>_linux_aarch64.so    # cross-compiled (omitted if -DskipRustCrossCompile=true)
 |   |   +-- libsynclite_<version>.dylib               # only if built on macOS
 |   |   +-- synclite.conf
-+-- sample-apps/                                      # Language samples: cpp, java, python, rust
+|   +-- python/
+|   |   +-- synclite-<version>-cp38-abi3-*.whl        # Host-platform PyO3 wheel
+|   +-- rust/
+|       +-- synclite-source/                          # Cargo workspace consumed offline by sample-apps/rust
++-- sample-apps/                                      # cpp / java / python / rust (one sample per language)
 +-- LICENSE
 +-- synclite_platform_version.txt
 ```
 
-The **full platform** flavors (#1 and #2) assemble under `SyncLite/target/synclite-platform-oss/`:
+The **full platform** flavors (#1 and #2) assemble under `SyncLite/target/synclite-platform-1.0.0/`:
 
 ```
-synclite-platform-oss/
+synclite-platform-1.0.0/
 +-- bin/                                              # deploy / start / stop, Docker helpers
-+-- lib/                                              # Same as runtime zip above
-|   +-- java/
-|   +-- native/                                       # Present in flavor #1 only
-+-- tools/                                            # synclite-db, dbreader, qreader, job-monitor, validator
-+-- sample-apps/                                      # Java, Python, and JSP/Servlet samples
++-- lib/                                              # Same as runtime zip above (java, native, python, rust)
++-- tools/                                            # synclite-{client,db,dbreader,qreader,job-monitor,validator,sample-app}
++-- sample-apps/                                      # cpp / java / python / rust (one sample per language)
 ```
 
 ---
@@ -320,7 +326,7 @@ The fastest way to see SyncLite in action is to drop the single jar into a Java 
 Use the bundled Docker helper:
 
 ```bash
-cd target/synclite-platform-oss/bin/dst/postgresql/
+cd target/synclite-platform-1.0.0/bin/dst/postgresql/
 ./docker-deploy.sh    # starts PostgreSQL on localhost:5432 (user: postgres / pwd: postgres)
 ```
 
@@ -329,9 +335,9 @@ Or use any existing PostgreSQL with a database `syncdb` and schema `syncschema`.
 ### Run the bundled sample
 
 ```bash
-JAR=synclite-logger-java/logger/target/synclite-oss.jar
+JAR=synclite-logger-java/logger/target/synclite-1.0.0.jar
 (cd synclite-logger-java/samples \
-   && javac -cp ../logger/target/synclite-oss.jar SyncliteSqlitePostgresApp.java)
+   && javac -cp ../logger/target/synclite-1.0.0.jar SyncliteSqlitePostgresApp.java)
 java -cp "$JAR:synclite-logger-java/samples" SyncliteSqlitePostgresApp
 ```
 
@@ -346,7 +352,7 @@ import java.time.Duration;
 public class SyncliteSqlitePostgresApp {
     public static void main(String[] args) throws Exception {
         Path  dbPath  = Path.of("orders.db");
-        String pgUrl  = "jdbc:postgresql://localhost:5432/syncdb";
+        String pgUrl  = "jdbc:postgresql://localhost:5432/syncdb?user=postgres&password=postgres";
         String schema = "syncschema";
 
         DestinationOptions dst = DestinationOptions.builder()
@@ -381,6 +387,8 @@ public class SyncliteSqlitePostgresApp {
 ```
 
 Full source: [synclite-logger-java/samples/SyncliteSqlitePostgresApp.java](synclite-logger-java/samples/SyncliteSqlitePostgresApp.java).
+
+> **Sample failing?** See [Where does SyncLite put its files?](#where-does-synclite-put-its-files) for the two trace files to check (`<dbPath>.synclite/<dbName>.trace` for logger errors, `<userHome>/synclite/job1/workDir/synclite_<deviceName>_<uuid>/synclite_device.trace` for in-process consolidator errors).
 
 ### Same thing in Rust → PostgreSQL
 
@@ -448,13 +456,55 @@ fn main() -> Result<()> {
 Run it:
 
 ```bash
-cd synclite-code-samples/synclite-runtime/rust
+cd synclite-code-samples/rust
 cargo run --example synclite_rusqlite_postgres
 ```
 
-Full source: [synclite-code-samples/synclite-runtime/rust/synclite_rusqlite_postgres.rs](synclite-code-samples/synclite-runtime/rust/synclite_rusqlite_postgres.rs).
+Full source: [synclite-code-samples/rust/synclite_rusqlite_postgres.rs](synclite-code-samples/rust/synclite_rusqlite_postgres.rs).
 
 SyncLite Runtime (Rust) is the same `cdylib` consumable from Python, Node.js, C/C++, Go, Ruby, and C#. See [Step 4 — Choose Your Use Case](#step-4--choose-your-use-case) for per-language snippets.
+
+---
+
+## Where does SyncLite put its files?
+
+A first-time question every user asks. SyncLite uses **three** roots; only the first one is chosen by your app.
+
+> **Why this layout?** `stageDir/` and `workDir/` deliberately sit under a shared `<userHome>/synclite/job1/` root rather than alongside each DB. That means an embedded-runtime app and the standalone Consolidator WAR can point at the **same** `stageDir/` + `workDir/` with zero file moves — you can switch a deployment from in-process consolidation to the central Consolidator (or vice versa) by changing the call site (`initialize(dbPath, deviceName, dst)` ↔ `initialize(dbPath, conf)`) and starting the Consolidator app. No data migration.
+
+| What lives here | Path | Who picks it | Who reads/writes it |
+|---|---|---|---|
+| Your local DB file (e.g. `orders.db`) | `<dbPath>` — wherever your app calls `initialize(dbPath, ...)` | **You** | Your app + the SyncLite logger |
+| Per-DB logger trace + trigger files (`reinitialize.<dev>`, `pause_sync.<dev>`, …) | `<dbPath>.synclite/` (sibling of the DB file, e.g. `orders.db.synclite/orders.db.trace`) | SyncLite (derived from `dbPath`) | Logger writes the trace; you drop trigger files here |
+| Outbound log segments (in-flight + retained) | `<userHome>/synclite/job1/stageDir/synclite_<deviceName>_<uuid>/` | SyncLite (default; overridable via `local-data-stage-directory` in `synclite.conf`) | Logger writes; shipper / Consolidator reads |
+| In-process consolidator state + `synclite_device.trace` | `<userHome>/synclite/job1/workDir/synclite_<deviceName>_<uuid>/` | SyncLite (default; overridable via `work-dir` in `synclite.conf`) | In-process or standalone Consolidator |
+| Standalone Consolidator global trace (`synclite_consolidator.trace`) | `<workDir>/synclite_consolidator.trace` | Consolidator app | **Standalone Consolidator only** — the embedded runtime never writes this |
+
+**Two traces to know about when something breaks:**
+
+1. `<dbPath>.synclite/<dbName>.trace` — logger-side errors (config parse failures, log-write errors, schema-evolution problems on the local DB).
+2. `<userHome>/synclite/job1/workDir/synclite_<deviceName>_<uuid>/synclite_device.trace` — in-process consolidator errors (destination auth failures, missing destination schema, DDL conflicts, retry attempts).
+
+For a sample whose DB is `orders.db` and `deviceName = "orders-device"`, the full layout on disk looks like:
+
+```text
+<your app's cwd>/
++-- orders.db                                 # your local SQLite/DuckDB/... DB
++-- orders.db.synclite/
+    +-- orders.db.trace                       # logger trace
+    +-- reinitialize.orders-device            # (optional) trigger files you drop here
+    +-- pause_sync.orders-device              # (optional)
+
+<userHome>/synclite/job1/
++-- stageDir/
+|   +-- synclite_orders-device_<uuid>/        # outbound .sqllog segments
++-- workDir/
+    +-- synclite_orders-device_<uuid>/
+        +-- synclite_device.trace             # in-process consolidator trace
+        +-- ... (consolidator metadata)
+```
+
+To relocate these roots, set `local-data-stage-directory` and `work-dir` in `synclite.conf` and pass the conf to `initialize(dbPath, conf)`.
 
 ---
 
@@ -465,7 +515,7 @@ Skip this step if all you need is the embedded runtime. Use it when you want the
 ### Native (Windows / Linux / macOS)
 
 ```bash
-cd target/synclite-platform-oss/bin/
+cd target/synclite-platform-1.0.0/bin/
 
 # First run: downloads Tomcat + JDK, deploys all WARs
 ./deploy.sh          # Linux/macOS
@@ -479,7 +529,7 @@ start.bat            # Windows
 ### Docker (all-in-one)
 
 ```bash
-cd target/synclite-platform-oss/bin/
+cd target/synclite-platform-1.0.0/bin/
 
 # Edit STAGE and DST variables at the top of docker-deploy.sh first
 ./docker-deploy.sh   # Builds synclite-platform image + starts containers
@@ -628,10 +678,10 @@ returns `source - applied` as wall-clock milliseconds (every `commit_id` is a
 `System.currentTimeMillis()` value); `-1` means the applied side is unknown
 (destination unreachable, consolidator not running yet, etc.).
 
-Runnable samples live in [`synclite-code-samples/synclite-runtime/rust/`](synclite-code-samples/synclite-runtime/rust/):
+Runnable samples live in [`synclite-code-samples/rust/`](synclite-code-samples/rust/):
 
 ```sh
-cd synclite-code-samples/synclite-runtime/rust
+cd synclite-code-samples/rust
 cargo run --example synclite_rusqlite
 cargo run --example synclite_duckdb_store
 cargo run --example synclite_streaming
@@ -658,7 +708,7 @@ public class App {
         Path dbPath = Path.of("orders.db");
         DestinationOptions dst = DestinationOptions.builder()
                 .dstType(DstType.POSTGRES)
-                .connectionString("jdbc:postgresql://localhost:5432/syncdb")
+                .connectionString("jdbc:postgresql://localhost:5432/syncdb?user=postgres&password=postgres")
                 .database("syncdb")
                 .schema("syncschema")
                 .syncMode(DstSyncMode.CONSOLIDATION)
@@ -685,7 +735,7 @@ public class App {
 Run with the SyncLite jar on the classpath (no extra fat jar — the in-process consolidator is already bundled):
 
 ```sh
-java -cp synclite-logger-java/logger/target/synclite-oss.jar:. App
+java -cp synclite-logger-java/logger/target/synclite-1.0.0.jar:. App
 ```
 
 **Section A below** describes the *logger-only* mode (same `synclite-<version>.jar`, just

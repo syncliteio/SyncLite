@@ -374,22 +374,22 @@ set WEBAPPS=%TOMCAT_DIR%\webapps
 
 echo !STEP![7/7] Deploying WAR files to Tomcat...!RESET!
 
-call :deploy_war "SyncLite Consolidator" "synclite-consolidator" "Consolidator WAR not found in packaged or module build output." "..\tools\synclite-consolidator\synclite-consolidator-*.war" "..\tools\synclite-consolidator\*.war" "..\target\synclite-platform-oss\tools\synclite-consolidator\synclite-consolidator-*.war" "..\synclite-consolidator\root\web\target\synclite-consolidator-*.war" "..\synclite-consolidator\root\web\target\*.war"
+call :deploy_war "SyncLite Consolidator" "synclite-consolidator" "Consolidator WAR not found in packaged or module build output." "..\tools\synclite-consolidator\synclite-consolidator-*.war" "..\tools\synclite-consolidator\*.war" "..\target\synclite-platform-1.0.0\tools\synclite-consolidator\synclite-consolidator-*.war" "..\synclite-consolidator\root\web\target\synclite-consolidator-*.war" "..\synclite-consolidator\root\web\target\*.war"
 if errorlevel 1 exit /b 1
 
-call :deploy_war "SyncLite Sample App" "synclite-sample-app" "Sample app WAR not found in packaged or module build output." "..\sample-apps\synclite-logger\jsp-servlet\web\target\*.war" "..\synclite-sample-web-app\web\target\*.war"
+call :deploy_war "SyncLite Sample App" "synclite-sample-app" "Sample app WAR not found in packaged or module build output." "..\tools\synclite-sample-app\*.war" "..\target\synclite-platform-1.0.0\tools\synclite-sample-app\*.war" "..\synclite-sample-web-app\web\target\*.war"
 if errorlevel 1 exit /b 1
 
-call :deploy_war "SyncLite DB" "synclite-db" "SyncLite DB WAR not found in packaged or module build output." "..\tools\synclite-db\*.war" "..\target\synclite-platform-oss\tools\synclite-db\*.war" "..\synclite-db\root\web\target\synclite-db-*.war" "..\synclite-db\root\web\target\*.war"
+call :deploy_war "SyncLite DB" "synclite-db" "SyncLite DB WAR not found in packaged or module build output." "..\tools\synclite-db\*.war" "..\target\synclite-platform-1.0.0\tools\synclite-db\*.war" "..\synclite-db\root\web\target\synclite-db-*.war" "..\synclite-db\root\web\target\*.war"
 if errorlevel 1 exit /b 1
 
-call :deploy_war "SyncLite DBReader" "synclite-dbreader" "DBReader WAR not found in packaged or module build output." "..\tools\synclite-dbreader\*.war" "..\target\synclite-platform-oss\tools\synclite-dbreader\*.war" "..\synclite-dbreader\root\web\target\synclite-dbreader-*.war" "..\synclite-dbreader\root\web\target\*.war"
+call :deploy_war "SyncLite DBReader" "synclite-dbreader" "DBReader WAR not found in packaged or module build output." "..\tools\synclite-dbreader\*.war" "..\target\synclite-platform-1.0.0\tools\synclite-dbreader\*.war" "..\synclite-dbreader\root\web\target\synclite-dbreader-*.war" "..\synclite-dbreader\root\web\target\*.war"
 if errorlevel 1 exit /b 1
 
-call :deploy_war "SyncLite QReader" "synclite-qreader" "QReader WAR not found in packaged or module build output." "..\tools\synclite-qreader\*.war" "..\target\synclite-platform-oss\tools\synclite-qreader\*.war" "..\synclite-qreader\root\web\target\synclite-qreader-*.war" "..\synclite-qreader\root\web\target\*.war"
+call :deploy_war "SyncLite QReader" "synclite-qreader" "QReader WAR not found in packaged or module build output." "..\tools\synclite-qreader\*.war" "..\target\synclite-platform-1.0.0\tools\synclite-qreader\*.war" "..\synclite-qreader\root\web\target\synclite-qreader-*.war" "..\synclite-qreader\root\web\target\*.war"
 if errorlevel 1 exit /b 1
 
-call :deploy_war "SyncLite Job Monitor" "synclite-jobmonitor" "Job Monitor WAR not found in packaged or module build output." "..\tools\synclite-jobmonitor\*.war" "..\target\synclite-platform-oss\tools\synclite-jobmonitor\*.war" "..\synclite-job-monitor\root\web\target\synclite-jobmonitor-*.war" "..\synclite-job-monitor\root\web\target\*.war"
+call :deploy_war "SyncLite Job Monitor" "synclite-jobmonitor" "Job Monitor WAR not found in packaged or module build output." "..\tools\synclite-jobmonitor\*.war" "..\target\synclite-platform-1.0.0\tools\synclite-jobmonitor\*.war" "..\synclite-job-monitor\root\web\target\synclite-jobmonitor-*.war" "..\synclite-job-monitor\root\web\target\*.war"
 if errorlevel 1 exit /b 1
 
 
