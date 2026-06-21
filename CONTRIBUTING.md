@@ -61,6 +61,8 @@ Required only if you build the Rust loggers (default build flavor; not needed wh
 | Rust toolchain (`rustup`, `cargo`) | 1.86.0 | Install via https://rustup.rs |
 | Native C/C++ toolchain (system linker) | platform default | **Windows**: [Microsoft C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) — "Desktop development with C++" workload (MSVC v143 + Windows 10/11 SDK). Required by the default `x86_64-pc-windows-msvc` Rust target; without it the build fails with `error: linker 'link.exe' not found`. Run the build from the **"x64 Native Tools Command Prompt for VS"**. **Linux**: `build-essential`, `cmake`, `pkg-config`. **macOS**: `xcode-select --install`. |
 | [`cargo-zigbuild`](https://github.com/rust-cross/cargo-zigbuild) + [Zig](https://ziglang.org/download/) | latest | Only for multi-arch Linux cross-compile from a non-Linux host. Skip with `-DskipRustCrossCompile=true`. |
+| Python interpreter + [`maturin`](https://www.maturin.rs/) | Python 3.8+, maturin latest | Required to build the host-platform `synclite` PyO3 wheel shipped under `lib/python/`. Install with `python -m pip install maturin`. Skip with `-DskipPythonWheel=true` (also auto-skipped by `-DskipNonJavaLoggers=true`). |
+| Per-OS wheel-repair tool | Windows: `delvewheel`. Linux: `auditwheel`. macOS: `delocate`. | Bundles the wheel's native DLL/SO/dylib deps (duckdb) so end users `pip install` works on a vanilla box. Install with `pip install delvewheel` / `auditwheel` / `delocate`. Skipped when the wheel build is skipped. |
 
 Optional but recommended:
 - An IDE with Java and Maven support (IntelliJ IDEA, Eclipse, VS Code + Extension Pack for Java)
@@ -85,9 +87,9 @@ Optional but recommended:
 
 4. **Build the project** to verify your environment:
    ```bash
-   mvn -Drevision=oss clean install
+   mvn -Drevision=1.0.0 clean install
    ```
-   A successful build creates the platform release under `target/synclite-platform-oss/`.
+   A successful build creates the platform release under `target/synclite-platform-1.0.0/`.
 
    **Build flavors** — SyncLite has three top-level reactor flavors, ordered largest → smallest. Pick the smallest one that meets your need.
 
@@ -99,13 +101,13 @@ Optional but recommended:
 
    ```bash
    # 1. Full platform (default)
-   mvn -Drevision=oss clean install
+   mvn -Drevision=1.0.0 clean install
 
    # 2. Full platform, Java-only
-   mvn -Drevision=oss -DskipNonJavaLoggers=true clean install
+   mvn -Drevision=1.0.0 -DskipNonJavaLoggers=true clean install
 
    # 3. Runtime
-   mvn -Drevision=oss -DruntimeOnly=true clean install
+   mvn -Drevision=1.0.0 -DruntimeOnly=true clean install
    ```
 
    > For just the synclite logger jar, or just the Rust cdylibs, build the subproject directly (`cd synclite-logger-java && mvn install`, or `cd synclite-logger-rust && cargo build --workspace --release`).
@@ -117,10 +119,10 @@ Optional but recommended:
 
    ```bash
    # Fastest full platform build
-   mvn -Drevision=oss -DskipTests clean install
+   mvn -Drevision=1.0.0 -DskipTests clean install
 
    # Fastest runtime build on a host without zig
-   mvn -Drevision=oss -DruntimeOnly=true -DskipRustCrossCompile=true -DskipTests clean install
+   mvn -Drevision=1.0.0 -DruntimeOnly=true -DskipRustCrossCompile=true -DskipTests clean install
    ```
 
 5. **Create a branch** for your change (see [Branch Naming](#branch-naming) below).
@@ -204,7 +206,7 @@ Run the Maven test phase for the specific submodule you changed:
 ```bash
 # Example: test the logger
 cd synclite-logger-java/logger
-mvn -Drevision=oss test
+mvn -Drevision=1.0.0 test
 ```
 
 ### Integration tests (SyncLite Validator)
@@ -215,7 +217,7 @@ Refer to [synclite-validator/README.md](synclite-validator/README.md) for setup 
 
 ### What we check in CI
 
-- `mvn -Drevision=oss clean install` (full multi-module build)
+- `mvn -Drevision=1.0.0 clean install` (full multi-module build)
 - All unit tests pass
 - No compiler warnings treated as errors
 

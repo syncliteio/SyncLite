@@ -214,30 +214,31 @@ log_step "[7/7] Deploying WAR files to Tomcat..."
 copy_war "SyncLite Consolidator" "${WEBAPPS}/synclite-consolidator.war" \
 	"../tools/synclite-consolidator/synclite-consolidator-*.war" \
 	"../tools/synclite-consolidator/*.war" \
-	"../target/synclite-platform-oss/tools/synclite-consolidator/synclite-consolidator-*.war" \
+	"../target/synclite-platform-1.0.0/tools/synclite-consolidator/synclite-consolidator-*.war" \
 	"../synclite-consolidator/root/web/target/synclite-consolidator-*.war" \
 	"../synclite-consolidator/root/web/target/*.war"
 copy_war "SyncLite Sample App" "${WEBAPPS}/synclite-sample-app.war" \
-	"../sample-apps/synclite-logger/jsp-servlet/web/target/*.war" \
+	"../tools/synclite-sample-app/*.war" \
+	"../target/synclite-platform-1.0.0/tools/synclite-sample-app/*.war" \
 	"../synclite-sample-web-app/web/target/*.war"
 copy_war "SyncLite DB" "${WEBAPPS}/synclite-db.war" \
 	"../tools/synclite-db/*.war" \
-	"../target/synclite-platform-oss/tools/synclite-db/*.war" \
+	"../target/synclite-platform-1.0.0/tools/synclite-db/*.war" \
 	"../synclite-db/root/web/target/synclite-db-*.war" \
 	"../synclite-db/root/web/target/*.war"
 copy_war "SyncLite DBReader" "${WEBAPPS}/synclite-dbreader.war" \
 	"../tools/synclite-dbreader/*.war" \
-	"../target/synclite-platform-oss/tools/synclite-dbreader/*.war" \
+	"../target/synclite-platform-1.0.0/tools/synclite-dbreader/*.war" \
 	"../synclite-dbreader/root/web/target/synclite-dbreader-*.war" \
 	"../synclite-dbreader/root/web/target/*.war"
 copy_war "SyncLite QReader" "${WEBAPPS}/synclite-qreader.war" \
 	"../tools/synclite-qreader/*.war" \
-	"../target/synclite-platform-oss/tools/synclite-qreader/*.war" \
+	"../target/synclite-platform-1.0.0/tools/synclite-qreader/*.war" \
 	"../synclite-qreader/root/web/target/synclite-qreader-*.war" \
 	"../synclite-qreader/root/web/target/*.war"
 copy_war "SyncLite Job Monitor" "${WEBAPPS}/synclite-jobmonitor.war" \
 	"../tools/synclite-jobmonitor/*.war" \
-	"../target/synclite-platform-oss/tools/synclite-jobmonitor/*.war" \
+	"../target/synclite-platform-1.0.0/tools/synclite-jobmonitor/*.war" \
 	"../synclite-job-monitor/root/web/target/synclite-jobmonitor-*.war" \
 	"../synclite-job-monitor/root/web/target/*.war"
 log_ok "[7/7] WAR deployment complete."

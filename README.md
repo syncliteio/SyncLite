@@ -196,6 +196,20 @@ All three surfaces produce the same log format and use the same shipper + consol
   - **macOS**: Xcode Command Line Tools — `xcode-select --install`.
 - [`cargo-zigbuild`](https://github.com/rust-cross/cargo-zigbuild) and the [Zig](https://ziglang.org/download/) compiler on `PATH`
 - Rust standard libraries for Linux x86_64 and aarch64
+- **Python 3.8+ and [`maturin`](https://www.maturin.rs/)** — required to build the host-platform `synclite` PyO3 wheel shipped under `lib/python/`. Install once on the build host with:
+  ```bash
+  python -m pip install maturin
+  ```
+  Plus the per-OS wheel-repair tool so the published wheel bundles its native DLL/SO/dylib deps (duckdb) and `pip install` works on a vanilla box:
+  ```bash
+  # Windows
+  python -m pip install delvewheel
+  # Linux
+  python -m pip install auditwheel
+  # macOS
+  python -m pip install delocate
+  ```
+  Skip the wheel build (and these prereqs) with `-DskipPythonWheel=true`; it is also skipped automatically by `-DskipNonJavaLoggers=true`.
 
 The Rust cdylibs for **Linux x86_64 and aarch64** are cross-compiled on every
 host so a single `mvn package` produces a complete, multi-arch `lib/native/`
@@ -233,13 +247,13 @@ SyncLite has **three** Maven build flavors, ordered from largest to smallest out
 
 ```bash
 # 1. Full platform (default) — Tomcat platform zip with WARs, tools, all language samples, and the multi-arch Rust runtime
-mvn -Drevision=oss clean install
+mvn -Drevision=1.0.0 clean install
 
 # 2. Full platform, Java-only — same Tomcat platform zip as #1 but no lib/native/ (no Rust toolchain required)
-mvn -Drevision=oss -DskipNonJavaLoggers=true clean install
+mvn -Drevision=1.0.0 -DskipNonJavaLoggers=true clean install
 
 # 3. Runtime — slim embeddable zip: synclite jar + multi-arch native cdylibs + sample-apps/{cpp,java,python,rust}
-mvn -Drevision=oss -DruntimeOnly=true clean install
+mvn -Drevision=1.0.0 -DruntimeOnly=true clean install
 ```
 
 > For just the synclite logger jar, or just the Rust cdylibs, build the individual subprojects directly (`cd synclite-logger-java && mvn install`, or `cd synclite-logger-rust && cargo build --workspace --release`).
@@ -253,10 +267,10 @@ These switches combine with any flavor above:
 
 ```bash
 # Fastest full platform build (skips all tests)
-mvn -Drevision=oss -DskipTests clean install
+mvn -Drevision=1.0.0 -DskipTests clean install
 
 # Fastest runtime build on a host without zig — host-arch cdylib only, no Linux cross-compile, no tests
-mvn -Drevision=oss -DruntimeOnly=true -DskipRustCrossCompile=true -DskipTests clean install
+mvn -Drevision=1.0.0 -DruntimeOnly=true -DskipRustCrossCompile=true -DskipTests clean install
 ```
 
 > The `bin/deploy.sh` / `bin/deploy.bat` scripts download Apache Tomcat 9.0.117 and OpenJDK 25 automatically. No manual installation needed for a quick start.
@@ -266,18 +280,30 @@ mvn -Drevision=oss -DruntimeOnly=true -DskipRustCrossCompile=true -DskipTests cl
 ### Runtime-only zip (`-DruntimeOnly=true`)
 
 ```
-synclite-runtime-oss/
+synclite-runtime-1.0.0/
 +-- lib/
 |   +-- java/
 |   |   +-- synclite-<version>.jar              # Add to your app classpath
 |   |   +-- synclite.conf                       # Default logger configuration
 |   +-- native/                                 # Multi-arch native cdylibs (Rust runtime)
-|       +-- libsynclite_<version>.dll                 # Windows host build
-|       +-- libsynclite_<version>.lib                 # Windows import library
-|       +-- libsynclite_<version>_linux_x86_64.so     # cross-compiled
-|       +-- libsynclite_<version>_linux_aarch64.so    # cross-compiled
-|       +-- libsynclite_<version>.dylib               # only if built on macOS
-|       +-- synclite.conf
+|   |   +-- include/                            # C / C++ ABI headers (synclite.h, synclite.hpp)
+|   |   +-- libsynclite_<version>.dll                 # Windows host build
+|   |   +-- libsynclite_<version>.lib                 # Windows import library
+|   |   +-- libsynclite_<version>_linux_x86_64.so     # cross-compiled
+|   |   +-- libsynclite_<version>_linux_aarch64.so    # cross-compiled
+|   |   +-- libsynclite_<version>.dylib               # only if built on macOS
+|   |   +-- synclite.conf
+|   +-- python/
+|   |   +-- synclite-<version>-cp38-abi3-*.whl  # Host-platform PyO3 wheel
+|   +-- rust/
+|       +-- synclite-source/                    # Self-contained Cargo workspace
+|                                               # (synclite facade + logger + consolidator),
+|                                               # consumed offline by sample-apps/rust
++-- sample-apps/                                # One sample per language
+|   +-- cpp/                                    # CMake-based, links lib/native
+|   +-- java/                                   # javac + lib/java/synclite-<version>.jar
+|   +-- python/                                 # pip install lib/python/*.whl
+|   +-- rust/                                   # cargo run, path-deps into lib/rust
 +-- LICENSE
 +-- synclite_platform_version.txt
 ```
@@ -285,7 +311,7 @@ synclite-runtime-oss/
 ### Full platform zip (default)
 
 ```
-synclite-platform-oss/
+synclite-platform-1.0.0/
 +-- bin/
 |   +-- deploy.sh / deploy.bat        # One-command setup: downloads Tomcat + JDK, deploys WARs
 |   +-- start.sh / start.bat          # Start Tomcat + all SyncLite apps
@@ -300,6 +326,8 @@ synclite-platform-oss/
 +-- lib/                              # Same as runtime-only zip above
 |   +-- java/
 |   +-- native/
+|   +-- python/
+|   +-- rust/
 |
 +-- tools/
 |   +-- synclite-client/              # CLI client
@@ -308,11 +336,13 @@ synclite-platform-oss/
 |   +-- synclite-qreader/             # QReader WAR + launcher
 |   +-- synclite-job-monitor/         # Job Monitor WAR
 |   +-- synclite-validator/           # Validator WAR
+|   +-- synclite-sample-app/          # JSP/Servlet sample webapp (auto-deployed by bin/deploy.*)
 |
-+-- sample-apps/
-    +-- synclite-logger/java/         # Java sample apps
-    +-- synclite-logger/python/       # Python sample apps
-    +-- synclite-logger/jsp-servlet/  # Sample web app WAR
++-- sample-apps/                      # START HERE -- see sample-apps/README.md
+    +-- cpp/                          # canonical embed-the-library samples
+    +-- java/                         # one sample per language: cpp / java / python / rust
+    +-- python/                       # all four share the same end-to-end story
+    +-- rust/                         # (local SQLite -> in-process consolidator -> Postgres)
 ```
 
 ---
@@ -338,10 +368,11 @@ One jar — **`synclite-<version>.jar`** — gives you the JDBC / Store / Stream
 # Build everything (root pom builds the Rust natives once and bundles them into the Java jar)
 mvn -DskipTests install
 
-# Run the embedded-runtime sample
-JAR=synclite-logger-java/logger/target/synclite-oss.jar
-(cd synclite-logger-java/samples && javac -cp ../logger/target/synclite-oss.jar SyncliteSqlitePostgresApp.java)
-java -cp "$JAR:synclite-logger-java/samples" SyncliteSqlitePostgresApp
+# Run the embedded-runtime sample (canonical path -- see synclite-code-samples/README.md)
+JAR=synclite-logger-java/logger/target/synclite-1.0.0.jar
+cd synclite-code-samples/java
+javac -cp ../../$JAR SyncliteSqlitePostgresApp.java
+java -cp ../../$JAR:. SyncliteSqlitePostgresApp
 ```
 
 End-to-end Java → PostgreSQL in one snippet (drop in the single jar, write SQL, await sync, read back):
@@ -355,7 +386,7 @@ import java.time.Duration;
 public class SyncliteSqlitePostgresApp {
     public static void main(String[] args) throws Exception {
         Path  dbPath  = Path.of("orders.db");
-        String pgUrl  = "jdbc:postgresql://localhost:5432/syncdb";
+        String pgUrl  = "jdbc:postgresql://localhost:5432/syncdb?user=postgres&password=postgres";
         String schema = "syncschema";
 
         DestinationOptions dst = DestinationOptions.builder()
@@ -389,17 +420,16 @@ public class SyncliteSqlitePostgresApp {
 }
 ```
 
-Full runnable sample: [`synclite-logger-java/samples/SyncliteSqlitePostgresApp.java`](synclite-logger-java/samples/SyncliteSqlitePostgresApp.java).
+Full runnable sample: [`synclite-code-samples/java/SyncliteSqlitePostgresApp.java`](synclite-code-samples/java/SyncliteSqlitePostgresApp.java). See [`synclite-code-samples/README.md`](synclite-code-samples/README.md) for the full sample map (Java / Python / Rust / C++).
+
+> **Sample failing?** SyncLite uses three roots on disk. See [GETTING_STARTED.md § Where does SyncLite put its files?](GETTING_STARTED.md#where-does-synclite-put-its-files) for the layout and the two trace files to check (`<dbPath>.synclite/<dbName>.trace` for logger errors, `<userHome>/synclite/job1/workDir/synclite_<deviceName>_<uuid>/synclite_device.trace` for in-process consolidator errors).
 
 #### Rust / Python / C++ (embedded runtime)
 
 ```bash
 # Build SyncLite Runtime (Rust) and run a sample directly
-cd synclite-code-samples/synclite-runtime/rust
-cargo run --example synclite_rusqlite
-
-# For PostgreSQL destination demo:
-# cargo run --example synclite_rusqlite_postgres
+cd synclite-code-samples/rust
+cargo run --example synclite_rusqlite_postgres
 ```
 
 For Rust/Python/C++ embedding via SyncLite Runtime, you do not need
