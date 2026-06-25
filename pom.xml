@@ -295,9 +295,10 @@
 						</goals>
 						<configuration>
 							<target>
-								<delete includeemptydirs="true">
-									<fileset dir="${project.basedir}/synclite-logger-rust/python/dist" includes="**/*"/>
-								</delete>
+								<!-- delete dir="..." is a no-op when the directory is
+								     absent, unlike a <fileset> which fails the build
+								     if its dir does not exist. -->
+								<delete dir="${project.basedir}/synclite-logger-rust/python/dist"/>
 								<mkdir dir="${project.basedir}/synclite-logger-rust/python/dist"/>
 							</target>
 						</configuration>
