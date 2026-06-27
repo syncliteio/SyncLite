@@ -696,33 +696,37 @@ qreader-default-synclite-table-name = <span class="str">iot_events</span>
 
     <!-- Python -->
     <div id="tab-python" class="tab-pane">
-<pre><span class="cmt"># Python via the synclite PyO3 wheel — built from the in-tree Rust workspace.</span>
-<span class="cmt"># See synclite-logger-rust/python/ for install via `maturin develop --release`.</span>
-<span class="cmt"># No pip install, no Rust toolchain, no maturin.</span>
+<pre><span class="cmt"># Python via the synclite PyO3 wheel. Offline-first SQLite syncing to PostgreSQL.</span>
+<span class="cmt"># The Connection / Statement objects match the Rust and C++ samples one-for-one.</span>
 <span class="kw">import</span> synclite <span class="kw">as</span> sl
 
-<span class="cmt"># Minimal SQLite-device config shipping to PostgreSQL.</span>
-<span class="kw">with</span> open(<span class="str">"synclite_logger.conf"</span>, <span class="str">"w"</span>) <span class="kw">as</span> f:
-    f.write(
-        <span class="str">"device-name=orders-device\n"</span>
-        <span class="str">"db-engine=SQLITE\n"</span>
-        <span class="str">"device-type=SQLITE\n"</span>
-        <span class="str">"db-path=orders.db\n"</span>
-        <span class="str">"local-data-stage-directory=synclite-stage\n"</span>
-        <span class="str">"dst-type=POSTGRES\n"</span>
-        <span class="str">"dst-connection-string=postgresql://postgres:postgres@localhost:5432/syncdb\n"</span>
-        <span class="str">"dst-database=syncdb\n"</span>
-        <span class="str">"dst-schema=syncschema\n"</span>
-        <span class="str">"dst-sync-mode=REPLICATION\n"</span>
-    )
+<span class="cmt"># Wire up logger + shipper + embedded consolidator in one call.</span>
+sl.<span class="fn">initialize</span>(
+    device_type=<span class="str">"SQLITE"</span>,
+    device_name=<span class="str">"orders-device"</span>,                 <span class="cmt"># device name</span>
+    db_path=<span class="str">"orders.db"</span>,                          <span class="cmt"># local SQLite path</span>
+    destination=sl.<span class="cls">DestinationOptions</span>(
+        dst_type=<span class="str">"POSTGRES"</span>,
+        dst_connection_string=<span class="str">"postgresql://postgres:postgres@localhost:5432/syncdb"</span>,
+        dst_database=<span class="str">"syncdb"</span>,
+        dst_schema=<span class="str">"syncschema"</span>,
+        dst_sync_mode=<span class="str">"REPLICATION"</span>,
+    ),
+)
 
-<span class="kw">with</span> sl.Runtime.open_config(<span class="str">"synclite_logger.conf"</span>) <span class="kw">as</span> rt:
-    rt.log_sql(<span class="str">"CREATE TABLE IF NOT EXISTS orders(id INTEGER, item TEXT, qty INTEGER)"</span>)
-    rt.log_sql(<span class="str">"INSERT INTO orders VALUES(1, 'widget', 100)"</span>)
-    rt.commit()
-    rt.flush_log()
-<span class="cmt"># ↑ logged locally; shipped + consolidated into PostgreSQL in the background.</span>
-<span class="cmt"># Richer Connection / Statement / await_sync / DB-API surface is coming via synclite-logger-python.</span></pre>
+<span class="cmt"># From here on the app talks to a plain local SQLite database.</span>
+conn = sl.<span class="cls">Connection</span>.<span class="fn">open</span>(<span class="str">"orders.db"</span>)
+conn.<span class="fn">execute</span>(<span class="str">"CREATE TABLE IF NOT EXISTS orders(id INTEGER, item TEXT, qty INTEGER)"</span>)
+conn.<span class="fn">execute</span>(<span class="str">"INSERT INTO orders VALUES(?, ?, ?)"</span>, [<span class="num">1</span>, <span class="str">"widget"</span>, <span class="num">100</span>])
+conn.<span class="fn">commit</span>()
+
+<span class="cmt"># Roll the active log segment, then block until the apply lands in PostgreSQL.</span>
+<span class="cmt"># NOTE: await_sync is only used here to demonstrate SyncLite's background sync in action —</span>
+<span class="cmt"># apps normally just keep writing; SyncLite ships changes asynchronously in the background.</span>
+conn.<span class="fn">flush</span>()
+sl.<span class="fn">await_sync</span>(<span class="str">"orders.db"</span>, <span class="num">30.0</span>)
+conn.<span class="fn">close</span>()
+<span class="cmt"># ↑ logged + shipped + consolidated into PostgreSQL.</span></pre>
     </div>
 
     <!-- C++ -->
