@@ -78,13 +78,15 @@ flowchart LR
 
     Stage -- apply --> Dst
 
-    Dst["Destinations<br/>Postgres · MySQL · MSSQL · MongoDB<br/>Iceberg · DuckDB · S3"]:::dst
+    Dst["Current embedded-runtime target<br/>PostgreSQL<br/><br/>Standalone Consolidator<br/>PostgreSQL · MySQL · MSSQL · MongoDB<br/>Iceberg · DuckDB · S3"]:::dst
 ```
 
 <sub>Inside each runtime: SQL (JDBC for Java, rusqlite for Rust, native
 bindings for Python / Node / C/C++ / Go / Ruby / C#) plus the Store
 CRUD and Stream APIs all sit on top of the same embedded DB, WAL
-logger, shipper, and in-process consolidator.</sub>
+logger, shipper, and in-process consolidator. The current embedded
+runtime path targets PostgreSQL; the standalone Consolidator is the
+broader multi-destination path, and more runtime destinations are planned.</sub>
 
 ---
 
@@ -105,8 +107,8 @@ If you're a developer building an app, you only need group 1. If you're standing
 
 | Component | Description | README |
 |---|---|---|
-| **SyncLite Runtime (Java)** (`synclite-<version>.jar`) | One jar = JDBC / Store / Stream APIs + logger + shipper + (optional) **in-process consolidator** (via bundled `synclite_jni` native). Call `initialize(dbPath, deviceName, destinationOptions)` for the single-jar topology, or `initialize(dbPath, conf)` for logger-only mode paired with the standalone Consolidator WAR. | [→](synclite-logger-java/README.md) |
-| **SyncLite Runtime (Rust)** | Same runtime in Rust (logger + in-process consolidator) as a single `cdylib`. Consumable from **Rust, Python, Node.js, C/C++, Go, Ruby, C#** — anywhere you can load a native library. | [→](synclite-logger-rust/README.md) |
+| **SyncLite Runtime (Java)** (`synclite-<version>.jar`) | One jar = JDBC / Store / Stream APIs + logger + shipper + (optional) **in-process consolidator** (via bundled `synclite_jni` native). Call `initialize(dbPath, deviceName, destinationOptions)` for the single-jar topology, or `initialize(dbPath, conf)` for logger-only mode paired with the standalone Consolidator WAR. The current embedded-runtime destination focus is PostgreSQL, while the standalone Consolidator is the broader multi-destination path. | [→](synclite-logger-java/README.md) |
+| **SyncLite Runtime (Rust)** | Same runtime in Rust (logger + in-process consolidator) as a single `cdylib`. Consumable from **Rust, Python, Node.js, C/C++, Go, Ruby, C#** — anywhere you can load a native library. Its current embedded-runtime destination focus is PostgreSQL; more runtime destinations are planned, while the standalone Consolidator already supports a wider set. | [→](synclite-logger-rust/README.md) |
 
 ### Optional tooling — built on top of the runtime
 
@@ -171,7 +173,7 @@ runtime.</sub>
 
 A "device" is just a logical embedded DB that the runtime owns end-to-end (storage + log + sync). Pick the API surface that fits your code, not the other way around:
 
-- **SQL Devices** — full SQL via JDBC (`SQLite`, `DuckDB`, `Derby`, `H2`, `HyperSQL`). Run arbitrary `CREATE` / `ALTER` / `SELECT` / `INSERT` / `UPDATE` / `DELETE`. Use this when you want a real embedded SQL DB and just happen to also want it synced.
+- **SQL Devices** — full, SQLite-syntax-compliant SQL access (`SQLite`, `DuckDB`, `Derby`, `H2`, `HyperSQL`). Run arbitrary `CREATE` / `ALTER` / `SELECT` / `INSERT` / `UPDATE` / `DELETE` through any of the language runtimes (Java, Rust, Python, C++). Use this when you want a real embedded SQL DB and just happen to also want it synced.
 - **Store Devices** — `SyncLiteStore` typed CRUD (`SQLITE_STORE`, `DUCKDB_STORE`, `DERBY_STORE`, `H2_STORE`, `HYPERSQL_STORE`). `insert` / `update` / `delete` / `selectAll` against plain maps; schema evolves automatically. Use this when you want a simple, stable replication contract without writing SQL.
 - **Streaming Device** — `SyncLiteStream` fluent `insert` / `insertBatch` over the append-only `STREAMING` device. Use this for high-throughput event capture where UPDATE/DELETE are not needed.
 
@@ -685,6 +687,16 @@ bin/stage/minio/docker-deploy.sh   # MinIO object storage
 ## Patent
 
 SyncLite is backed by patented technology, more info: https://www.synclite.io/about
+
+---
+
+## Sponsorship & Support
+
+SyncLite is open source and free to use. If it adds value to your work, please consider sponsoring its continued development — sponsorships fund maintenance, new features, and community support.
+
+[![Sponsor SyncLite](https://img.shields.io/badge/Sponsor-%E2%9D%A4-db61a2?logo=github-sponsors&logoColor=white)](https://github.com/sponsors/syncliteio)
+
+You can sponsor us via [GitHub Sponsors](https://github.com/sponsors/syncliteio) (see [.github/FUNDING.yml](.github/FUNDING.yml)). Every contribution, big or small, is greatly appreciated. ⭐ Starring the repo and spreading the word helps too!
 
 ---
 
