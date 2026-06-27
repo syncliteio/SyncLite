@@ -19,6 +19,17 @@ Each step prints a `[LOCAL ...]` banner. After `awaitSync` / `await_sync`, Java 
 
 Every sample is **safe to rerun on the same device** — each table is `DROP TABLE IF EXISTS`'d before being recreated.
 
+## Device families
+
+These runtime samples all use a **SQL device** — a full, SQLite-syntax-compliant embedded SQL database where you run arbitrary `CREATE` / `ALTER` / `SELECT` / `INSERT` / `UPDATE` / `DELETE` and have every change replicated to the destination. It's the right starting point when your app needs real SQL, JOINs, multi-statement transactions, or ad-hoc DDL.
+
+SyncLite also ships two other device families on the same runtime:
+
+- **Store devices** — the same SQL-shaped API tuned for bulk write-through; the runtime emits pre-formed row events that the Consolidator applies directly to the destination, giving the highest end-to-end consolidation throughput and the simplest starting point for a new app.
+- **Streaming devices** — append-only ingestion for high-throughput event capture; accept `INSERT` + DDL and reject `UPDATE` / `DELETE` by design.
+
+All three produce the same change log and flow through the same shipper + consolidator, so you can mix device families inside one application. See [../README.md § SyncLite Devices](../README.md#synclite-devices--three-apis-over-one-runtime) for the full device-family reference and [../DOCUMENTATION.md](../DOCUMENTATION.md) for per-device API details.
+
 ## Sync modes: `REPLICATION` vs `CONSOLIDATION`
 
 Each sample picks one of two destination sync modes — set on the device at `initialize(...)` (or in `synclite.conf` as `dst-sync-mode=...`):
