@@ -73,13 +73,15 @@ flowchart LR
 
     Stage -- apply --> Dst
 
-    Dst["Destinations<br/>Postgres · MySQL · MSSQL · MongoDB<br/>Iceberg · DuckDB · S3"]:::dst
+    Dst["Current embedded-runtime target<br/>PostgreSQL<br/><br/>Standalone Consolidator<br/>PostgreSQL · MySQL · MSSQL · MongoDB<br/>Iceberg · DuckDB · S3"]:::dst
 ```
 
 <sub>Inside each runtime: SQL (JDBC for Java, rusqlite for Rust, native
 bindings for Python / Node / C/C++ / Go / Ruby / C#) plus the Store
 CRUD and Stream APIs all sit on top of the same embedded DB, WAL
-logger, shipper, and in-process consolidator.</sub>
+logger, shipper, and in-process consolidator. The current embedded
+runtime path targets PostgreSQL; the standalone Consolidator is the
+broader multi-destination path, and more runtime destinations are planned.</sub>
 
 ---
 
