@@ -1,0 +1,5 @@
+[env]
+# Mirror the Python-wheel approach for native deps: keep DuckDB's prebuilt
+# library download enabled even when the packaged sample is built from the
+# release zip instead of the repo root.
+DUCKDB_DOWNLOAD_LIB = "true"
