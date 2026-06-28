@@ -15,13 +15,13 @@
 
 **SyncLite is a lightweight, embeddable database runtime.** Drop one library into your app and you get a fully-featured embedded database (SQLite, DuckDB, Apache Derby, H2, or HyperSQL) whose every write is durably logged and continuously synced to a destination.
 
-Today the embedded runtime supports PostgreSQL as the primary remote destination, with SQLite and DuckDB also used as local/embedded destinations. The standalone Consolidator is the broader multi-destination path, and more runtime destinations are planned.
-
 No server to install. No daemon to babysit. No CDC pipeline to wire up. Your application links a jar, a crate, or a native library and ships.
 
 ```text
 your app  ──►  SyncLite Runtime (embedded DB + log + shipper + sync)  ──►  PostgreSQL / SQLite / DuckDB
 ```
+
+Today the embedded runtime supports PostgreSQL as the primary remote destination, with SQLite and DuckDB also used as local/embedded destinations. The standalone Consolidator is the broader multi-destination path, and more runtime destinations are planned.
 
 ### What you get without installing anything
 
