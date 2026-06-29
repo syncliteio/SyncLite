@@ -39,6 +39,34 @@ cmake -S . -B build
 cmake --build build --config Release
 ```
 
+### Try other device types
+
+The packaged sample is wired for the SQLite device (`SQLITE`) and a PostgreSQL destination by default. If you want to try other local-device variants, change the initialization line in [synclite_rusqlite_postgres.cpp](synclite_rusqlite_postgres.cpp) from:
+
+```cpp
+sl::initialize("SQLITE", DEVICE_NAME, DB_PATH, dst);
+```
+
+to one of these:
+
+```cpp
+sl::initialize("SQLITE_STORE", DEVICE_NAME, DB_PATH, dst);
+```
+
+```cpp
+sl::initialize("STREAMING", DEVICE_NAME, DB_PATH, dst);
+```
+
+```cpp
+sl::initialize("DUCKDB", DEVICE_NAME, DB_PATH, dst);
+```
+
+```cpp
+sl::initialize("DUCKDB_STORE", DEVICE_NAME, DB_PATH, dst);
+```
+
+On Windows, the C++ sample also needs `duckdb.dll` next to the executable when you use DuckDB-backed devices. CMake will copy it automatically when it can find it in the native lib folder, the Rust build output, or a `deps` folder. If it still is not found, copy `duckdb.dll` manually to the same folder as the built `.exe`.
+
 Then:
 
 **Windows:**
