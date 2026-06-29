@@ -1,5 +1,11 @@
 // End-to-end SyncLite -> PostgreSQL demo (C++).
 //
+// The sample is wired for the SQLite device and PostgreSQL destination by
+// default. To try other local-device variants, swap the initialization line
+// at the bottom to `sl::initialize("SQLITE_STORE", ...)`,
+// `sl::initialize("STREAMING", ...)`, `sl::initialize("DUCKDB", ...)`, or
+// `sl::initialize("DUCKDB_STORE", ...)`.
+//
 // Demonstrates `dst_sync_mode = "REPLICATION"`: every row-level operation
 // AND every schema-evolution operation executed on the local SQLite
 // database is mirrored 1:1 to PostgreSQL by the in-process consolidator.
