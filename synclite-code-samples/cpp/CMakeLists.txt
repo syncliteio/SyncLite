@@ -102,18 +102,47 @@ if(WIN32)
         # doesn't carry; try the inverse.
         set(SYNCLITE_RUNTIME_DLL "${SYNCLITE_LIB_DIR}/lib${_synclite_lib_filename}.dll")
     endif()
+
+    # DuckDB-backed devices need duckdb.dll available at run time too.
+    # Search the release-native folder first, then fall back to the Rust build
+    # output when the sample is built from a source checkout.
+    find_file(SYNCLITE_DUCKDB_DLL
+        NAMES duckdb.dll
+        HINTS "${SYNCLITE_LIB_DIR}"
+              "${SYNCLITE_LIB_DIR}/deps"
+              "${CMAKE_CURRENT_SOURCE_DIR}/../../synclite-logger-rust/target/${SYNCLITE_PROFILE}"
+              "${CMAKE_CURRENT_SOURCE_DIR}/../../synclite-logger-rust/target/debug"
+              "${CMAKE_CURRENT_SOURCE_DIR}/../../synclite-logger-rust/target/release"
+        NO_DEFAULT_PATH)
+    if(SYNCLITE_DUCKDB_DLL)
+        message(STATUS "duckdb runtime dll  : ${SYNCLITE_DUCKDB_DLL}")
+    else()
+        message(WARNING
+            "duckdb.dll not found near ${SYNCLITE_LIB_DIR}.\n"
+            "If you want to try DuckDB or DuckDB_STORE devices, copy duckdb.dll "
+            "next to the built .exe manually or build the Rust side with the "
+            "download-lib flow so it is produced.")
+    endif()
 endif()
 
 function(add_synclite_sample name)
     add_executable(${name} ${name}.cpp)
     target_include_directories(${name} PRIVATE "${SYNCLITE_INCLUDE_DIR}")
     target_link_libraries(${name} PRIVATE "${SYNCLITE_LIB}")
-    if(WIN32 AND EXISTS "${SYNCLITE_RUNTIME_DLL}")
-        # Copy the cdylib next to the .exe so it loads at run time.
-        add_custom_command(TARGET ${name} POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                    "${SYNCLITE_RUNTIME_DLL}"
-                    "$<TARGET_FILE_DIR:${name}>/")
+    if(WIN32)
+        if(EXISTS "${SYNCLITE_RUNTIME_DLL}")
+            # Copy the cdylib next to the .exe so it loads at run time.
+            add_custom_command(TARGET ${name} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                        "${SYNCLITE_RUNTIME_DLL}"
+                        "$<TARGET_FILE_DIR:${name}>/")
+        endif()
+        if(SYNCLITE_DUCKDB_DLL)
+            add_custom_command(TARGET ${name} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                        "${SYNCLITE_DUCKDB_DLL}"
+                        "$<TARGET_FILE_DIR:${name}>/duckdb.dll")
+        endif()
     endif()
 endfunction()
 
