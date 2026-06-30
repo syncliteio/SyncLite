@@ -18,10 +18,10 @@
 No server to install. No daemon to babysit. No CDC pipeline to wire up. Your application links a jar, a crate, or a native library and ships.
 
 ```text
-your app  ──►  SyncLite Runtime (embedded DB + log + shipper + sync)  ──►  PostgreSQL / SQLite / DuckDB
+your app  ──►  Offline First SyncLite Runtime (embedded DB + automatic sync)  ──►  PostgreSQL
 ```
 
-Today the embedded runtime supports PostgreSQL as the primary remote destination, with SQLite and DuckDB also used as local/embedded destinations. The standalone Consolidator is the broader multi-destination path, and more runtime destinations are planned.
+Today the embedded runtime supports PostgreSQL as the primary remote destination, with SQLite and DuckDB also used as local destinations. The standalone Consolidator is the broader multi-destination path, and more runtime destinations are planned.
 
 ### What you get without installing anything
 
