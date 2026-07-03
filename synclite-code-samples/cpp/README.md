@@ -1,28 +1,25 @@
-# SyncLite C++ sample
+# SyncLite C++ Sample (SQLite -> PostgreSQL)
 
-[`synclite_rusqlite_postgres.cpp`](synclite_rusqlite_postgres.cpp) — local SQLite app whose every change is replicated to PostgreSQL by the in-process consolidator. Built on the SyncLite C ABI (`synclite.h`) wrapped in a header-only C++17 RAII layer (`synclite.hpp`).
+This folder contains one end-to-end sample:
 
-Top-of-file comments show where to flip **sync mode** (`REPLICATION` ↔ `CONSOLIDATION` — see [../README.md § Sync modes](../README.md#sync-modes-replication-vs-consolidation)) and adjust connection settings.
+- [synclite_rusqlite_postgres.cpp](synclite_rusqlite_postgres.cpp)
 
-> **Postgres verification.** Unlike Java / Python / Rust, the C++ sample does *not* link `libpq` (avoids a non-trivial build dependency). After `await_sync` it prints copy-paste `psql` queries you can run from a separate shell to confirm the same rows + same schema landed.
+The program writes to a local SQLite database and uses SyncLite's embedded pipeline to replicate data and schema changes to PostgreSQL.
 
-## Run from the release zip
+The sample demonstrates:
 
-You are already in `sample-apps/cpp/` of an extracted release. The release ships the C/C++ SDK under [`../../lib/native/`](../../lib/native/):
+1. DML replication: INSERT / UPDATE / batch INSERT
+2. Schema evolution replication: ADD / RENAME / DROP COLUMN
+3. Table rename replication: RENAME TO
+4. Flush + await_sync for deterministic completion
 
-```
-../../lib/native/
-    include/synclite.h        # C ABI
-    include/synclite.hpp      # C++17 RAII wrapper (header-only)
-    libsynclite_1.0.0.dll              # Windows runtime
-    libsynclite_1.0.0.lib              # Windows import library
-    libsynclite_1.0.0_linux_x86_64.so  # Linux x86_64
-    libsynclite_1.0.0_linux_aarch64.so # Linux arm64
-```
+## Prerequisites
 
-[`CMakeLists.txt`](CMakeLists.txt) auto-detects this layout — no flags needed.
+1. PostgreSQL reachable from this machine
+2. Database and schema created
+3. C++ toolchain + CMake
 
-### 1. Pre-create the Postgres database + schema (one-time)
+Create DB + schema once:
 
 ```sql
 CREATE DATABASE syncdb;
@@ -30,82 +27,66 @@ CREATE DATABASE syncdb;
 CREATE SCHEMA syncschema;
 ```
 
-Defaults: schema `syncschema`. Edit the constants at the top of the `.cpp` to override.
+Default connection used by the sample:
 
-### 2. Build + run
+- host: `localhost`
+- port: `5432`
+- user/password: `postgres/postgres`
+- db: `syncdb`
+- schema: `syncschema`
+
+If needed, edit constants in [synclite_rusqlite_postgres.cpp](synclite_rusqlite_postgres.cpp).
+
+## Run From Packaged Platform (Recommended)
+
+From an extracted platform folder, open terminal in:
+
+- `sample-apps/cpp`
+
+Expected layout relative to this folder:
+
+```text
+../../lib/native/include/synclite.h
+../../lib/native/include/synclite.hpp
+../../lib/native/libsynclite_<version>.dll   (Windows)
+../../lib/native/libsynclite_<version>.lib   (Windows)
+```
+
+### Windows (PowerShell)
+
+If `cmake` is on PATH:
 
 ```pwsh
 cmake -S . -B build
 cmake --build build --config Release
-```
-
-### Try other device types
-
-The packaged sample is wired for the SQLite device (`SQLITE`) and a PostgreSQL destination by default. If you want to try other local-device variants, change the initialization line in [synclite_rusqlite_postgres.cpp](synclite_rusqlite_postgres.cpp) from:
-
-```cpp
-sl::initialize("SQLITE", DEVICE_NAME, DB_PATH, dst);
-```
-
-to one of these:
-
-```cpp
-sl::initialize("SQLITE_STORE", DEVICE_NAME, DB_PATH, dst);
-```
-
-```cpp
-sl::initialize("STREAMING", DEVICE_NAME, DB_PATH, dst);
-```
-
-```cpp
-sl::initialize("DUCKDB", DEVICE_NAME, DB_PATH, dst);
-```
-
-```cpp
-sl::initialize("DUCKDB_STORE", DEVICE_NAME, DB_PATH, dst);
-```
-
-On Windows, the C++ sample also needs `duckdb.dll` next to the executable when you use DuckDB-backed devices. CMake will copy it automatically when it can find it in the native lib folder, the Rust build output, or a `deps` folder. If it still is not found, copy `duckdb.dll` manually to the same folder as the built `.exe`.
-
-Then:
-
-**Windows:**
-
-```pwsh
 .\build\Release\synclite_rusqlite_postgres.exe
 ```
 
-**Linux / macOS:**
+If `cmake` is not on PATH (Visual Studio bundled CMake):
+
+```pwsh
+$cmake = "C:\Program Files\Microsoft Visual Studio\2022\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe"
+& $cmake -S . -B build
+& $cmake --build build --config Release
+.\build\Release\synclite_rusqlite_postgres.exe
+```
+
+### Linux / macOS
 
 ```bash
+cmake -S . -B build
+cmake --build build
 ./build/synclite_rusqlite_postgres
 ```
 
-CMake copies the SyncLite cdylib next to the executable on Windows. On Linux set `LD_LIBRARY_PATH=../../lib/native` (or `DYLD_LIBRARY_PATH` on macOS) before running if the loader can't find it.
+If loader cannot find SyncLite runtime libs, set:
 
-Safe to rerun — each table is `DROP TABLE IF EXISTS`'d before being recreated.
+- Linux: `LD_LIBRARY_PATH=../../lib/native`
+- macOS: `DYLD_LIBRARY_PATH=../../lib/native`
 
-## What you'll see
+## Run From Source Checkout
 
-Three flows executed locally on SQLite, each step printing a `[LOCAL ...]` banner:
-
-1. **users** — `INSERT` / `UPDATE` / batched `INSERT`.
-2. **products** — `ALTER TABLE ADD / RENAME / DROP COLUMN`.
-3. **orders → orders_archive** — `ALTER TABLE RENAME TO`.
-
-Then `synclite::await_sync` blocks until the in-process shipper + consolidator have drained to Postgres. A final `[POSTGRES VERIFY]` block prints the `psql` queries you can run to confirm the same rows + same schema landed.
-
-## Troubleshooting
-
-- **`Could not find synclite_c / synclite_1.0.0`** at CMake configure — verify `../../lib/native/` exists relative to this folder. If you moved the sample out of the release tree, pass `-DSYNCLITE_SDK_DIR=<path-to-lib/native-or-equivalent>`.
-- **`synclite_*.dll not found`** at run time on Windows — the CMake post-build step copies the dll next to the `.exe`; if you moved the exe, copy the dll alongside it.
-- **Nothing landed on Postgres** — check the trace files documented in [../README.md § Where do the samples write files?](../README.md#where-do-the-samples-write-files).
-
----
-
-## Developing against the repo
-
-If you're working from a `synclite` repo checkout instead of an extracted release, build the cdylib from source first:
+If you are in this repository (not extracted package), build Rust runtime first:
 
 ```pwsh
 cd ..\..\synclite-logger-rust
@@ -113,6 +94,89 @@ cargo build -p synclite-c --release
 cd ..\synclite-code-samples\cpp
 cmake -S . -B build -DSYNCLITE_RUST_ROOT=..\..\synclite-logger-rust -DSYNCLITE_PROFILE=release
 cmake --build build --config Release
+.\build\Release\synclite_rusqlite_postgres.exe
 ```
 
-CMake then picks up `synclite-logger-rust/target/release/synclite_c.{dll,lib,so}` automatically.
+## Device Types (C++ / Rust Runtime)
+
+To switch device type, edit the initialize call in [synclite_rusqlite_postgres.cpp](synclite_rusqlite_postgres.cpp):
+
+```cpp
+sl::initialize("SQLITE", DEVICE_NAME, DB_PATH, dst);
+```
+
+Valid values for the first argument are:
+
+1. `SQLITE`: full SQL device on SQLite
+2. `SQLITE_STORE`: store-oriented SQL device on SQLite
+3. `DUCKDB`: full SQL device on DuckDB
+4. `DUCKDB_STORE`: store-oriented SQL device on DuckDB
+5. `STREAMING`: append-only streaming device
+
+Quick examples:
+
+```cpp
+sl::initialize("SQLITE_STORE", DEVICE_NAME, DB_PATH, dst);
+sl::initialize("DUCKDB", DEVICE_NAME, DB_PATH, dst);
+sl::initialize("DUCKDB_STORE", DEVICE_NAME, DB_PATH, dst);
+sl::initialize("STREAMING", DEVICE_NAME, DB_PATH, dst);
+```
+
+Behavior notes:
+
+1. `STREAMING` is append-oriented and does not support general `UPDATE`/`DELETE` workflows like full SQL devices.
+2. `DUCKDB` and `DUCKDB_STORE` may require `duckdb.dll` on Windows next to the executable depending on packaging.
+3. The sample flow itself is written for SQL semantics; if you switch to `STREAMING`, adapt statements accordingly.
+
+## What Success Looks Like
+
+Program output includes these banners:
+
+1. `TABLE users`
+2. `TABLE products`
+3. `TABLE orders -> orders_archive`
+4. `SYNC: flush + await_sync`
+
+Then it prints SQL snippets under `VERIFY on PostgreSQL` so you can validate destination state manually.
+
+## Troubleshooting
+
+### Configure fails: cannot find synclite library
+
+Symptom:
+
+- `Could not find a synclite_c / libsynclite_<revision> library ...`
+
+Checks:
+
+1. Confirm `../../lib/native` exists from this folder
+2. Confirm it contains `.lib/.dll` (Windows) or `.so/.dylib` (Linux/macOS)
+3. If sample moved outside package layout, pass `-DSYNCLITE_SDK_DIR=<sdk-root>`
+
+### Windows run fails with `0xC0000135`
+
+This is a missing DLL.
+
+Common fixes:
+
+1. Ensure `synclite_c.dll` exists next to the built `.exe`
+2. Ensure SyncLite runtime DLL is next to the `.exe`
+3. Ensure `duckdb.dll` is next to the `.exe` when required by your runtime build
+
+If your package only has `libsynclite_<version>.dll`, create a compatibility copy next to the exe:
+
+```pwsh
+Copy-Item .\libsynclite_1.0.0.dll .\synclite_c.dll -Force
+```
+
+### No rows appear in PostgreSQL
+
+1. Verify connection string in sample code
+2. Confirm DB/schema exists
+3. Wait for `await_sync` success
+4. Run printed verification SQL
+
+## Notes
+
+1. Re-running is safe; tables are dropped/recreated in sample flow
+2. C++ sample intentionally avoids `libpq` dependency and prints SQL verification steps instead
