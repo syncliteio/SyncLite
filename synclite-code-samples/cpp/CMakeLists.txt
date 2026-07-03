@@ -60,26 +60,15 @@ if(NOT EXISTS "${SYNCLITE_INCLUDE_DIR}/synclite.h")
 endif()
 
 # `synclite_c` is the in-tree source-build name; platform packages may ship
-# either `synclite_oss*` or versioned `libsynclite_<revision>*` names.
+# versioned `libsynclite_<revision>*` names.
 # find_library tries each discovered basename and handles the platform `lib`
 # prefix automatically.
-file(GLOB _synclite_oss_libs
-    RELATIVE "${SYNCLITE_LIB_DIR}"
-    "${SYNCLITE_LIB_DIR}/libsynclite_oss*.lib"
-    "${SYNCLITE_LIB_DIR}/libsynclite_oss*.so"
-    "${SYNCLITE_LIB_DIR}/libsynclite_oss*.dylib"
-    "${SYNCLITE_LIB_DIR}/synclite_oss*.lib")
 file(GLOB _synclite_versioned_libs
     RELATIVE "${SYNCLITE_LIB_DIR}"
     "${SYNCLITE_LIB_DIR}/libsynclite_*.lib"
     "${SYNCLITE_LIB_DIR}/libsynclite_*.so"
     "${SYNCLITE_LIB_DIR}/libsynclite_*.dylib")
 set(_synclite_lib_names synclite_c logger_bindings_c)
-foreach(_lib IN LISTS _synclite_oss_libs)
-    get_filename_component(_basename "${_lib}" NAME_WE)
-    string(REGEX REPLACE "^lib" "" _basename "${_basename}")
-    list(APPEND _synclite_lib_names "${_basename}")
-endforeach()
 foreach(_lib IN LISTS _synclite_versioned_libs)
     get_filename_component(_basename "${_lib}" NAME_WE)
     string(REGEX REPLACE "^lib" "" _basename "${_basename}")
@@ -94,7 +83,7 @@ find_library(SYNCLITE_LIB
 
 if(NOT SYNCLITE_LIB)
     message(FATAL_ERROR
-        "Could not find a synclite_c / synclite_oss / libsynclite_<revision> library in ${SYNCLITE_LIB_DIR}.\n"
+        "Could not find a synclite_c / libsynclite_<revision> library in ${SYNCLITE_LIB_DIR}.\n"
         "Either build the cdylib (cargo build -p synclite-c [--release])\n"
         "or pass -DSYNCLITE_SDK_DIR=<prebuilt-sdk>.")
 endif()
@@ -104,7 +93,7 @@ message(STATUS "synclite library    : ${SYNCLITE_LIB}")
 
 # On Windows the runtime dll lives next to the import lib. Locate by basename
 # so we copy the actual file the linker resolved (synclite_c.dll OR
-# libsynclite_oss.dll OR libsynclite_oss_<arch>.dll).
+# libsynclite_<revision>.dll).
 if(WIN32)
     get_filename_component(_synclite_lib_filename "${SYNCLITE_LIB}" NAME_WE)
     set(SYNCLITE_RUNTIME_DLL "${SYNCLITE_LIB_DIR}/${_synclite_lib_filename}.dll")
