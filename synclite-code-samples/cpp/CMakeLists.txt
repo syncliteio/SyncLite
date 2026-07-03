@@ -81,6 +81,30 @@ find_library(SYNCLITE_LIB
     HINTS "${SYNCLITE_LIB_DIR}"
     NO_DEFAULT_PATH)
 
+if(NOT SYNCLITE_LIB AND _synclite_versioned_libs)
+    # Versioned names like libsynclite_1.0.0.lib are valid shipped artifacts,
+    # but find_library can miss them when dots are present in the basename.
+    if(WIN32)
+        set(_synclite_preferred_ext ".lib")
+    elseif(APPLE)
+        set(_synclite_preferred_ext ".dylib")
+    else()
+        set(_synclite_preferred_ext ".so")
+    endif()
+
+    foreach(_lib IN LISTS _synclite_versioned_libs)
+        if(_lib MATCHES "${_synclite_preferred_ext}$")
+            set(SYNCLITE_LIB "${SYNCLITE_LIB_DIR}/${_lib}")
+            break()
+        endif()
+    endforeach()
+
+    if(NOT SYNCLITE_LIB)
+        list(GET _synclite_versioned_libs 0 _synclite_first_lib)
+        set(SYNCLITE_LIB "${SYNCLITE_LIB_DIR}/${_synclite_first_lib}")
+    endif()
+endif()
+
 if(NOT SYNCLITE_LIB)
     message(FATAL_ERROR
         "Could not find a synclite_c / libsynclite_<revision> library in ${SYNCLITE_LIB_DIR}.\n"
@@ -97,10 +121,16 @@ message(STATUS "synclite library    : ${SYNCLITE_LIB}")
 if(WIN32)
     get_filename_component(_synclite_lib_filename "${SYNCLITE_LIB}" NAME_WE)
     set(SYNCLITE_RUNTIME_DLL "${SYNCLITE_LIB_DIR}/${_synclite_lib_filename}.dll")
+    set(SYNCLITE_RUNTIME_DLL_ALIAS "")
     if(NOT EXISTS "${SYNCLITE_RUNTIME_DLL}")
         # Some release archives ship the dll with a `lib` prefix that the .lib
         # doesn't carry; try the inverse.
         set(SYNCLITE_RUNTIME_DLL "${SYNCLITE_LIB_DIR}/lib${_synclite_lib_filename}.dll")
+    endif()
+    # Versioned platform packages may link via libsynclite_<revision>.lib while
+    # the executable import table still expects synclite_c.dll.
+    if(_synclite_lib_filename MATCHES "^libsynclite_")
+        set(SYNCLITE_RUNTIME_DLL_ALIAS "synclite_c.dll")
     endif()
 
     # DuckDB-backed devices need duckdb.dll available at run time too.
@@ -136,6 +166,12 @@ function(add_synclite_sample name)
                 COMMAND ${CMAKE_COMMAND} -E copy_if_different
                         "${SYNCLITE_RUNTIME_DLL}"
                         "$<TARGET_FILE_DIR:${name}>/")
+            if(SYNCLITE_RUNTIME_DLL_ALIAS)
+                add_custom_command(TARGET ${name} POST_BUILD
+                    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                            "${SYNCLITE_RUNTIME_DLL}"
+                            "$<TARGET_FILE_DIR:${name}>/${SYNCLITE_RUNTIME_DLL_ALIAS}")
+            endif()
         endif()
         if(SYNCLITE_DUCKDB_DLL)
             add_custom_command(TARGET ${name} POST_BUILD
