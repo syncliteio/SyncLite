@@ -247,6 +247,10 @@ if defined TOMCAT_READY (
 )
 
 
+if not exist "%TOMCAT_DIR%\temp" mkdir "%TOMCAT_DIR%\temp" >nul
+if not exist "%TOMCAT_DIR%\work" mkdir "%TOMCAT_DIR%\work" >nul
+if not exist "%TOMCAT_DIR%\logs" mkdir "%TOMCAT_DIR%\logs" >nul
+
 echo !STEP![3/7] Configuring Tomcat users...!RESET!
 
 call :copy_file "tomcat-users.xml" "%TOMCAT_DIR%\conf\tomcat-users.xml"
