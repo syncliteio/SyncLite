@@ -138,6 +138,7 @@ else
 	log_ok "[2/7] Tomcat extraction complete."
 fi
 
+mkdir -p "${TOMCAT_DIR}/temp" "${TOMCAT_DIR}/work" "${TOMCAT_DIR}/logs"
 log_step "[3/7] Configuring Tomcat users..."
 cp -f tomcat-users.xml "${TOMCAT_DIR}/conf/tomcat-users.xml"
 chmod +x "${TOMCAT_DIR}/bin/"*.sh
