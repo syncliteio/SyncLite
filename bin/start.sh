@@ -105,6 +105,7 @@ if [[ ! -d "${CATALINA_WEBAPPS}" ]]; then
     log_error "ERROR: Tomcat webapps directory missing at ${CATALINA_WEBAPPS}."
     exit 1
 fi
+mkdir -p "${CATALINA_HOME}/temp" "${CATALINA_HOME}/work" "${CATALINA_HOME}/logs"
 log_ok "[2/4] Tomcat found."
 
 log_info "Using JAVA_HOME=${JAVA_HOME}"
