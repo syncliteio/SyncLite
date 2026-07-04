@@ -63,47 +63,71 @@ endif()
 # versioned `libsynclite_<revision>*` names.
 # find_library tries each discovered basename and handles the platform `lib`
 # prefix automatically.
-file(GLOB _synclite_versioned_libs
-    RELATIVE "${SYNCLITE_LIB_DIR}"
-    "${SYNCLITE_LIB_DIR}/libsynclite_*.lib"
-    "${SYNCLITE_LIB_DIR}/libsynclite_*.so"
-    "${SYNCLITE_LIB_DIR}/libsynclite_*.dylib")
-set(_synclite_lib_names synclite_c logger_bindings_c)
+if(WIN32)
+    file(GLOB _synclite_versioned_libs_underscore
+        RELATIVE "${SYNCLITE_LIB_DIR}"
+        "${SYNCLITE_LIB_DIR}/libsynclite_*_*.lib")
+    if(_synclite_versioned_libs_underscore)
+        set(_synclite_versioned_libs ${_synclite_versioned_libs_underscore})
+    else()
+        file(GLOB _synclite_versioned_libs
+            RELATIVE "${SYNCLITE_LIB_DIR}"
+            "${SYNCLITE_LIB_DIR}/libsynclite_*.lib")
+    endif()
+elseif(APPLE)
+    file(GLOB _synclite_versioned_libs_underscore
+        RELATIVE "${SYNCLITE_LIB_DIR}"
+        "${SYNCLITE_LIB_DIR}/libsynclite_*_*.dylib")
+    if(_synclite_versioned_libs_underscore)
+        set(_synclite_versioned_libs ${_synclite_versioned_libs_underscore})
+    else()
+        file(GLOB _synclite_versioned_libs
+            RELATIVE "${SYNCLITE_LIB_DIR}"
+            "${SYNCLITE_LIB_DIR}/libsynclite_*.dylib")
+    endif()
+else()
+    file(GLOB _synclite_versioned_libs_underscore
+        RELATIVE "${SYNCLITE_LIB_DIR}"
+        "${SYNCLITE_LIB_DIR}/libsynclite_*_*.so")
+    if(_synclite_versioned_libs_underscore)
+        set(_synclite_versioned_libs ${_synclite_versioned_libs_underscore})
+    else()
+        file(GLOB _synclite_versioned_libs
+            RELATIVE "${SYNCLITE_LIB_DIR}"
+            "${SYNCLITE_LIB_DIR}/libsynclite_*.so")
+    endif()
+endif()
+set(_synclite_lib_names)
 foreach(_lib IN LISTS _synclite_versioned_libs)
     get_filename_component(_basename "${_lib}" NAME_WE)
+    list(APPEND _synclite_lib_names "${_basename}")
     string(REGEX REPLACE "^lib" "" _basename "${_basename}")
     list(APPEND _synclite_lib_names "${_basename}")
 endforeach()
+list(APPEND _synclite_lib_names logger_bindings_c)
 list(REMOVE_DUPLICATES _synclite_lib_names)
 
-find_library(SYNCLITE_LIB
-    NAMES ${_synclite_lib_names}
-    HINTS "${SYNCLITE_LIB_DIR}"
-    NO_DEFAULT_PATH)
-
-if(NOT SYNCLITE_LIB AND _synclite_versioned_libs)
-    # Versioned names like libsynclite_1.0.0.lib are valid shipped artifacts,
-    # but find_library can miss them when dots are present in the basename.
-    if(WIN32)
-        set(_synclite_preferred_ext ".lib")
-    elseif(APPLE)
-        set(_synclite_preferred_ext ".dylib")
-    else()
-        set(_synclite_preferred_ext ".so")
-    endif()
-
-    foreach(_lib IN LISTS _synclite_versioned_libs)
-        if(_lib MATCHES "${_synclite_preferred_ext}$")
-            set(SYNCLITE_LIB "${SYNCLITE_LIB_DIR}/${_lib}")
-            break()
-        endif()
-    endforeach()
-
-    if(NOT SYNCLITE_LIB)
-        list(GET _synclite_versioned_libs 0 _synclite_first_lib)
-        set(SYNCLITE_LIB "${SYNCLITE_LIB_DIR}/${_synclite_first_lib}")
-    endif()
+set(_synclite_lib_candidates)
+foreach(_lib IN LISTS _synclite_versioned_libs)
+    list(APPEND _synclite_lib_candidates "${SYNCLITE_LIB_DIR}/${_lib}")
+endforeach()
+if(WIN32)
+    list(APPEND _synclite_lib_candidates
+        "${SYNCLITE_LIB_DIR}/logger_bindings_c.lib")
+elseif(APPLE)
+    list(APPEND _synclite_lib_candidates
+        "${SYNCLITE_LIB_DIR}/libsynclite.dylib")
+else()
+    list(APPEND _synclite_lib_candidates
+        "${SYNCLITE_LIB_DIR}/libsynclite.so")
 endif()
+
+foreach(_candidate IN LISTS _synclite_lib_candidates)
+    if(EXISTS "${_candidate}")
+        set(SYNCLITE_LIB "${_candidate}")
+        break()
+    endif()
+endforeach()
 
 if(NOT SYNCLITE_LIB)
     message(FATAL_ERROR
@@ -116,21 +140,28 @@ message(STATUS "synclite include dir: ${SYNCLITE_INCLUDE_DIR}")
 message(STATUS "synclite library    : ${SYNCLITE_LIB}")
 
 # On Windows the runtime dll lives next to the import lib. Locate by basename
-# so we copy the actual file the linker resolved (synclite_c.dll OR
-# libsynclite_<revision>.dll).
+# so we copy the actual file the linker resolved (typically
+# libsynclite_<revision>.dll) next to the built .exe.
 if(WIN32)
-    get_filename_component(_synclite_lib_filename "${SYNCLITE_LIB}" NAME_WE)
-    set(SYNCLITE_RUNTIME_DLL "${SYNCLITE_LIB_DIR}/${_synclite_lib_filename}.dll")
-    set(SYNCLITE_RUNTIME_DLL_ALIAS "")
-    if(NOT EXISTS "${SYNCLITE_RUNTIME_DLL}")
-        # Some release archives ship the dll with a `lib` prefix that the .lib
-        # doesn't carry; try the inverse.
-        set(SYNCLITE_RUNTIME_DLL "${SYNCLITE_LIB_DIR}/lib${_synclite_lib_filename}.dll")
+    file(GLOB _synclite_runtime_dll_candidates
+        LIST_DIRECTORIES false
+        "${SYNCLITE_LIB_DIR}/libsynclite_*_*.dll")
+    if(NOT _synclite_runtime_dll_candidates)
+        file(GLOB _synclite_runtime_dll_candidates
+            LIST_DIRECTORIES false
+            "${SYNCLITE_LIB_DIR}/libsynclite_*.dll"
+            "${SYNCLITE_LIB_DIR}/synclite_c.dll")
     endif()
-    # Versioned platform packages may link via libsynclite_<revision>.lib while
-    # the executable import table still expects synclite_c.dll.
-    if(_synclite_lib_filename MATCHES "^libsynclite_")
-        set(SYNCLITE_RUNTIME_DLL_ALIAS "synclite_c.dll")
+    if(_synclite_runtime_dll_candidates)
+        list(GET _synclite_runtime_dll_candidates 0 SYNCLITE_RUNTIME_DLL)
+    else()
+        get_filename_component(_synclite_lib_filename "${SYNCLITE_LIB}" NAME_WE)
+        set(SYNCLITE_RUNTIME_DLL "${SYNCLITE_LIB_DIR}/${_synclite_lib_filename}.dll")
+        if(NOT EXISTS "${SYNCLITE_RUNTIME_DLL}")
+            # Some release archives ship the dll with a `lib` prefix that the .lib
+            # doesn't carry; try the inverse.
+            set(SYNCLITE_RUNTIME_DLL "${SYNCLITE_LIB_DIR}/lib${_synclite_lib_filename}.dll")
+        endif()
     endif()
 
     # DuckDB-backed devices need duckdb.dll available at run time too.
@@ -140,6 +171,10 @@ if(WIN32)
         NAMES duckdb.dll
         HINTS "${SYNCLITE_LIB_DIR}"
               "${SYNCLITE_LIB_DIR}/deps"
+              "${SYNCLITE_LIB_DIR}/../deps"
+              "${CMAKE_CURRENT_SOURCE_DIR}/build-run/Release"
+              "${CMAKE_CURRENT_SOURCE_DIR}/build/Release"
+              "${CMAKE_CURRENT_BINARY_DIR}/Release"
               "${CMAKE_CURRENT_SOURCE_DIR}/../../synclite-logger-rust/target/${SYNCLITE_PROFILE}"
               "${CMAKE_CURRENT_SOURCE_DIR}/../../synclite-logger-rust/target/debug"
               "${CMAKE_CURRENT_SOURCE_DIR}/../../synclite-logger-rust/target/release"
@@ -147,11 +182,9 @@ if(WIN32)
     if(SYNCLITE_DUCKDB_DLL)
         message(STATUS "duckdb runtime dll  : ${SYNCLITE_DUCKDB_DLL}")
     else()
-        message(WARNING
-            "duckdb.dll not found near ${SYNCLITE_LIB_DIR}.\n"
-            "If you want to try DuckDB or DuckDB_STORE devices, copy duckdb.dll "
-            "next to the built .exe manually or build the Rust side with the "
-            "download-lib flow so it is produced.")
+        message(FATAL_ERROR
+            "duckdb.dll is required on Windows because ${SYNCLITE_RUNTIME_DLL} imports it.\n"
+            "Could not locate duckdb.dll near ${SYNCLITE_LIB_DIR} or Rust target outputs.")
     endif()
 endif()
 
@@ -160,24 +193,24 @@ function(add_synclite_sample name)
     target_include_directories(${name} PRIVATE "${SYNCLITE_INCLUDE_DIR}")
     target_link_libraries(${name} PRIVATE "${SYNCLITE_LIB}")
     if(WIN32)
+        set(_runtime_copy_commands)
         if(EXISTS "${SYNCLITE_RUNTIME_DLL}")
-            # Copy the cdylib next to the .exe so it loads at run time.
-            add_custom_command(TARGET ${name} POST_BUILD
+            list(APPEND _runtime_copy_commands
+                COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:${name}>"
                 COMMAND ${CMAKE_COMMAND} -E copy_if_different
                         "${SYNCLITE_RUNTIME_DLL}"
                         "$<TARGET_FILE_DIR:${name}>/")
-            if(SYNCLITE_RUNTIME_DLL_ALIAS)
-                add_custom_command(TARGET ${name} POST_BUILD
-                    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                            "${SYNCLITE_RUNTIME_DLL}"
-                            "$<TARGET_FILE_DIR:${name}>/${SYNCLITE_RUNTIME_DLL_ALIAS}")
-            endif()
         endif()
-        if(SYNCLITE_DUCKDB_DLL)
-            add_custom_command(TARGET ${name} POST_BUILD
+        if(EXISTS "${SYNCLITE_DUCKDB_DLL}")
+            list(APPEND _runtime_copy_commands
                 COMMAND ${CMAKE_COMMAND} -E copy_if_different
                         "${SYNCLITE_DUCKDB_DLL}"
                         "$<TARGET_FILE_DIR:${name}>/duckdb.dll")
+        endif()
+        if(_runtime_copy_commands)
+            add_custom_command(TARGET ${name} POST_BUILD
+                ${_runtime_copy_commands}
+                VERBATIM)
         endif()
     endif()
 endfunction()
