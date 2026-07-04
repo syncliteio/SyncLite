@@ -104,11 +104,15 @@ if not exist "%CATALINA_WEBAPPS%" (
     call :hold_window failure
     exit /b 1
 )
+if not exist "%CATALINA_HOME%\temp" mkdir "%CATALINA_HOME%\temp" >nul
+if not exist "%CATALINA_HOME%\work" mkdir "%CATALINA_HOME%\work" >nul
+if not exist "%CATALINA_HOME%\logs" mkdir "%CATALINA_HOME%\logs" >nul
 echo !OK![2/4] Tomcat found.!RESET!
 
 echo !INFO!Using JAVA_HOME=%JAVA_HOME%!RESET!
 echo !INFO!Using JRE_HOME=%JRE_HOME%!RESET!
 echo !INFO!Using Tomcat: %TOMCAT_DIR%!RESET!
+echo !INFO!Ensured Tomcat temp/work/logs directories exist.!RESET!
 
 echo !STEP![3/4] Refreshing WAR deployments...!RESET!
 call :refresh_war "SyncLite Consolidator" "synclite-consolidator" "..\tools\synclite-consolidator\synclite-consolidator-*.war" "..\tools\synclite-consolidator\*.war" "..\target\synclite-platform-1.0.0\tools\synclite-consolidator\synclite-consolidator-*.war" "..\synclite-consolidator\root\web\target\synclite-consolidator-*.war" "..\synclite-consolidator\root\web\target\*.war"
