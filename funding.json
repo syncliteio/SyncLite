@@ -1,32 +1,82 @@
 {
-  "version": "1.0",
-  "project": {
-    "name": "SyncLite",
-    "description": "SyncLite is an open-source platform that simplifies real-time data synchronization and consolidation. It enables applications to replicate data from embedded and edge databases to analytical databases and data lakes using a lightweight, configuration-driven approach.",
-    "repository": "https://github.com/syncliteio/SyncLite",
-    "website": "https://synclite.io",
-    "license": "Apache-2.0"
+  "$schema": "https://fundingjson.org/schema/v1.1.0.json",
+  "version": "v1.0.0",
+  "entity": {
+    "type": "individual",
+    "role": "owner",
+    "name": "Mahendra Chavan",
+    "email": "mahendra.chavan@synclite.io",
+    "description": "Founder and maintainer of SyncLite, an open-source platform focused on making data synchronization simple, reliable, and vendor-neutral.",
+    "webpageUrl": {
+      "url": "https://synclite.io"
+    }
   },
-  "maintainers": [
+  "projects": [
     {
-      "name": "Mahendra Chavan",
-      "role": "Founder and Maintainer"
+      "guid": "synclite",
+      "name": "SyncLite",
+      "description": "SyncLite is an open-source platform that makes edge-to-cloud data synchronization boring again. It enables developers to build offline-first, cloud-sync-ready applications with exactly-once data delivery, low-code APIs, and vendor-neutral replication into databases, data warehouses, and data lakes.",
+      "webpageUrl": {
+        "url": "https://synclite.io"
+      },
+      "repositoryUrl": {
+        "url": "https://github.com/syncliteio/SyncLite"
+      },
+      "licenses": [
+        "spdx:Apache-2.0"
+      ],
+      "tags": [
+        "data-sync",
+        "replication",
+        "cdc",
+        "edge-computing",
+        "offline-first",
+        "database",
+        "sqlite",
+        "duckdb",
+        "etl",
+        "java",
+        "python",
+        "rust",
+        "cpp",
+        "open-source"
+      ]
     }
   ],
   "funding": {
-    "purpose": [
-      "Develop new source and destination connectors",
-      "Improve documentation and developer experience",
-      "Expand automated testing across platforms",
-      "Maintain releases and long-term support",
-      "Advance the Open Replication Format ecosystem",
-      "Support community contributions and issue triage"
+    "channels": [
+      {
+        "guid": "github-sponsors",
+        "type": "payment-provider",
+        "address": "https://github.com/sponsors/syncliteio",
+        "description": "Support the continued development of SyncLite through GitHub Sponsors."
+      }
     ],
-    "why": "SyncLite aims to make data synchronization as simple and ubiquitous as SQLite made embedded databases. Funding helps sustain full-time development, improve reliability, expand platform support, grow the open-source ecosystem, and keep the project free and vendor-neutral."
-  },
-  "links": {
-    "homepage": "https://synclite.io",
-    "repository": "https://github.com/syncliteio/SyncLite",
-    "githubSponsors": "https://github.com/sponsors/syncliteio"
+    "plans": [
+      {
+        "guid": "community-support",
+        "status": "active",
+        "name": "Community Support",
+        "description": "Help keep SyncLite free, open source, and vendor-neutral by supporting ongoing maintenance, documentation, testing, and community engagement.",
+        "amount": 0,
+        "currency": "USD",
+        "frequency": "one-time",
+        "channels": [
+          "github-sponsors"
+        ]
+      },
+      {
+        "guid": "sustaining-development",
+        "status": "active",
+        "name": "Sustaining Development",
+        "description": "Support full-time development of new connectors, the Open Replication Format, platform compatibility, testing infrastructure, documentation, and long-term maintenance.",
+        "amount": 3000,
+        "currency": "USD",
+        "frequency": "monthly",
+        "channels": [
+          "github-sponsors"
+        ]
+      }
+    ]
   }
 }
