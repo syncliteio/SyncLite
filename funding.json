@@ -1,0 +1,32 @@
+{
+  "version": "1.0",
+  "project": {
+    "name": "SyncLite",
+    "description": "SyncLite is an open-source platform that simplifies real-time data synchronization and consolidation. It enables applications to replicate data from embedded and edge databases to analytical databases and data lakes using a lightweight, configuration-driven approach.",
+    "repository": "https://github.com/syncliteio/SyncLite",
+    "website": "https://synclite.io",
+    "license": "Apache-2.0"
+  },
+  "maintainers": [
+    {
+      "name": "Mahendra Chavan",
+      "role": "Founder and Maintainer"
+    }
+  ],
+  "funding": {
+    "purpose": [
+      "Develop new source and destination connectors",
+      "Improve documentation and developer experience",
+      "Expand automated testing across platforms",
+      "Maintain releases and long-term support",
+      "Advance the Open Replication Format ecosystem",
+      "Support community contributions and issue triage"
+    ],
+    "why": "SyncLite aims to make data synchronization as simple and ubiquitous as SQLite made embedded databases. Funding helps sustain full-time development, improve reliability, expand platform support, grow the open-source ecosystem, and keep the project free and vendor-neutral."
+  },
+  "links": {
+    "homepage": "https://synclite.io",
+    "repository": "https://github.com/syncliteio/SyncLite",
+    "githubSponsors": "https://github.com/sponsors/syncliteio"
+  }
+}
