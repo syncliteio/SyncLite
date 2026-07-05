@@ -34,11 +34,7 @@
         "database",
         "sqlite",
         "duckdb",
-        "etl",
-        "java",
-        "python",
-        "rust",
-        "cpp",
+        "etl",        
         "open-source"
       ]
     }
