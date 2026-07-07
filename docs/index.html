@@ -434,13 +434,13 @@
     </div>
     <div class="pipe-arrow">──▶</div>
     <div class="pipe-node">
-      <div class="label">Always-On Sink (Embedded/Standalone)</div>
+      <div class="label">Always-On Sink</div>
       <div class="name">SyncLite Consolidator</div>
     </div>
     <div class="pipe-arrow">──▶</div>
     <div class="pipe-node">
       <div class="label">Your Destination</div>
-      <div class="name">PostgreSQL · MySQL · MS SQL Server<br/><small style="color:var(--muted);font-size:.7rem">DuckDB · Apache Iceberg · MongoDB…</small></div>
+      <div class="name">PostgreSQL · MySQL · MS SQL Server<br/><small style="color:var(--muted);font-size:.7rem">MongoDB · Apache Iceberg · ClickHouse…</small></div>
     </div>
   </div>
   <p style="text-align:center;color:var(--muted);font-size:.85rem;margin-top:1.5rem;">
@@ -881,42 +881,42 @@ props.<span class="fn">put</span>(<span class="str">"value.serializer"</span>, <
         <tbody>
           <tr>
             <td>SyncLite Logger</td>
-            <td>Embeddable JDBC driver. Wraps SQLite, DuckDB, Derby, H2, HyperSQL. Captures every SQL transaction into binary log files and ships them to staging storage.</td>
-            <td><a href="https://github.com/syncliteio/synclite-logger-java">Java · Python</a></td>
+            <td>The embeddable runtime component for your app: local DB, write-ahead log, shipper, and optional in-process consolidator. It wraps SQLite, DuckDB, Derby, H2, or HyperSQL and handles local durability plus downstream sync.</td>
+            <td><a href="https://github.com/syncliteio/synclite-logger-java">Java · Rust · Python</a></td>
           </tr>
           <tr>
             <td>SyncLite DB</td>
-            <td>Local-first, sync-enabled database server. Optimized for localhost/edge, exposes embedded DBs over HTTP/JSON for any language. Full transaction support, pagination, HMAC auth.</td>
+            <td>Local-first, sync-enabled database server that exposes the runtime over HTTP/JSON. Use it when you want the runtime available from a language that does not yet embed the native library, or when multiple processes share one device.</td>
             <td><a href="https://github.com/syncliteio/synclite-db">Any (HTTP)</a></td>
           </tr>
           <tr>
             <td>SyncLite Consolidator</td>
-            <td>Always-on central sink. Reads log files from staging, replicates transactionally to one or more destinations. Web UI for job config, live metrics, and SQL analytics.</td>
+            <td>Standalone central consolidation service. It accepts log segments from many embedded devices and applies them to destinations, keeping the data path separate from the embedded runtime.</td>
             <td><a href="https://github.com/syncliteio/synclite-consolidator">Java WAR</a></td>
           </tr>
           <tr>
             <td>SyncLite DBReader</td>
-            <td>Database ETL and replication. Reads from PostgreSQL, MySQL, Oracle, SQL Server, and more. Supports full load, watermark-based incremental, and log-based CDC.</td>
+            <td>Configurable ETL, replication, and migration jobs that move data from source databases into SyncLite devices and onward to destinations.</td>
             <td><a href="https://github.com/syncliteio/synclite-dbreader">Java WAR</a></td>
           </tr>
           <tr>
             <td>SyncLite QReader</td>
-            <td>IoT MQTT connector. Subscribes to any MQTT v3.1 broker, parses CSV/JSON payloads, feeds the SyncLite pipeline. Works with Mosquitto, EMQX, AWS IoT Core, Azure IoT Hub.</td>
+            <td>MQTT and IoT connector that lands broker traffic into SyncLite devices for downstream replication and sync.</td>
             <td><a href="https://github.com/syncliteio/synclite-qreader">Java WAR</a></td>
           </tr>
           <tr>
             <td>SyncLite Client</td>
-            <td>Interactive CLI for SyncLite devices. Connect directly (embedded) or via HTTP to a SyncLite DB server. Execute SQL, inspect data, test pipelines.</td>
+            <td>Interactive CLI for inspecting and querying SyncLite devices. Connect directly to an embedded device or through SyncLite DB over HTTP.</td>
             <td><a href="https://github.com/syncliteio/synclite-client">CLI</a></td>
           </tr>
           <tr>
             <td>SyncLite Job Monitor</td>
-            <td>Unified operations dashboard. Start, stop, schedule, and monitor all Consolidator, DBReader, and QReader jobs from a single web UI. Supports cron scheduling and alerting.</td>
+            <td>Unified operations dashboard for scheduling and monitoring Consolidator, DBReader, and QReader jobs from a single web UI.</td>
             <td><a href="https://github.com/syncliteio/synclite-job-monitor">Java WAR</a></td>
           </tr>
           <tr>
             <td>SyncLite Validator</td>
-            <td>End-to-end integration testing. Generates synthetic workloads, runs them through the full pipeline, and does a row-by-row comparison of source and destination data.</td>
+            <td>End-to-end integration test harness for SyncLite pipelines, used to generate workloads and compare source and destination data.</td>
             <td><a href="https://github.com/syncliteio/synclite-validator">Java WAR</a></td>
           </tr>
         </tbody>
