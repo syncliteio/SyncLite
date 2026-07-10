@@ -10,6 +10,29 @@
 
 ---
 
+## Quick Install (published packages, v1.0.0)
+
+Embed the SyncLite runtime by pulling the **published** package for your language — no repo checkout or source build required:
+
+| Language | Install | Registry |
+|---|---|---|
+| **Python** | `pip install synclite==1.0.0` | PyPI |
+| **Rust** | `cargo add synclite@1.0.0` (or `synclite = "1.0.0"` in `Cargo.toml`) | crates.io |
+| **Java** | Maven: `io.synclite:synclite:1.0.0` &nbsp;·&nbsp; Gradle: `implementation 'io.synclite:synclite:1.0.0'` | Maven Central |
+
+```xml
+<!-- Maven — pom.xml -->
+<dependency>
+    <groupId>io.synclite</groupId>
+    <artifactId>synclite</artifactId>
+    <version>1.0.0</version>
+</dependency>
+```
+
+The Python wheel and Java jar are self-contained (they bundle the platform native runtime plus DuckDB / the PostgreSQL driver); the Rust crate compiles its native DuckDB dependency, so a C/C++ toolchain + CMake are required — see [Prerequisites & Build](#4-prerequisites--build). To build everything from source instead, follow the same section.
+
+---
+
 ## Table of Contents
 
 1. [Overview](#1-overview)
@@ -139,9 +162,10 @@ Both produce the same `.sqllog` segments, so you can mix devices (some logger-on
 | Native C/C++ toolchain (system linker) — see callout below | platform default |
 | Zig compiler (for cross-arch Rust runtime packaging) | latest stable |
 | cargo-zigbuild (for Linux cross-compiled cdylibs) | latest |
-| Python interpreter (`python` on `PATH`) | 3.8+ |
+| Python interpreter (`python` on `PATH`) | 3.8+ (auto-detected — `python`/`py`/`python3`; override with `-DpythonExecutable=...`) |
 | [`maturin`](https://www.maturin.rs/) (PyO3 wheel builder; `python -m pip install maturin`) | latest stable |
 | Per-OS wheel-repair tool (bundles native DLL/SO/dylib deps into the wheel) | Windows: `pip install delvewheel` — Linux: `pip install auditwheel` — macOS: `pip install delocate` |
+| WSL + a Linux build toolchain (**Windows hosts only, optional**) — build local `manylinux` Linux wheels | WSL2 + a glibc distro (e.g. Ubuntu) with `rustup`+`cargo`, `python3`, `patchelf`, `maturin`, `zig` |
 
 > **Rust alone is not sufficient — you also need the platform's native C/C++ toolchain** so `cargo` can invoke the system linker and so the DuckDB / SQLite crates can build their native code:
 > - **Windows**: install [Microsoft C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) ("Desktop development with C++" workload, MSVC v143 + Windows 10/11 SDK). Without it, the build fails with `error: linker 'link.exe' not found`. Run the build from the **"x64 Native Tools Command Prompt for VS"** (or any shell where `link.exe` is on `PATH`).
@@ -186,7 +210,7 @@ mvn -Drevision=1.0.0 -DruntimeOnly=true clean install
 These switches combine with any flavor above:
 
 - `-DskipTests` — skip JUnit + Rust device-integration tests.
-- `-DskipRustCrossCompile=true` — skip the two Linux cross-compile cargo executions (use on hosts without `cargo-zigbuild` + `zig`; host-arch cdylib still built). Only relevant for flavors #1 and #3.
+- `-DskipRustCrossCompile=true` — skip the two Linux cross-compile cargo executions **and** the best-effort local `manylinux` Python wheel build (use on hosts without `cargo-zigbuild` + `zig`, or without WSL + a Linux toolchain; host-arch cdylib + host wheel still built). Only relevant for flavors #1 and #3.
 
 ```bash
 # Fastest full platform build
@@ -214,6 +238,29 @@ rustup target add x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu
 # Ensure zig is installed and available on PATH
 zig version
 ```
+
+#### Building Linux Python wheels
+
+The `synclite` Python package ships as **platform-specific wheels** (one per OS/arch — pip auto-selects the match); a single wheel cannot cover all platforms the way the Java jar does. A default build produces the **host** wheel (e.g. `win_amd64` on Windows) under `synclite-logger-rust/python/dist/` and stages it into `lib/python/`.
+
+Producing a **PyPI-acceptable `manylinux` Linux wheel** (x86_64 / aarch64) has a hard constraint: the wheel must bundle `libduckdb.so` and RPATH-patch the extension, which requires [`patchelf`](https://github.com/NixOS/patchelf) — a **POSIX-only** tool with **no Windows binary**. The wheel build therefore has to run inside Linux.
+
+- **On a Linux host**: the wheels are built natively during `mvn package` (under `-DskipRustCrossCompile` — on by default).
+- **On a Windows host**: the build dispatches into **WSL** automatically. Install WSL and a Linux build toolchain once:
+  ```powershell
+  wsl --install            # WSL2 + a default distro (e.g. Ubuntu); reboot if prompted
+  ```
+  Then inside the distro:
+  ```bash
+  # rustup + cargo
+  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+  rustup target add x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu
+  sudo apt update && sudo apt install -y build-essential cmake pkg-config python3 python3-pip patchelf
+  pip install maturin
+  # zig (for the aarch64 cross-target): install from https://ziglang.org/download/ and put it on PATH
+  ```
+- **This step is entirely best-effort.** If WSL or the Linux toolchain is missing, the build prints a skip notice and **still succeeds** — you simply get no local Linux wheels. It is governed by the same `-DskipRustCrossCompile` flag (pass `=true` to skip it explicitly).
+- **The authoritative, full multi-platform wheel set** (Linux x86_64/aarch64 + Windows x64 + macOS x86_64/arm64) is produced by CI — see [`.github/workflows/python-wheels.yml`](.github/workflows/python-wheels.yml). macOS wheels can only be built on a macOS runner (no redistributable Apple SDK), so they are never produced locally on Windows/Linux.
 
 ### Build individual components
 

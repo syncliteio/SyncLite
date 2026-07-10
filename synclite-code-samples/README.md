@@ -9,6 +9,19 @@ One end-to-end sample per language, each demonstrating the same story: a local S
 | Rust   | [`synclite_rusqlite_postgres.rs`](rust/synclite_rusqlite_postgres.rs)              | [rust/README.md](rust/README.md) |
 | C++    | [`synclite_rusqlite_postgres.cpp`](cpp/synclite_rusqlite_postgres.cpp)             | [cpp/README.md](cpp/README.md) |
 
+## Install the SyncLite runtime (v1.0.0)
+
+Each sample can run against the **published** SyncLite runtime for its language — no repo checkout required. Grab the one for your stack, then follow that folder's README:
+
+| Language | Install | Registry |
+|---|---|---|
+| Python | `pip install synclite==1.0.0` | [PyPI](https://pypi.org/project/synclite/) |
+| Rust   | `cargo add synclite@1.0.0` (or `synclite = "1.0.0"` in `Cargo.toml`) | [crates.io](https://crates.io/crates/synclite) |
+| Java   | `io.synclite:synclite:1.0.0` (Maven / Gradle — see [java/README.md](java/README.md#quickest-start--add-the-maven-dependency)) | Maven Central |
+| C++    | Link the native `synclite` cdylib (built from the `synclite` crate / bundled SDK — see [cpp/README.md](cpp/README.md)) | crates.io / release zip |
+
+The Python wheel and Java jar are self-contained (they bundle their native runtime + DuckDB). The Rust crate and C++ binding compile the native DuckDB dependency, so a C/C++ toolchain + CMake are required. Prefer a fully offline flow? Every folder README also documents running straight from an extracted release zip.
+
 All four samples share the same story:
 
 1. **users** — `INSERT` / `UPDATE` / batched `INSERT`.

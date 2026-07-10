@@ -16,6 +16,27 @@ No server to install. No daemon to babysit. No CDC pipeline to wire up. Your app
 your app  ──►  SyncLite Runtime (embedded DB + log + shipper + sync)  ──►  Postgres / MySQL / Snowflake / S3 / ...
 ```
 
+## Install in 30 seconds (published packages, v1.0.0)
+
+Pull the **published** SyncLite runtime for your language — no repo checkout, no source build:
+
+| Language | Install |
+|---|---|
+| **Python** | `pip install synclite==1.0.0` |
+| **Rust** | `cargo add synclite@1.0.0` (or `synclite = "1.0.0"` in `Cargo.toml`) |
+| **Java** | Maven: `io.synclite:synclite:1.0.0` &nbsp;·&nbsp; Gradle: `implementation 'io.synclite:synclite:1.0.0'` |
+
+```xml
+<!-- Maven — pom.xml -->
+<dependency>
+    <groupId>io.synclite</groupId>
+    <artifactId>synclite</artifactId>
+    <version>1.0.0</version>
+</dependency>
+```
+
+The Python wheel and Java jar are self-contained (they bundle the native runtime + DuckDB / JDBC driver); the Rust crate compiles its native DuckDB dependency, so a C/C++ toolchain + CMake are required. Runnable samples for all four languages: [`synclite-code-samples/`](synclite-code-samples/README.md).
+
 ### What you get without installing anything
 
 - **One library, full stack.** Embedded SQL database + write-ahead logger + segment shipper + (optional) in-process consolidator — all inside your process.
@@ -197,9 +218,10 @@ All three surfaces produce the same log format and use the same shipper + consol
 | [`cargo-zigbuild`](https://github.com/rust-cross/cargo-zigbuild) | latest |
 | [Zig](https://ziglang.org/download/) compiler on `PATH` | latest stable |
 | Rust standard libraries for Linux x86_64 and aarch64 | — |
-| Python interpreter (`python` on `PATH`) | 3.8+ |
+| Python interpreter (`python` on `PATH`) | 3.8+ (auto-detected — `python`/`py`/`python3`; override with `-DpythonExecutable=...`) |
 | [`maturin`](https://www.maturin.rs/) (PyO3 wheel builder) | latest stable; install with `python -m pip install maturin` |
 | Per-OS wheel-repair tool (bundles native DLL/SO/dylib deps into the wheel) | Windows: `pip install delvewheel` — Linux: `pip install auditwheel` — macOS: `pip install delocate` |
+| WSL + Linux build toolchain (**Windows hosts only, optional**) — for local `manylinux` Linux wheels | WSL2 + a glibc distro (e.g. Ubuntu) with `rustup`+`cargo`, `python3`, `patchelf`, `maturin`, `zig` |
 
 > **Native C/C++ toolchain is required in addition to Rust.** Rust shells out to the platform linker to produce the cdylibs, and the DuckDB / SQLite crates ship native code that needs a C/C++ compiler.
 >
@@ -219,6 +241,17 @@ zig version
 > If `mvn package` fails with `error: no such command: zigbuild`, you are missing `cargo-zigbuild` — run `cargo install cargo-zigbuild` and retry.
 
 macOS (`libsynclite_<rev>.dylib`) still requires running the build on a macOS host — the Apple SDK isn't redistributable so it cannot be cross-compiled from Windows or Linux.
+
+#### Building Linux Python wheels (optional, best-effort)
+
+The `synclite` Python package ships as **one wheel per OS/arch** (pip auto-selects the match). A default build produces the **host** wheel and stages it under `lib/python/`.
+
+Producing a **PyPI-acceptable `manylinux` Linux wheel** (x86_64 / aarch64) must bundle `libduckdb.so` and RPATH-patch the extension, which requires [`patchelf`](https://github.com/NixOS/patchelf) — a **POSIX-only** tool with **no Windows binary**. So the Linux wheel build runs inside Linux:
+
+- **Linux host**: built natively during `mvn package`.
+- **Windows host**: automatically dispatched into **WSL**. One-time setup — `wsl --install`, then inside the distro install `rustup`+`cargo`, `python3`, `patchelf`, `maturin`, `zig`, and `rustup target add x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu`.
+- **Best-effort:** if WSL or the Linux toolchain is missing, the step prints a skip notice and the build **still succeeds** (no local Linux wheels). It runs under the same `-DskipRustCrossCompile` flag (on by default; pass `=true` to skip).
+- The full multi-platform wheel set (incl. macOS) is produced by CI — see [`.github/workflows/python-wheels.yml`](.github/workflows/python-wheels.yml).
 
 > The `bin/deploy.sh` / `bin/deploy.bat` scripts download **Apache Tomcat 9.0.117** and **OpenJDK 25** automatically — no manual JDK installation required for a quick start of the optional platform.
 

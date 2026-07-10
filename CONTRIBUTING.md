@@ -63,6 +63,7 @@ Required only if you build the Rust loggers (default build flavor; not needed wh
 | [`cargo-zigbuild`](https://github.com/rust-cross/cargo-zigbuild) + [Zig](https://ziglang.org/download/) | latest | Only for multi-arch Linux cross-compile from a non-Linux host. Skip with `-DskipRustCrossCompile=true`. |
 | Python interpreter + [`maturin`](https://www.maturin.rs/) | Python 3.8+, maturin latest | Required to build the host-platform `synclite` PyO3 wheel shipped under `lib/python/`. Install with `python -m pip install maturin`. Skip with `-DskipPythonWheel=true` (also auto-skipped by `-DskipNonJavaLoggers=true`). |
 | Per-OS wheel-repair tool | Windows: `delvewheel`. Linux: `auditwheel`. macOS: `delocate`. | Bundles the wheel's native DLL/SO/dylib deps (duckdb) so end users `pip install` works on a vanilla box. Install with `pip install delvewheel` / `auditwheel` / `delocate`. Skipped when the wheel build is skipped. |
+| WSL + a Linux build toolchain (**Windows hosts, optional**) | WSL2 + any glibc distro (e.g. Ubuntu) | Only needed to build the **PyPI-acceptable `manylinux` Linux wheels** (x86_64 + aarch64) locally on a Windows host. A self-contained manylinux wheel must bundle `libduckdb.so` and RPATH-patch the extension, which requires [`patchelf`](https://github.com/NixOS/patchelf) — a POSIX-only tool with **no Windows binary** — so the wheel build runs inside Linux. Install WSL (`wsl --install`), then inside the distro install `rustup`+`cargo`, `python3`, `patchelf`, `maturin`, and `zig`. **Entirely optional and best-effort**: if WSL or the Linux toolchain is absent the step prints a skip notice and the build still succeeds. Runs under the same `-DskipRustCrossCompile` flag (on by default). The full multi-platform wheel set (incl. macOS) is produced by CI — see [`.github/workflows/python-wheels.yml`](.github/workflows/python-wheels.yml). |
 
 Optional but recommended:
 - An IDE with Java and Maven support (IntelliJ IDEA, Eclipse, VS Code + Extension Pack for Java)
@@ -115,7 +116,7 @@ Optional but recommended:
    **Build accelerators** (combine with any flavor above):
 
    - `-DskipTests` — skip JUnit + Rust device-integration tests.
-   - `-DskipRustCrossCompile=true` — skip the two Linux cross-compile cargo executions (use on hosts without `cargo-zigbuild` + `zig`; host-arch cdylib still built). Only relevant for flavors #1 and #3.
+   - `-DskipRustCrossCompile=true` — skip the two Linux cross-compile cargo executions **and** the best-effort local `manylinux` Python wheel build (use on hosts without `cargo-zigbuild` + `zig`, or without WSL + a Linux toolchain; host-arch cdylib + host wheel still built). Only relevant for flavors #1 and #3.
 
    ```bash
    # Fastest full platform build

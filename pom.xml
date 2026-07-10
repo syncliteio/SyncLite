@@ -58,20 +58,45 @@
 		  doesn't want the file mutated).
 		-->
 		<skipRevisionVersionSync>false</skipRevisionVersionSync>
-		<!-- Python interpreter used to drive `python -m maturin`. Override with -DpythonExecutable=python3 on linux/macos if needed. -->
-		<pythonExecutable>python</pythonExecutable>
+		<!--
+		  Python interpreter used to drive `python -m maturin`. Intentionally
+		  NOT given a default here: the `detect-python-executable` antrun step
+		  (phase initialize, below) auto-detects the right interpreter for the
+		  host and exports it as this property (OS-aware preference: python then
+		  py then python3 on Windows; python3 then python then py elsewhere).
+		  That makes a bare `mvn install` work out of the box on stock Ubuntu
+		  (where `python` often does not exist, only `python3`) without any
+		  -D flag. Pass -DpythonExecutable=python3 (or any path) to override the
+		  auto-detection; an explicit value is respected as-is.
+
+		  Deliberately NOT declared as a property element here: leaving it
+		  undefined lets the antrun detection set it (Ant properties are
+		  immutable, so a pre-declared value - even empty - could not be
+		  overwritten by detection). An explicit -DpythonExecutable=... still
+		  pre-defines it and short-circuits detection.
+		-->
+
 		<!-- Rust logger native deps: keep DuckDB prebuilt/downloaded to avoid heavy native builds. -->
 		<duckdbDownloadLib>true</duckdbDownloadLib>
-		<!-- Globs so per-arch variants (e.g. libsynclite_<rev>_linux_x86_64.so) coexist. -->
-		<rust.logger.include.dll>libsynclite_${revision}*.dll</rust.logger.include.dll>
-		<rust.logger.include.lib>libsynclite_${revision}*.lib</rust.logger.include.lib>
-		<rust.logger.include.so>libsynclite_${revision}*.so</rust.logger.include.so>
-		<rust.logger.include.dylib>libsynclite_${revision}*.dylib</rust.logger.include.dylib>
-		<!-- JNI cdylib (Java consumers). Same naming pattern as the C SDK above. -->
-		<rust.logger.include.jni.dll>libsynclite_${revision}_jni*.dll</rust.logger.include.jni.dll>
-		<rust.logger.include.jni.lib>libsynclite_${revision}_jni*.lib</rust.logger.include.jni.lib>
-		<rust.logger.include.jni.so>libsynclite_${revision}_jni*.so</rust.logger.include.jni.so>
-		<rust.logger.include.jni.dylib>libsynclite_${revision}_jni*.dylib</rust.logger.include.jni.dylib>
+		<!-- Globs so per-arch variants (e.g. libsynclite_<rev>_linux_x86_64.so) coexist.
+		     NOTE: the C cdylib crate name is hardcoded 'libsynclite_1_0_0' (underscores) and is
+		     independent of Maven's dotted ${revision}, so these globs must NOT use ${revision}
+		     (a dotted value like 1.0.0 never matches the underscore filename). On Linux/macOS
+		     Cargo prepends an extra 'lib' to the crate name -> liblibsynclite_*.so / .dylib. -->
+		<rust.logger.include.dll>libsynclite_*.dll</rust.logger.include.dll>
+		<rust.logger.include.lib>libsynclite_*.lib</rust.logger.include.lib>
+		<rust.logger.include.so>liblibsynclite_*.so</rust.logger.include.so>
+		<rust.logger.include.dylib>liblibsynclite_*.dylib</rust.logger.include.dylib>
+		<!-- JNI cdylib (Java consumers). Named 'synclite_jni' from bindings-java crate. -->
+		<rust.logger.include.jni.dll>synclite_jni*.dll</rust.logger.include.jni.dll>
+		<rust.logger.include.jni.lib>synclite_jni*.lib</rust.logger.include.jni.lib>
+		<rust.logger.include.jni.so>libsynclite_jni*.so</rust.logger.include.jni.so>
+		<rust.logger.include.jni.dylib>libsynclite_jni*.dylib</rust.logger.include.jni.dylib>
+		<!-- Python binding (_native cdylib from bindings-python crate). -->
+		<rust.logger.include.python.dll>_native*.dll</rust.logger.include.python.dll>
+		<rust.logger.include.python.lib>_native*.lib</rust.logger.include.python.lib>
+		<rust.logger.include.python.so>lib_native*.so</rust.logger.include.python.so>
+		<rust.logger.include.python.dylib>lib_native*.dylib</rust.logger.include.python.dylib>
 	</properties>
   
   	<!--
@@ -94,7 +119,11 @@
 							<goal>exec</goal>
 						</goals>
 						<configuration>
-							<skip>${skipNonJavaLoggers}</skip>
+							<!-- effectiveSkipHostRust = skipNonJavaLoggers OR (cargo
+							     absent). The exec goal has no failOnError, so a missing
+							     cargo MUST be handled by skipping - otherwise the build
+							     fails. Computed + exported by detect-python-executable. -->
+							<skip>${effectiveSkipHostRust}</skip>
 							<workingDirectory>${project.basedir}/synclite-logger-rust</workingDirectory>
 							<executable>cargo</executable>
 							<environmentVariables>
@@ -125,7 +154,7 @@
 							<goal>exec</goal>
 						</goals>
 						<configuration>
-							<skip>${skipRustTests}</skip>
+							<skip>${effectiveSkipRustTests}</skip>
 							<workingDirectory>${project.basedir}/synclite-logger-rust</workingDirectory>
 							<executable>cargo</executable>
 							<environmentVariables>
@@ -172,7 +201,11 @@
 							<goal>exec</goal>
 						</goals>
 						<configuration>
-							<skip>${skipRustCrossCompile}</skip>
+							<!-- effectiveSkipCross = skipNonJavaLoggers OR
+							     skipRustCrossCompile OR NOT(cargo AND zig AND
+							     cargo-zigbuild). Skips (not fails) when the cross
+							     toolchain is incomplete. -->
+							<skip>${effectiveSkipCross}</skip>
 							<workingDirectory>${project.basedir}/synclite-logger-rust</workingDirectory>
 							<executable>cargo</executable>
 							<environmentVariables>
@@ -196,7 +229,11 @@
 							<goal>exec</goal>
 						</goals>
 						<configuration>
-							<skip>${skipRustCrossCompile}</skip>
+							<!-- effectiveSkipCross = skipNonJavaLoggers OR
+							     skipRustCrossCompile OR NOT(cargo AND zig AND
+							     cargo-zigbuild). Skips (not fails) when the cross
+							     toolchain is incomplete. -->
+							<skip>${effectiveSkipCross}</skip>
 							<workingDirectory>${project.basedir}/synclite-logger-rust</workingDirectory>
 							<executable>cargo</executable>
 							<environmentVariables>
@@ -232,7 +269,11 @@
 							<goal>exec</goal>
 						</goals>
 						<configuration>
-							<skip>${skipPythonWheel}</skip>
+							<!-- effectiveSkipHostWheel = skipNonJavaLoggers OR
+							     skipPythonWheel OR NOT cargo OR NOT maturin. maturin
+							     invokes cargo, so both must be present; otherwise skip
+							     (not fail). -->
+							<skip>${effectiveSkipHostWheel}</skip>
 							<workingDirectory>${project.basedir}/synclite-logger-rust/python</workingDirectory>
 							<executable>${pythonExecutable}</executable>
 							<environmentVariables>
@@ -246,6 +287,79 @@
 								<argument>--release</argument>
 								<argument>--out</argument>
 								<argument>${project.basedir}/synclite-logger-rust/python/dist</argument>
+							</arguments>
+						</configuration>
+					</execution>
+					<!--
+					  Cross-build the Linux x86_64 + aarch64 Python wheels via
+					  maturin's zig-backed build (maturin build with a Linux
+					  target triple and the zig linker). Folded under the SAME
+					  skipRustCrossCompile flag as the C SDK cross-compile
+					  (build-rust-synclite-linux-x86_64 / -aarch64, declared earlier
+					  in this phase) so both are on by default and toggle together.
+					  They also share the SAME cargo target dir, so the heavy
+					  libduckdb.so already downloaded under target/<triple>/release/
+					  is reused as-is - the only new work is compiling the small
+					  bindings-python (_native) cdylib. maturin's built-in manylinux
+					  repair then bundles that existing libduckdb.so into a
+					  self-contained manylinux wheel.
+
+					  macOS wheels cannot be produced this way (no redistributable
+					  Apple SDK) - use .github/workflows/python-wheels.yml for the
+					  full cross-platform wheel matrix.
+
+					  Prereqs (same as the C SDK cross-compile):
+					    cargo install cargo-zigbuild
+					    rustup target add x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu
+					    pythonExecutable -m pip install maturin
+					-->
+					<!--
+					  Build PyPI-acceptable manylinux Python wheels (x86_64 +
+					  aarch64) for the `synclite` package. Folded under the SAME
+					  skipRustCrossCompile flag as the C SDK Linux cross-compile
+					  (on by default) so both toggle together.
+
+					  A self-contained manylinux wheel MUST bundle libduckdb.so and
+					  RPATH-patch the extension, which needs `patchelf` - a
+					  POSIX-only tool with no Windows binary. So the wheel build has
+					  to run inside Linux. build_linux_wheels_launcher.py dispatches
+					  into WSL on a Windows host, or runs bash natively on a Linux
+					  host. It is BEST-EFFORT: if WSL / the Linux toolchain is
+					  absent it prints a skip notice and exits 0, and the execution
+					  also sets failOnError=false - so the overall build always
+					  succeeds. macOS wheels still require the CI matrix in
+					  .github/workflows/python-wheels.yml.
+
+					  Prereq for local Linux wheels on a Windows host (one-time):
+					    install WSL + a Linux distro (wsl install)
+					    then INSIDE the distro:
+					      rustup + cargo, python3, patchelf, maturin, zig
+					    See GETTING_STARTED.md 'Building Linux Python wheels'.
+					-->
+					<execution>
+						<id>build-python-wheels-linux</id>
+						<phase>package</phase>
+						<goals>
+							<goal>exec</goal>
+						</goals>
+						<configuration>
+							<!-- effectiveSkipLinuxWheels = skipNonJavaLoggers OR
+							     skipPythonWheel OR skipRustCrossCompile OR (no Python
+							     interpreter). The launcher must at least start; it is
+							     itself best-effort (exits 0) when the Linux/WSL
+							     toolchain is incomplete. -->
+							<skip>${effectiveSkipLinuxWheels}</skip>
+							<workingDirectory>${project.basedir}/synclite-logger-rust/python</workingDirectory>
+							<executable>${pythonExecutable}</executable>
+							<environmentVariables>
+								<SYNCLITE_RUST_ARTIFACT_VERSION>${revision}</SYNCLITE_RUST_ARTIFACT_VERSION>
+								<DUCKDB_DOWNLOAD_LIB>${duckdbDownloadLib}</DUCKDB_DOWNLOAD_LIB>
+							</environmentVariables>
+							<arguments>
+								<argument>${project.basedir}/synclite-logger-rust/python/scripts/build_linux_wheels_launcher.py</argument>
+								<argument>${project.basedir}/synclite-logger-rust/python</argument>
+								<argument>${project.basedir}/synclite-logger-rust/python/dist</argument>
+								<argument>${revision}</argument>
 							</arguments>
 						</configuration>
 					</execution>
@@ -270,7 +384,12 @@
 							<goal>exec</goal>
 						</goals>
 						<configuration>
-							<skip>${skipPythonWheel}</skip>
+							<!-- Same effective flag as the host wheel: if the host
+							     wheel was skipped (missing cargo/maturin/Python) there
+							     is nothing to repair, and repair_wheel.py needs Python
+							     to even start. repair_wheel.py is itself best-effort
+							     (exits 0) when its per-platform tool is absent. -->
+							<skip>${effectiveSkipHostWheel}</skip>
 							<workingDirectory>${project.basedir}/synclite-logger-rust/python</workingDirectory>
 							<executable>${pythonExecutable}</executable>
 							<arguments>
@@ -287,6 +406,228 @@
 				<artifactId>maven-antrun-plugin</artifactId>
 				<version>3.1.0</version>
 				<executions>
+					<!--
+					  Auto-detect the host Python interpreter and export it as the
+					  ${pythonExecutable} Maven property consumed by the maturin
+					  exec steps (build-python-wheel / build-python-wheels-linux).
+					  Makes a bare `mvn install` work on stock Ubuntu (only
+					  `python3` present) and on Windows (`python` / `py`) without a
+					  -D flag. Honors an explicit -DpythonExecutable=... (Ant
+					  properties are immutable, so a user-supplied value pre-sets
+					  the property and the conditions below no-op). Probes are
+					  best-effort: failifexecutionfails="false" means a missing
+					  interpreter simply leaves its result property unset.
+					-->
+					<execution>
+						<id>detect-python-executable</id>
+						<phase>initialize</phase>
+						<goals>
+							<goal>run</goal>
+						</goals>
+						<configuration>
+							<exportAntProperties>true</exportAntProperties>
+							<target>
+								<!--
+								  Probe tools through the OS shell (`where` on Windows,
+								  `command -v` on Unix) rather than exec'ing each tool
+								  directly, so a MISSING tool yields a clean non-zero exit
+								  code instead of a scary [ERROR] "Cannot run program" line.
+								  cmd/sh always exist, so no IOException is ever thrown. The
+								  `probe` macro sets its <prop> to "true" or "false".
+								-->
+								<macrodef name="probe">
+									<attribute name="prop"/>
+									<attribute name="wincmd"/>
+									<attribute name="nixcmd"/>
+									<sequential>
+										<exec osfamily="windows" executable="cmd" failifexecutionfails="false" resultproperty="@{prop}.rc">
+											<arg value="/c"/><arg value="@{wincmd}"/>
+										</exec>
+										<exec osfamily="unix" executable="sh" failifexecutionfails="false" resultproperty="@{prop}.rc">
+											<arg value="-c"/><arg value="@{nixcmd}"/>
+										</exec>
+										<condition property="@{prop}" value="true"><equals arg1="${@{prop}.rc}" arg2="0"/></condition>
+										<property name="@{prop}" value="false"/>
+									</sequential>
+								</macrodef>
+
+								<property environment="env"/>
+
+								<!-- Python interpreter candidates. -->
+								<probe prop="has.python3" wincmd="where python3 >NUL 2>NUL" nixcmd="command -v python3 >/dev/null 2>&amp;1"/>
+								<probe prop="has.python"  wincmd="where python >NUL 2>NUL"  nixcmd="command -v python >/dev/null 2>&amp;1"/>
+								<probe prop="has.py"      wincmd="where py >NUL 2>NUL"      nixcmd="command -v py >/dev/null 2>&amp;1"/>
+
+								<!-- Windows preference: python, then py, then python3. -->
+								<condition property="pythonExecutable" value="python"><and><os family="windows"/><istrue value="${has.python}"/></and></condition>
+								<condition property="pythonExecutable" value="py"><and><os family="windows"/><istrue value="${has.py}"/></and></condition>
+								<condition property="pythonExecutable" value="python3"><and><os family="windows"/><istrue value="${has.python3}"/></and></condition>
+								<!-- Non-Windows preference: python3, then python, then py. -->
+								<condition property="pythonExecutable" value="python3"><istrue value="${has.python3}"/></condition>
+								<condition property="pythonExecutable" value="python"><istrue value="${has.python}"/></condition>
+								<condition property="pythonExecutable" value="py"><istrue value="${has.py}"/></condition>
+								<!-- Absolute fallback when no interpreter was found on PATH. -->
+								<condition property="pythonExecutable" value="python"><os family="windows"/></condition>
+								<property name="pythonExecutable" value="python3"/>
+
+								<!--
+								  ============================================================
+								  BUILD STRATEGY DETECTION
+								  ============================================================
+								  Combine each optional native toolchain's availability with
+								  the relevant skip flag to produce an upfront, honest plan of
+								  what this build WILL and WILL NOT produce, and WHY (user skip
+								  flag vs. missing tool). A developer with only Java + Maven
+								  gets a green `mvn clean install`; the plan simply shows the
+								  native artifacts as skipped. Every skip flag is respected:
+								  skipNonJavaLoggers (master Rust off), skipRustRuntime (JNI),
+								  skipRustCrossCompile (Linux cdylib/JNI + manylinux wheels),
+								  skipPythonWheel (all wheels), skipRustTests (Rust tests).
+								-->
+								<!-- cargo: host Rust cdylib + JNI + wheels + tests. -->
+								<probe prop="cargoPresent"    wincmd="where cargo >NUL 2>NUL"           nixcmd="command -v cargo >/dev/null 2>&amp;1"/>
+								<!-- zig + cargo-zigbuild: Linux cross-compile of cdylib and JNI. -->
+								<probe prop="zigPresent"      wincmd="where zig >NUL 2>NUL"             nixcmd="command -v zig >/dev/null 2>&amp;1"/>
+								<probe prop="zigbuildPresent" wincmd="where cargo-zigbuild >NUL 2>NUL"  nixcmd="command -v cargo-zigbuild >/dev/null 2>&amp;1"/>
+								<!-- maturin (via the detected interpreter): host Python wheel. -->
+								<probe prop="maturinPresent"  wincmd="${pythonExecutable} -m maturin --version >NUL 2>NUL" nixcmd="${pythonExecutable} -m maturin --version >/dev/null 2>&amp;1"/>
+
+								<!-- WSL: dispatch target for manylinux Linux wheels on Windows. -->
+								<available property="wslPresent" file="${env.SystemRoot}/System32/wsl.exe"/>
+								<condition property="wslPresent" value="true"><istrue value="${wslPresent}"/></condition>
+								<property name="wslPresent" value="false"/>
+
+								<!--
+								  effectiveSkipRustTests = skipRustTests OR (cargo absent).
+								  Consumed by the test-rust-synclite <skip> so a host without
+								  cargo skips cleanly, while a real test failure on a
+								  cargo-equipped host still fails the build. NOT declared as a
+								  <properties> default so antrun can set it (Ant props are
+								  immutable).
+								-->
+								<condition property="effectiveSkipRustTests" value="true"><istrue value="${skipRustTests}"/></condition>
+								<condition property="effectiveSkipRustTests" value="true"><isfalse value="${cargoPresent}"/></condition>
+								<property name="effectiveSkipRustTests" value="false"/>
+
+								<!--
+								  Effective <skip> flags for the exec-maven-plugin native
+								  steps. CRITICAL: exec-maven-plugin's `exec` goal has NO
+								  `failOnError` parameter (that only exists on the `java`
+								  goal), so a MISSING executable throws an IOException that
+								  fails the build regardless. The ONLY reliable way to keep a
+								  Java + Maven-only developer green is to SKIP the step when
+								  its toolchain is absent. Each effective flag ORs the user
+								  skip flag(s) with the "tool absent" condition. Not declared
+								  as <properties> defaults so antrun can set them (Ant props
+								  are immutable) and exportAntProperties surfaces them to the
+								  later package/test-phase exec executions.
+								-->
+								<!-- Host Rust cdylib: needs cargo. -->
+								<condition property="effectiveSkipHostRust" value="true"><or><istrue value="${skipNonJavaLoggers}"/><isfalse value="${cargoPresent}"/></or></condition>
+								<property name="effectiveSkipHostRust" value="false"/>
+
+								<!-- Linux cross cdylibs: need cargo + zig + cargo-zigbuild. -->
+								<condition property="effectiveSkipCross" value="true">
+									<or>
+										<istrue value="${skipNonJavaLoggers}"/>
+										<istrue value="${skipRustCrossCompile}"/>
+										<not><and><istrue value="${cargoPresent}"/><istrue value="${zigPresent}"/><istrue value="${zigbuildPresent}"/></and></not>
+									</or>
+								</condition>
+								<property name="effectiveSkipCross" value="false"/>
+
+								<!-- Host Python wheel: needs cargo (maturin invokes it) + maturin. -->
+								<condition property="effectiveSkipHostWheel" value="true">
+									<or>
+										<istrue value="${skipNonJavaLoggers}"/>
+										<istrue value="${skipPythonWheel}"/>
+										<isfalse value="${cargoPresent}"/>
+										<isfalse value="${maturinPresent}"/>
+									</or>
+								</condition>
+								<property name="effectiveSkipHostWheel" value="false"/>
+
+								<!--
+								  manylinux wheels: the launcher must at least start, so a
+								  Python interpreter has to exist; the launcher itself is
+								  best-effort (exits 0) when the Linux/WSL toolchain is
+								  incomplete.
+								-->
+								<condition property="pythonPresent" value="true">
+									<or><istrue value="${has.python3}"/><istrue value="${has.python}"/><istrue value="${has.py}"/></or>
+								</condition>
+								<property name="pythonPresent" value="false"/>
+								<condition property="effectiveSkipLinuxWheels" value="true">
+									<or>
+										<istrue value="${skipNonJavaLoggers}"/>
+										<istrue value="${skipPythonWheel}"/>
+										<istrue value="${skipRustCrossCompile}"/>
+										<isfalse value="${pythonPresent}"/>
+									</or>
+								</condition>
+								<property name="effectiveSkipLinuxWheels" value="false"/>
+
+								<!--
+								  Per-artifact status = 3-way (disabled by a skip flag /
+								  skipped for a missing tool / will build). Skip flags are
+								  checked FIRST so a user-disabled artifact never reports a
+								  misleading "tool missing".
+								-->
+								<condition property="status.hostRust" value="disabled (skipNonJavaLoggers)"><istrue value="${skipNonJavaLoggers}"/></condition>
+								<condition property="status.hostRust" value="SKIP (cargo not found)"><isfalse value="${cargoPresent}"/></condition>
+								<property name="status.hostRust" value="BUILD"/>
+
+								<condition property="status.jni" value="disabled (skip flag)"><or><istrue value="${skipNonJavaLoggers}"/><istrue value="${skipRustRuntime}"/></or></condition>
+								<condition property="status.jni" value="SKIP (cargo not found)"><isfalse value="${cargoPresent}"/></condition>
+								<property name="status.jni" value="BUILD"/>
+
+								<condition property="status.cross" value="disabled (skip flag)"><or><istrue value="${skipNonJavaLoggers}"/><istrue value="${skipRustCrossCompile}"/></or></condition>
+								<condition property="status.cross" value="SKIP (needs cargo + zig + cargo-zigbuild)">
+									<not><and><istrue value="${cargoPresent}"/><istrue value="${zigPresent}"/><istrue value="${zigbuildPresent}"/></and></not>
+								</condition>
+								<property name="status.cross" value="BUILD"/>
+
+								<condition property="status.hostWheel" value="disabled (skip flag)"><or><istrue value="${skipNonJavaLoggers}"/><istrue value="${skipPythonWheel}"/></or></condition>
+								<condition property="status.hostWheel" value="SKIP (needs cargo + maturin)"><or><isfalse value="${cargoPresent}"/><isfalse value="${maturinPresent}"/></or></condition>
+								<property name="status.hostWheel" value="BUILD"/>
+
+								<condition property="status.linuxWheels" value="disabled (skip flag)">
+									<or><istrue value="${skipNonJavaLoggers}"/><istrue value="${skipPythonWheel}"/><istrue value="${skipRustCrossCompile}"/></or>
+								</condition>
+								<condition property="status.linuxWheels" value="SKIP (no Python interpreter)"><isfalse value="${pythonPresent}"/></condition>
+								<condition property="status.linuxWheels" value="SKIP (WSL not available)">
+									<and><os family="windows"/><isfalse value="${wslPresent}"/></and>
+								</condition>
+								<property name="status.linuxWheels" value="ATTEMPT (best-effort in Linux/WSL)"/>
+
+								<condition property="status.rustTests" value="disabled (skip flag)"><istrue value="${skipRustTests}"/></condition>
+								<condition property="status.rustTests" value="SKIP (cargo not found)"><isfalse value="${cargoPresent}"/></condition>
+								<property name="status.rustTests" value="RUN"/>
+
+								<echo level="info" message=""/>
+								<echo level="info" message="=================== SyncLite build strategy ==================="/>
+								<echo level="info" message="Detected tools (capability x skip flags -> plan):"/>
+								<echo level="info" message="  Java + Maven     : present (running this build)"/>
+								<echo level="info" message="  Python           : ${pythonExecutable}"/>
+								<echo level="info" message="  cargo (Rust)     : ${cargoPresent}"/>
+								<echo level="info" message="  zig              : ${zigPresent}"/>
+								<echo level="info" message="  cargo-zigbuild   : ${zigbuildPresent}"/>
+								<echo level="info" message="  maturin          : ${maturinPresent}"/>
+								<echo level="info" message="  WSL (wsl.exe)    : ${wslPresent}"/>
+								<echo level="info" message="---------------------------------------------------------------"/>
+								<echo level="info" message="Planned artifacts:"/>
+								<echo level="info" message="  Java jars (all modules)         : BUILD"/>
+								<echo level="info" message="  Rust runtime + host cdylib      : ${status.hostRust}"/>
+								<echo level="info" message="  JNI native (host OS)            : ${status.jni}"/>
+								<echo level="info" message="  Linux cdylib + JNI (x64/arm64)  : ${status.cross}"/>
+								<echo level="info" message="  Python wheel (host OS)          : ${status.hostWheel}"/>
+								<echo level="info" message="  Python wheels (manylinux)       : ${status.linuxWheels}"/>
+								<echo level="info" message="  Rust integration tests          : ${status.rustTests}"/>
+								<echo level="info" message="==============================================================="/>
+								<echo level="info" message=""/>
+							</target>
+						</configuration>
+					</execution>
 					<execution>
 						<id>clean-python-wheel-output</id>
 						<phase>prepare-package</phase>
@@ -312,70 +653,27 @@
 						<configuration>
 							<target>
 								<!--
-								  Cargo names cdylibs after the [lib] name (or package name if no [lib.name]),
-								  replacing hyphens with underscores. The `synclite-c` crate's [lib.name]
-								  is `synclite_c`, so cargo produces synclite_c.{dll,so,dylib}
-								  (and synclite_c.dll.lib on Windows). The renames below produce
-								  the versioned filenames consumed by Java NativeLoader and by the platform
-								  zip's lib/native/ folder. All copies are best-effort (failonerror=false)
-								  so a logger-only build on a host without a Rust toolchain still succeeds.
+								  Cargo names the C cdylib after the crate's [lib] name
+								  (`libsynclite_1_0_0`), so the host-arch build already lands as
+								  target/release/libsynclite_1_0_0.{dll,lib} (Windows) or
+								  target/release/liblibsynclite_1_0_0.{so,dylib} (Linux/macOS —
+								  Cargo prepends an extra 'lib'). Those match the assembly globs
+								  directly, so no rename is needed for the host build.
+
+								  The only staging still required is for the cross-compiled Linux
+								  outputs (cargo-zigbuild), which land under target/<triple>/release/.
+								  They share the same filename across arches, so we copy them into
+								  target/release/ with an arch suffix so both variants coexist in
+								  lib/native/. Best-effort (failonerror=false) so a host without the
+								  cross toolchain still builds.
 								-->
-								<copy file="${project.basedir}/synclite-logger-rust/target/release/synclite_c.dll"
-								      tofile="${project.basedir}/synclite-logger-rust/target/release/libsynclite_${revision}.dll"
+								<copy file="${project.basedir}/synclite-logger-rust/target/x86_64-unknown-linux-gnu/release/liblibsynclite_1_0_0.so"
+								      tofile="${project.basedir}/synclite-logger-rust/target/release/liblibsynclite_1_0_0_linux_x86_64.so"
 								      overwrite="true"
 								      quiet="true"
 								      failonerror="false"/>
-								<copy file="${project.basedir}/synclite-logger-rust/target/release/deps/synclite_c.dll"
-								      tofile="${project.basedir}/synclite-logger-rust/target/release/libsynclite_${revision}.dll"
-								      overwrite="true"
-								      quiet="true"
-								      failonerror="false"/>
-
-								<copy file="${project.basedir}/synclite-logger-rust/target/release/synclite_c.lib"
-								      tofile="${project.basedir}/synclite-logger-rust/target/release/libsynclite_${revision}.lib"
-								      overwrite="true"
-								      quiet="true"
-								      failonerror="false"/>
-								<copy file="${project.basedir}/synclite-logger-rust/target/release/deps/synclite_c.lib"
-								      tofile="${project.basedir}/synclite-logger-rust/target/release/libsynclite_${revision}.lib"
-								      overwrite="true"
-								      quiet="true"
-								      failonerror="false"/>
-								<copy file="${project.basedir}/synclite-logger-rust/target/release/synclite_c.dll.lib"
-								      tofile="${project.basedir}/synclite-logger-rust/target/release/libsynclite_${revision}.lib"
-								      overwrite="true"
-								      quiet="true"
-								      failonerror="false"/>
-
-								<copy file="${project.basedir}/synclite-logger-rust/target/release/libsynclite_c.so"
-								      tofile="${project.basedir}/synclite-logger-rust/target/release/libsynclite_${revision}.so"
-								      overwrite="true"
-								      quiet="true"
-								      failonerror="false"/>
-								<copy file="${project.basedir}/synclite-logger-rust/target/release/deps/libsynclite_c.so"
-								      tofile="${project.basedir}/synclite-logger-rust/target/release/libsynclite_${revision}.so"
-								      overwrite="true"
-								      quiet="true"
-								      failonerror="false"/>
-
-								<copy file="${project.basedir}/synclite-logger-rust/target/release/libsynclite_c.dylib"
-								      tofile="${project.basedir}/synclite-logger-rust/target/release/libsynclite_${revision}.dylib"
-								      overwrite="true"
-								      quiet="true"
-								      failonerror="false"/>
-								<copy file="${project.basedir}/synclite-logger-rust/target/release/deps/libsynclite_c.dylib"
-								      tofile="${project.basedir}/synclite-logger-rust/target/release/libsynclite_${revision}.dylib"
-								      overwrite="true"
-								      quiet="true"
-								      failonerror="false"/>
-								<!-- Cross-compiled Linux outputs (cargo-zigbuild). -->
-								<copy file="${project.basedir}/synclite-logger-rust/target/x86_64-unknown-linux-gnu/release/libsynclite_c.so"
-								      tofile="${project.basedir}/synclite-logger-rust/target/release/libsynclite_${revision}_linux_x86_64.so"
-								      overwrite="true"
-								      quiet="true"
-								      failonerror="false"/>
-								<copy file="${project.basedir}/synclite-logger-rust/target/aarch64-unknown-linux-gnu/release/libsynclite_c.so"
-								      tofile="${project.basedir}/synclite-logger-rust/target/release/libsynclite_${revision}_linux_aarch64.so"
+								<copy file="${project.basedir}/synclite-logger-rust/target/aarch64-unknown-linux-gnu/release/liblibsynclite_1_0_0.so"
+								      tofile="${project.basedir}/synclite-logger-rust/target/release/liblibsynclite_1_0_0_linux_aarch64.so"
 								      overwrite="true"
 								      quiet="true"
 								      failonerror="false"/>

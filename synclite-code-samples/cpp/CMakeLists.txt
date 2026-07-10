@@ -182,9 +182,37 @@ if(WIN32)
     if(SYNCLITE_DUCKDB_DLL)
         message(STATUS "duckdb runtime dll  : ${SYNCLITE_DUCKDB_DLL}")
     else()
-        message(FATAL_ERROR
-            "duckdb.dll is required on Windows because ${SYNCLITE_RUNTIME_DLL} imports it.\n"
-            "Could not locate duckdb.dll near ${SYNCLITE_LIB_DIR} or Rust target outputs.")
+        message(WARNING
+            "duckdb.dll not found near ${SYNCLITE_LIB_DIR} or Rust target outputs.\n"
+            "${SYNCLITE_RUNTIME_DLL} imports duckdb.dll, so the duckdb-backed sample\n"
+            "will fail to load unless duckdb.dll is on the loader path at run time.")
+    endif()
+else()
+    # On Unix the cdylib we linked against IS the runtime shared object, so we
+    # stage that exact file (e.g. liblibsynclite_1_0_0.so / .dylib) next to the
+    # sample so developers do not have to fiddle with LD_LIBRARY_PATH.
+    set(SYNCLITE_RUNTIME_LIB "${SYNCLITE_LIB}")
+
+    if(APPLE)
+        set(_synclite_duckdb_names libduckdb.dylib libduckdb.so)
+    else()
+        set(_synclite_duckdb_names libduckdb.so)
+    endif()
+    find_file(SYNCLITE_DUCKDB_LIB
+        NAMES ${_synclite_duckdb_names}
+        HINTS "${SYNCLITE_LIB_DIR}"
+              "${SYNCLITE_LIB_DIR}/deps"
+              "${SYNCLITE_LIB_DIR}/../deps"
+              "${CMAKE_CURRENT_SOURCE_DIR}/../../synclite-logger-rust/target/${SYNCLITE_PROFILE}"
+              "${CMAKE_CURRENT_SOURCE_DIR}/../../synclite-logger-rust/target/debug"
+              "${CMAKE_CURRENT_SOURCE_DIR}/../../synclite-logger-rust/target/release"
+        NO_DEFAULT_PATH)
+    if(SYNCLITE_DUCKDB_LIB)
+        message(STATUS "duckdb runtime lib  : ${SYNCLITE_DUCKDB_LIB}")
+    else()
+        message(WARNING
+            "Could not locate a duckdb shared library near ${SYNCLITE_LIB_DIR}.\n"
+            "The duckdb-backed sample will fail to load unless duckdb is on the loader path.")
     endif()
 endif()
 
@@ -206,6 +234,38 @@ function(add_synclite_sample name)
                 COMMAND ${CMAKE_COMMAND} -E copy_if_different
                         "${SYNCLITE_DUCKDB_DLL}"
                         "$<TARGET_FILE_DIR:${name}>/duckdb.dll")
+        endif()
+        if(_runtime_copy_commands)
+            add_custom_command(TARGET ${name} POST_BUILD
+                ${_runtime_copy_commands}
+                VERBATIM)
+        endif()
+    else()
+        # Resolve the sample's shared-library dependencies relative to its own
+        # location so the copied runtime libs are found without LD_LIBRARY_PATH.
+        if(APPLE)
+            set_target_properties(${name} PROPERTIES
+                BUILD_RPATH "@loader_path"
+                INSTALL_RPATH "@loader_path")
+        else()
+            set_target_properties(${name} PROPERTIES
+                BUILD_RPATH "$ORIGIN"
+                INSTALL_RPATH "$ORIGIN")
+        endif()
+        set(_runtime_copy_commands)
+        if(SYNCLITE_RUNTIME_LIB AND EXISTS "${SYNCLITE_RUNTIME_LIB}")
+            list(APPEND _runtime_copy_commands
+                COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:${name}>"
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                        "${SYNCLITE_RUNTIME_LIB}"
+                        "$<TARGET_FILE_DIR:${name}>/")
+        endif()
+        if(SYNCLITE_DUCKDB_LIB)
+            get_filename_component(_synclite_duckdb_name "${SYNCLITE_DUCKDB_LIB}" NAME)
+            list(APPEND _runtime_copy_commands
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                        "${SYNCLITE_DUCKDB_LIB}"
+                        "$<TARGET_FILE_DIR:${name}>/${_synclite_duckdb_name}")
         endif()
         if(_runtime_copy_commands)
             add_custom_command(TARGET ${name} POST_BUILD

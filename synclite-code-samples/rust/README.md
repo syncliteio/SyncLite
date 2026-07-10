@@ -4,6 +4,23 @@
 
 Top-of-file comments show where to flip **sync mode** (`REPLICATION` ↔ `CONSOLIDATION` — see [../README.md § Sync modes](../README.md#sync-modes-replication-vs-consolidation)) and swap connection settings.
 
+## Quickest start — add the crate from crates.io
+
+```bash
+cargo add synclite@1.0.0
+```
+
+Or add it to your `Cargo.toml` directly:
+
+```toml
+[dependencies]
+synclite = "1.0.0"
+```
+
+That pulls the published `synclite` facade crate (logger + in-process consolidator) from crates.io — no repo checkout needed. A C/C++ toolchain + CMake are still required to build its native dependencies (DuckDB); see [Troubleshooting](#troubleshooting). Then jump to [step 1](#1-pre-create-the-postgres-database-one-time) to create the Postgres DB and run the sample.
+
+Prefer to build entirely offline against the crates bundled in an extracted release zip? Use [Run from the release zip](#run-from-the-release-zip) below instead.
+
 ## Run from the release zip
 
 You are already in `sample-apps/rust/` of an extracted release. The release ships the SyncLite Rust SDK source under [`../../lib/rust/synclite-source/`](../../lib/rust/synclite-source/) — a self-contained Cargo workspace with the `synclite` facade + logger + consolidator + observability crates. The sample's [`Cargo.toml`](Cargo.toml) already points into that tree via path dependencies, so it builds **offline against the bundled crates** with no extra setup.
