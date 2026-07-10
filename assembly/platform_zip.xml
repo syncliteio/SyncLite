@@ -59,6 +59,10 @@
 				<include>${rust.logger.include.jni.lib}</include>
 				<include>${rust.logger.include.jni.so}</include>
 				<include>${rust.logger.include.jni.dylib}</include>
+				<include>${rust.logger.include.python.dll}</include>
+				<include>${rust.logger.include.python.lib}</include>
+				<include>${rust.logger.include.python.so}</include>
+				<include>${rust.logger.include.python.dylib}</include>
 			</includes>
 			<fileMode>755</fileMode>
 			<directoryMode>755</directoryMode>
@@ -85,6 +89,24 @@
 			<fileMode>644</fileMode>
 			<directoryMode>755</directoryMode>
 			<outputDirectory>lib/rust/synclite-source</outputDirectory>
+		</fileSet>
+		<fileSet>
+			<!--
+			  Host + cross-built PyO3 wheels produced by maturin (see pom.xml
+			  build-python-wheel and build-python-wheel-linux-*). Ships the same
+			  self-contained wheels as the exploded platform folder
+			  (assembly/platform.xml) and the runtime zip (assembly/runtime_zip.xml)
+			  so end users `pip install lib/python/synclite-*.whl` without a Rust
+			  toolchain. The glob matches every platform-tagged wheel (Windows +
+			  Linux x86_64/aarch64 + any macOS wheels present).
+			-->
+			<directory>${project.basedir}/synclite-logger-rust/python/dist</directory>
+			<includes>
+				<include>synclite-${revision}-*.whl</include>
+			</includes>
+			<fileMode>644</fileMode>
+			<directoryMode>755</directoryMode>
+			<outputDirectory>lib/python</outputDirectory>
 		</fileSet>
 		<fileSet>
 			<directory>${project.basedir}/synclite-code-samples</directory>

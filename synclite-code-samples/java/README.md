@@ -9,6 +9,28 @@ Top-of-file comments inside `appStartup()` show how to:
 - flip **sync mode** (`REPLICATION` ↔ `CONSOLIDATION` — see [../README.md § Sync modes](../README.md#sync-modes-replication-vs-consolidation)),
 - run in **pure-logger mode** (no inline destination — pair with a standalone Consolidator service).
 
+## Quickest start — add the Maven dependency
+
+**Maven** (`pom.xml`):
+
+```xml
+<dependency>
+    <groupId>io.synclite</groupId>
+    <artifactId>synclite</artifactId>
+    <version>1.0.0</version>
+</dependency>
+```
+
+**Gradle** (`build.gradle`):
+
+```groovy
+implementation 'io.synclite:synclite:1.0.0'
+```
+
+The published `synclite` jar is self-contained — it bundles the PostgreSQL JDBC driver **and** the platform `synclite_jni` native libraries (Windows x64, Linux x86_64 / aarch64), so no extra classpath entries or native installs are needed. Then jump to [step 1](#1-pre-create-the-postgres-database--schema-one-time) to create the Postgres DB and run the sample.
+
+Prefer to run entirely offline from an extracted release zip? Use [Run from the release zip](#run-from-the-release-zip) below instead.
+
 ## Run from the release zip
 
 You are already in `sample-apps/java/` of an extracted release. The release ships the runtime jar under [`../../lib/java/synclite-1.0.0.jar`](../../lib/java/synclite-1.0.0.jar).

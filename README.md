@@ -17,9 +17,43 @@
 
 No server to install. No daemon to babysit. No CDC pipeline to wire up. Your application links a jar, a crate, or a native library and ships.
 
-```text
-Your Offline-first App  ──►  Embedded DB (SQLite/DuckDB)  + SyncLite Runtime Background Sync  ──►  PostgreSQL
+```mermaid
+flowchart TB
+    classDef app  fill:#eef6ff,stroke:#2b6cb0,stroke-width:1px,color:#1a365d
+    classDef bad  fill:#fff5f5,stroke:#c53030,stroke-width:1.5px,color:#742a2a
+    classDef edb  fill:#fffaf0,stroke:#c98a00,stroke-width:1px,color:#5c3a00
+    classDef rt   fill:#fff8e6,stroke:#c98a00,stroke-width:1.5px,color:#5c3a00
+    classDef dst  fill:#f0fff4,stroke:#2f855a,stroke-width:1px,color:#22543d
+
+    subgraph Before["TRADITIONAL — app bound to a remote DB"]
+        direction LR
+        A1["Your App"]:::app
+        PG1[("PostgreSQL<br/>(network-bound)")]:::bad
+        A1 -- "every read/write<br/>over the network" --> PG1
+    end
+
+    subgraph After["SYNCLITE — local-first + background sync"]
+        direction LR
+        A2["Your App"]:::app
+        EDB[("Embedded DB<br/>SQLite / DuckDB<br/>local, always available")]:::edb
+        RT["SyncLite Runtime<br/>log + shipper + sync"]:::rt
+        PG2[("PostgreSQL")]:::dst
+        A2 -- "in-process read/write<br/>(no network in the hot path)" --> EDB
+        EDB --> RT
+        RT -- "async · durable · offline-tolerant" --> PG2
+    end
+
+    Before ==>|"drop in one library"| After
 ```
+
+**Why the SyncLite path wins:** your app reads and writes a **local** embedded DB at in-process speed and keeps working offline, while the SyncLite Runtime durably logs every write and syncs it to your destination in the background. The network moves *off* the critical path — so you get lower latency, offline resilience, and exactly-once delivery **without** wiring up a separate CDC tool, message bus, or replication agent.
+
+| | Traditional (app → remote DB) | **SyncLite (local-first)** |
+|---|---|---|
+| Read/write latency | network round-trip every op | **in-process, memory-speed** |
+| Works offline | ✗ fails without connectivity | **✓ fully offline, syncs on reconnect** |
+| Delivery guarantee | app must build retries/dedup | **✓ durable log, exactly-once** |
+| Moving parts | app + DB + custom CDC/queue | **✓ one embedded library** |
 
 Today the embedded runtime supports PostgreSQL as the primary remote destination, with SQLite and DuckDB also used as local destinations. The standalone Consolidator is the broader multi-destination path, and more runtime destinations are planned.
 
@@ -182,6 +216,36 @@ A "device" is just a logical embedded DB that the runtime owns end-to-end (stora
 All three surfaces produce the same log format and use the same shipper + consolidator under the covers, so you can mix and match devices inside a single application.
 
 > **Which device should I pick?** Store devices (`*_STORE`) and the `STREAMING` device emit pre-formed row events that the Consolidator applies directly to the destination — no SQL-log parsing or CDC-deduction step on the apply path, so they deliver the highest end-to-end consolidation throughput. Reach for a SQL device when your app actually needs raw SQL, JOINs, multi-statement transactions in one connection, or ad-hoc DDL beyond the schema-evolution the Store API handles for you. For a brand-new app, `SQLITE_STORE` is usually the fastest *and* simplest starting point.
+
+---
+
+## Install the runtime (published packages, v1.0.0)
+
+The fastest way to embed SyncLite is to pull the **published** runtime for your language — no repo checkout, no source build:
+
+| Language | Install | Registry |
+|---|---|---|
+| **Python** | `pip install synclite==1.0.0` | [PyPI](https://pypi.org/project/synclite/) |
+| **Rust** | `cargo add synclite@1.0.0` &nbsp;·&nbsp; or `synclite = "1.0.0"` in `Cargo.toml` | [crates.io](https://crates.io/crates/synclite) |
+| **Java** | Maven / Gradle coordinates below | Maven Central |
+
+```xml
+<!-- Maven — pom.xml -->
+<dependency>
+    <groupId>io.synclite</groupId>
+    <artifactId>synclite</artifactId>
+    <version>1.0.0</version>
+</dependency>
+```
+
+```groovy
+// Gradle — build.gradle
+implementation 'io.synclite:synclite:1.0.0'
+```
+
+The Python wheel and Java jar are **self-contained** — they bundle the platform native runtime (and DuckDB / the PostgreSQL driver), so `pip install` / a single Maven dependency is all you need on Windows, Linux (x86_64 / aarch64), and macOS. The Rust crate compiles its native DuckDB dependency, so a C/C++ toolchain + CMake are required (see [Build prerequisites](#build-synclite)).
+
+Ready-to-run samples for all four languages live in [`synclite-code-samples/`](synclite-code-samples/README.md). Prefer to build everything from source instead? Continue with [Build SyncLite](#build-synclite) below.
 
 ---
 

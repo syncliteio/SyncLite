@@ -4,6 +4,16 @@
 
 Top-of-file comments show where to flip **sync mode** (`REPLICATION` ↔ `CONSOLIDATION` — see [../README.md § Sync modes](../README.md#sync-modes-replication-vs-consolidation)) and swap connection settings.
 
+## Quickest start — install from PyPI
+
+```bash
+pip install synclite==1.0.0
+```
+
+That's it — the published `synclite` wheel is self-contained (bundles its native runtime + DuckDB) and installs on Linux (`manylinux_2_28` x86_64 / aarch64), Windows (`win_amd64`), and macOS with no repo checkout and no Rust toolchain. Then skip straight to [step 2](#2-install-psycopg-for-the-post-sync-postgres-verification) to add the Postgres client and run the sample.
+
+Prefer to run entirely offline from an extracted release zip? Use [Run from the release zip](#run-from-the-release-zip) below instead.
+
 ## Run from the release zip
 
 You are already in `sample-apps/python/` of an extracted release. The release ships the `synclite` wheel under [`../../lib/python/`](../../lib/python/).
