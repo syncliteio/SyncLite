@@ -200,6 +200,31 @@
     .tabs-wrap { max-width: 1000px; margin: 0 auto; padding: 4rem 2rem; }
     .tabs-wrap h2 { font-size: clamp(1.6rem,3vw,2rem); font-weight: 800; letter-spacing: -.5px; margin-bottom: .5rem; }
     .tabs-wrap .sub { color: var(--muted); margin-bottom: 2rem; font-size: .95rem; }
+    /* Published-package install strip (PyPI / crates.io / Maven Central) */
+    .install-strip {
+      background: var(--code-bg); border: 1px solid var(--border);
+      border-radius: 12px; padding: 1.25rem 1.5rem; margin-bottom: 2.25rem;
+    }
+    .install-strip-label { font-size: .82rem; font-weight: 700; color: var(--green); margin-bottom: .9rem; letter-spacing: .01em; }
+    .install-cmds { display: flex; gap: .75rem; flex-wrap: wrap; }
+    .install-cmd {
+      display: flex; align-items: center; gap: .6rem; flex: 1 1 260px;
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 8px; padding: .55rem .75rem;
+    }
+    .install-cmd-tag {
+      font-size: .68rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em;
+      color: var(--accent); background: rgba(59,130,246,.12);
+      border-radius: 5px; padding: .2em .55em; white-space: nowrap;
+    }
+    .install-cmd code {
+      font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: .82rem;
+      color: var(--text); overflow-x: auto; white-space: nowrap;
+    }
+    .install-strip-note { font-size: .8rem; color: var(--muted); margin-top: .9rem; }
+    .install-strip-note a { color: var(--accent); font-weight: 600; text-decoration: none; }
+    .install-strip-note a:hover { text-decoration: underline; }
+    @media (max-width: 640px) { .install-cmds { flex-direction: column; } }
     .tabs { display: flex; gap: .5rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
     .tab-btn {
       padding: .4rem 1rem; border-radius: 7px; font-size: .82rem; font-weight: 600;
@@ -496,6 +521,27 @@
   <div class="tabs-wrap">
     <h2>Start Syncing in Minutes</h2>
     <p class="sub">Native libraries for Rust, Python, and C++ — plus the Java JDBC driver and a language-agnostic HTTP API. Pick your stack, SyncLite handles the rest.</p>
+
+    <!-- Published packages: install from PyPI / crates.io / Maven Central, no build required -->
+    <div class="install-strip">
+      <div class="install-strip-label">Install the published runtime — no repo checkout, no source build:</div>
+      <div class="install-cmds">
+        <div class="install-cmd">
+          <span class="install-cmd-tag">Python</span>
+          <code>pip install synclite</code>
+        </div>
+        <div class="install-cmd">
+          <span class="install-cmd-tag">Rust</span>
+          <code>cargo add synclite</code>
+        </div>
+        <div class="install-cmd">
+          <span class="install-cmd-tag">Java</span>
+          <code>io.synclite:synclite:1.0.0</code>
+        </div>
+      </div>
+      <div class="install-strip-note">Python (PyPI) &amp; Rust (crates.io) grab the newest release automatically — add <code>==1.0.0</code> / <code>@1.0.0</code> to pin. Maven has no reliable “latest”, so pin the version. Python wheel &amp; Java jar bundle the native runtime; the Rust crate builds it. Full setup: <a href="https://github.com/syncliteio/SyncLite/blob/main/GETTING_STARTED.md" target="_blank">Getting Started →</a></div>
+    </div>
+
     <div class="tabs">
       <button class="tab-btn active" onclick="showTab('rust')">Rust <span style="font-size:.65rem;padding:.1em .45em;margin-left:.3em;border-radius:99px;background:var(--green);color:#0a0e1a;font-weight:800;letter-spacing:.04em;">NEW</span></button>
       <button class="tab-btn" onclick="showTab('python')">Python <span style="font-size:.65rem;padding:.1em .45em;margin-left:.3em;border-radius:99px;background:var(--green);color:#0a0e1a;font-weight:800;letter-spacing:.04em;">NEW</span></button>
