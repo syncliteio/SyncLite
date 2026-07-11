@@ -41,6 +41,14 @@
 		-->
 		<skipPythonWheel>false</skipPythonWheel>
 		<!--
+		  Skip the manylinux (Linux x86_64 + aarch64) Python wheel build that
+		  runs via WSL (or natively on a Linux host). Defaults to false; set
+		  -DskipLinuxWheels=true to build only the host wheel and leave the
+		  Linux wheels out. Also implicitly skipped when -DskipNonJavaLoggers=true,
+		  -DskipPythonWheel=true, or -DskipRustCrossCompile=true.
+		-->
+		<skipLinuxWheels>false</skipLinuxWheels>
+		<!--
 		  Skip staging the self-contained Rust source tree under
 		  lib/rust/synclite-source/ in the platform/runtime zips. Defaults to
 		  false; set -DskipRustSourceBundle=true on hosts that don't need to
@@ -78,25 +86,18 @@
 
 		<!-- Rust logger native deps: keep DuckDB prebuilt/downloaded to avoid heavy native builds. -->
 		<duckdbDownloadLib>true</duckdbDownloadLib>
-		<!-- Globs so per-arch variants (e.g. libsynclite_<rev>_linux_x86_64.so) coexist.
-		     NOTE: the C cdylib crate name is hardcoded 'libsynclite_1_0_0' (underscores) and is
+		<!-- Globs so per-arch variants (e.g. libsynclite_1_0_0_linux_x86_64.so) coexist.
+		     NOTE: the C cdylib crate name is hardcoded 'synclite_1_0_0' (underscores) and is
 		     independent of Maven's dotted ${revision}, so these globs must NOT use ${revision}
-		     (a dotted value like 1.0.0 never matches the underscore filename). On Linux/macOS
-		     Cargo prepends an extra 'lib' to the crate name -> liblibsynclite_*.so / .dylib. -->
-		<rust.logger.include.dll>libsynclite_*.dll</rust.logger.include.dll>
-		<rust.logger.include.lib>libsynclite_*.lib</rust.logger.include.lib>
-		<rust.logger.include.so>liblibsynclite_*.so</rust.logger.include.so>
-		<rust.logger.include.dylib>liblibsynclite_*.dylib</rust.logger.include.dylib>
-		<!-- JNI cdylib (Java consumers). Named 'synclite_jni' from bindings-java crate. -->
-		<rust.logger.include.jni.dll>synclite_jni*.dll</rust.logger.include.jni.dll>
-		<rust.logger.include.jni.lib>synclite_jni*.lib</rust.logger.include.jni.lib>
-		<rust.logger.include.jni.so>libsynclite_jni*.so</rust.logger.include.jni.so>
-		<rust.logger.include.jni.dylib>libsynclite_jni*.dylib</rust.logger.include.jni.dylib>
-		<!-- Python binding (_native cdylib from bindings-python crate). -->
-		<rust.logger.include.python.dll>_native*.dll</rust.logger.include.python.dll>
-		<rust.logger.include.python.lib>_native*.lib</rust.logger.include.python.lib>
-		<rust.logger.include.python.so>lib_native*.so</rust.logger.include.python.so>
-		<rust.logger.include.python.dylib>lib_native*.dylib</rust.logger.include.python.dylib>
+		     (a dotted value like 1.0.0 never matches the underscore filename). Following the
+		     standard platform convention, Windows has NO lib prefix (synclite_1_0_0.dll) while
+		     Cargo adds the conventional 'lib' prefix on Linux/macOS (libsynclite_1_0_0.so/.dylib).
+		     The version-anchored globs deliberately exclude the JNI (synclite_jni) and Python
+		     (_native) cdylibs, which ship inside the jar / wheel, not loose in lib/native. -->
+		<rust.logger.include.dll>synclite_1_0_0*.dll</rust.logger.include.dll>
+		<rust.logger.include.lib>synclite_1_0_0*.lib</rust.logger.include.lib>
+		<rust.logger.include.so>libsynclite_1_0_0*.so</rust.logger.include.so>
+		<rust.logger.include.dylib>libsynclite_1_0_0*.dylib</rust.logger.include.dylib>
 	</properties>
   
   	<!--
@@ -486,8 +487,13 @@
 								-->
 								<!-- cargo: host Rust cdylib + JNI + wheels + tests. -->
 								<probe prop="cargoPresent"    wincmd="where cargo >NUL 2>NUL"           nixcmd="command -v cargo >/dev/null 2>&amp;1"/>
-								<!-- zig + cargo-zigbuild: Linux cross-compile of cdylib and JNI. -->
-								<probe prop="zigPresent"      wincmd="where zig >NUL 2>NUL"             nixcmd="command -v zig >/dev/null 2>&amp;1"/>
+								<!--
+								  zig + cargo-zigbuild: Linux cross-compile of cdylib and JNI.
+								  zig may be a standalone binary on PATH OR the `ziglang` pip
+								  package (cargo-zigbuild transparently invokes `python -m ziglang`
+								  when no `zig` binary is found), so accept EITHER form here.
+								-->
+								<probe prop="zigPresent"      wincmd="where zig >NUL 2>NUL || ${pythonExecutable} -m ziglang version >NUL 2>NUL"             nixcmd="command -v zig >/dev/null 2>&amp;1 || ${pythonExecutable} -m ziglang version >/dev/null 2>&amp;1"/>
 								<probe prop="zigbuildPresent" wincmd="where cargo-zigbuild >NUL 2>NUL"  nixcmd="command -v cargo-zigbuild >/dev/null 2>&amp;1"/>
 								<!-- maturin (via the detected interpreter): host Python wheel. -->
 								<probe prop="maturinPresent"  wincmd="${pythonExecutable} -m maturin --version >NUL 2>NUL" nixcmd="${pythonExecutable} -m maturin --version >/dev/null 2>&amp;1"/>
@@ -561,6 +567,7 @@
 									<or>
 										<istrue value="${skipNonJavaLoggers}"/>
 										<istrue value="${skipPythonWheel}"/>
+										<istrue value="${skipLinuxWheels}"/>
 										<istrue value="${skipRustCrossCompile}"/>
 										<isfalse value="${pythonPresent}"/>
 									</or>
@@ -654,11 +661,11 @@
 							<target>
 								<!--
 								  Cargo names the C cdylib after the crate's [lib] name
-								  (`libsynclite_1_0_0`), so the host-arch build already lands as
-								  target/release/libsynclite_1_0_0.{dll,lib} (Windows) or
-								  target/release/liblibsynclite_1_0_0.{so,dylib} (Linux/macOS —
-								  Cargo prepends an extra 'lib'). Those match the assembly globs
-								  directly, so no rename is needed for the host build.
+								  (`synclite_1_0_0`), so the host-arch build already lands as
+								  target/release/synclite_1_0_0.{dll,lib} (Windows) or
+								  target/release/libsynclite_1_0_0.{so,dylib} (Linux/macOS —
+								  Cargo adds the conventional 'lib' prefix). Those match the
+								  assembly globs directly, so no rename is needed for the host build.
 
 								  The only staging still required is for the cross-compiled Linux
 								  outputs (cargo-zigbuild), which land under target/<triple>/release/.
@@ -667,13 +674,13 @@
 								  lib/native/. Best-effort (failonerror=false) so a host without the
 								  cross toolchain still builds.
 								-->
-								<copy file="${project.basedir}/synclite-logger-rust/target/x86_64-unknown-linux-gnu/release/liblibsynclite_1_0_0.so"
-								      tofile="${project.basedir}/synclite-logger-rust/target/release/liblibsynclite_1_0_0_linux_x86_64.so"
+								<copy file="${project.basedir}/synclite-logger-rust/target/x86_64-unknown-linux-gnu/release/libsynclite_1_0_0.so"
+								      tofile="${project.basedir}/synclite-logger-rust/target/release/libsynclite_1_0_0_linux_x86_64.so"
 								      overwrite="true"
 								      quiet="true"
 								      failonerror="false"/>
-								<copy file="${project.basedir}/synclite-logger-rust/target/aarch64-unknown-linux-gnu/release/liblibsynclite_1_0_0.so"
-								      tofile="${project.basedir}/synclite-logger-rust/target/release/liblibsynclite_1_0_0_linux_aarch64.so"
+								<copy file="${project.basedir}/synclite-logger-rust/target/aarch64-unknown-linux-gnu/release/libsynclite_1_0_0.so"
+								      tofile="${project.basedir}/synclite-logger-rust/target/release/libsynclite_1_0_0_linux_aarch64.so"
 								      overwrite="true"
 								      quiet="true"
 								      failonerror="false"/>
