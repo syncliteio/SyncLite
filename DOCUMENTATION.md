@@ -2,7 +2,7 @@
 
 > **License:** Apache License 2.0  
 
-> **Website:** https://github.com/syncliteio/SyncLite
+> **Website:** https://synclite.io
 
 > **Full Online Docs:** https://github.com/syncliteio/SyncLite/blob/main/DOCUMENTATION.md
 
