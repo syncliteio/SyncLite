@@ -33,20 +33,33 @@
 		</fileSet>
 		<!-- Rust cdylibs (multi-arch via glob) -->
 		<fileSet>
+			<!-- C/C++ SDK only: the C-ABI cdylib (synclite_1_0_0.dll on Windows,
+			     libsynclite_1_0_0.so/.dylib on Linux/macOS) + its Windows import/static
+			     libs + cross-compiled Linux .so variants. The Java JNI native (synclite_jni)
+			     is shipped inside the logger jar under lib/java
+			     (META-INF/native/<classifier>/libsynclite_<rev>_jni.<ext>) and the
+			     Python _native ext ships inside the wheel under lib/python, so neither
+			     is duplicated loose here. -->
 			<directory>${project.basedir}/synclite-logger-rust/target/release</directory>
 			<includes>
 				<include>${rust.logger.include.dll}</include>
 				<include>${rust.logger.include.lib}</include>
 				<include>${rust.logger.include.so}</include>
 				<include>${rust.logger.include.dylib}</include>
-				<include>${rust.logger.include.jni.dll}</include>
-				<include>${rust.logger.include.jni.lib}</include>
-				<include>${rust.logger.include.jni.so}</include>
-				<include>${rust.logger.include.jni.dylib}</include>
 			</includes>
 			<fileMode>755</fileMode>
 			<directoryMode>755</directoryMode>
 			<outputDirectory>lib/native</outputDirectory>
+		</fileSet>
+		<fileSet>
+			<!-- C/C++ ABI headers consumed by sample-apps/cpp. -->
+			<directory>${project.basedir}/synclite-logger-rust/include</directory>
+			<includes>
+				<include>synclite.h</include>
+				<include>synclite.hpp</include>
+			</includes>
+			<fileMode>644</fileMode>
+			<outputDirectory>lib/native/include</outputDirectory>
 		</fileSet>
 		<fileSet>
 			<directory>${project.build.directory}</directory>
