@@ -22,9 +22,11 @@ Pull the **published** SyncLite runtime for your language — no repo checkout, 
 
 | Language | Install |
 |---|---|
-| **Python** | `pip install synclite==1.0.0` |
-| **Rust** | `cargo add synclite@1.0.0` (or `synclite = "1.0.0"` in `Cargo.toml`) |
+| **Python** | `pip install synclite` |
+| **Rust** | `cargo add synclite` |
 | **Java** | Maven: `io.synclite:synclite:1.0.0` &nbsp;·&nbsp; Gradle: `implementation 'io.synclite:synclite:1.0.0'` |
+
+> `pip install synclite` / `cargo add synclite` install the **newest** release; pin with `==1.0.0` / `@1.0.0` for reproducible builds. Maven has no reliable "latest" metaversion, so the Java coordinate is always pinned.
 
 ```xml
 <!-- Maven — pom.xml -->
@@ -325,14 +327,17 @@ synclite-runtime-1.0.0/
 |   |   +-- synclite.conf                             # Default logger configuration
 |   +-- native/                                       # Multi-arch Rust runtime cdylibs
 |   |   +-- include/                                  # C / C++ ABI headers (synclite.h, synclite.hpp)
-|   |   +-- libsynclite_<version>.dll                 # Windows host build
-|   |   +-- libsynclite_<version>.lib                 # Windows import library
+|   |   +-- synclite_<version>.dll                    # Windows host build (no lib prefix)
+|   |   +-- synclite_<version>.dll.lib                # Windows import library (for the DLL)
+|   |   +-- synclite_<version>.lib                    # Windows static library
 |   |   +-- libsynclite_<version>_linux_x86_64.so     # cross-compiled (omitted if -DskipRustCrossCompile=true)
 |   |   +-- libsynclite_<version>_linux_aarch64.so    # cross-compiled (omitted if -DskipRustCrossCompile=true)
-|   |   +-- libsynclite_<version>.dylib               # only if built on macOS
+|   |   +-- libsynclite_<version>.dylib               # only if built on macOS (lib prefix on Unix)
 |   |   +-- synclite.conf
 |   +-- python/
-|   |   +-- synclite-<version>-cp38-abi3-*.whl        # Host-platform PyO3 wheel
+|   |   +-- synclite-<version>-cp38-abi3-win_amd64.whl              # host wheel (Windows)
+|   |   +-- synclite-<version>-cp38-abi3-manylinux_2_28_x86_64.whl   # Linux x86_64 (via WSL/CI)
+|   |   +-- synclite-<version>-cp38-abi3-manylinux_2_28_aarch64.whl  # Linux aarch64 (via WSL/CI)
 |   +-- rust/
 |       +-- synclite-source/                          # Cargo workspace consumed offline by sample-apps/rust
 +-- sample-apps/                                      # cpp / java / python / rust (one sample per language)
@@ -594,13 +599,31 @@ bin/dst/mysql/docker-deploy.sh      # MySQL destination
 | http://localhost:8080/synclite-job-monitor | Manage and schedule all SyncLite jobs |
 | http://localhost:8080/manager | Tomcat manager (`synclite` / `synclite`) |
 
-### Try the Sample Web App
+### Try the tools together
 
-The sample web app embeds SyncLite (Java) in **logger-only** mode — it produces `.sqllog` segments to the staging storage and relies on the standalone Consolidator WAR (configured below) to apply them to the destination. It does **not** use the in-process consolidator path.
+The platform tools are designed to be combined: a **producer** (Sample Web App or DBReader) writes `.sqllog` / `.cdclog` segments to a shared **staging** storage, and the **Consolidator** applies them to your destination database. Below are the two most common combinations to try first.
 
-1. Open [http://localhost:8080/synclite-consolidator](http://localhost:8080/synclite-consolidator) and configure a destination database (e.g., the PostgreSQL container you started in Step 2).
-2. Open [http://localhost:8080/synclite-sample-app](http://localhost:8080/synclite-sample-app)
-3. Create a device, run SQL workloads, and watch live sync to your configured destination — all from your browser.
+> Both flows share the same staging storage and the same Consolidator instance. Configure staging + destination once in the Consolidator, then point one or more producers at the same staging location.
+
+#### A. Sample Web App + Consolidator (interactive, no external DB source)
+
+Use this to see end-to-end sync from a browser-driven workload.
+
+The sample web app embeds SyncLite (Java) in **logger-only** mode — it produces `.sqllog` segments to the staging storage and relies on the standalone Consolidator WAR to apply them to the destination. It does **not** use the in-process consolidator path.
+
+1. Open [http://localhost:8080/synclite-consolidator](http://localhost:8080/synclite-consolidator), configure the **staging** location and a **destination** database (e.g., the PostgreSQL container you started in Step 2), and start the consolidation job.
+2. Open [http://localhost:8080/synclite-sample-app](http://localhost:8080/synclite-sample-app), create a device that logs to the **same** staging location.
+3. Run SQL workloads in the sample app and watch rows land in your destination — the Consolidator picks up each segment and applies it live.
+
+#### B. DBReader + Consolidator (database → database replication/ETL)
+
+Use this to continuously replicate an existing source database into your destination.
+
+1. Open [http://localhost:8080/synclite-consolidator](http://localhost:8080/synclite-consolidator), configure the **staging** location and the **destination** database, and start the consolidation job (same as above).
+2. Open [http://localhost:8080/synclite-dbreader](http://localhost:8080/synclite-dbreader), configure your **source** database connection, and point its output at the **same** staging location the Consolidator is watching.
+3. Start the DBReader job. It reads the source (initial snapshot + incremental changes) and writes segments to staging; the Consolidator applies them to the destination.
+
+> Use [http://localhost:8080/synclite-job-monitor](http://localhost:8080/synclite-job-monitor) to watch both the producer and the Consolidator jobs, their progress, and any errors in one place.
 
 ---
 
