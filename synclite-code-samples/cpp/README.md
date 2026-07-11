@@ -48,8 +48,8 @@ Expected layout relative to this folder:
 ```text
 ../../lib/native/include/synclite.h
 ../../lib/native/include/synclite.hpp
-../../lib/native/libsynclite_<version>.dll   (Windows)
-../../lib/native/libsynclite_<version>.lib   (Windows)
+../../lib/native/synclite_<version>.dll       (Windows)
+../../lib/native/synclite_<version>.dll.lib   (Windows import library)
 ```
 
 ### Windows (PowerShell)
