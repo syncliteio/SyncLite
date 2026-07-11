@@ -49,6 +49,13 @@
 			<outputDirectory>lib/java</outputDirectory>
 		</fileSet>
 		<fileSet>
+			<!-- C/C++ SDK only: the C-ABI cdylib (synclite_1_0_0.dll on Windows,
+			     libsynclite_1_0_0.so/.dylib on Linux/macOS) + its Windows import/static
+			     libs + cross-compiled Linux .so variants. The Java JNI native (synclite_jni)
+			     is shipped inside the logger jar under lib/java
+			     (META-INF/native/<classifier>/libsynclite_<rev>_jni.<ext>) and the
+			     Python _native ext ships inside the wheel under lib/python, so neither
+			     is duplicated loose here. -->
 			<directory>${project.basedir}/synclite-logger-rust/target/release</directory>
 			<includes>
 				<include>${rust.logger.include.dll}</include>
