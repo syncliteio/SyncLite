@@ -601,7 +601,7 @@ bin/dst/mysql/docker-deploy.sh      # MySQL destination
 
 ### Try the tools together
 
-The platform tools are designed to be combined: a **producer** (Sample Web App or DBReader) writes `.sqllog` / `.cdclog` segments to a shared **staging** storage, and the **Consolidator** applies them to your destination database. Below are the two most common combinations to try first.
+The platform tools are designed to be combined: a **producer** (Sample Web App, DBReader, SyncLite DB, or QReader) writes `.sqllog` / `.cdclog` segments to a shared **staging** storage, and the **Consolidator** applies them to your destination database. Below are the most common combinations to try first.
 
 > Both flows share the same staging storage and the same Consolidator instance. Configure staging + destination once in the Consolidator, then point one or more producers at the same staging location.
 
@@ -622,6 +622,22 @@ Use this to continuously replicate an existing source database into your destina
 1. Open [http://localhost:8080/synclite-consolidator](http://localhost:8080/synclite-consolidator), configure the **staging** location and the **destination** database, and start the consolidation job (same as above).
 2. Open [http://localhost:8080/synclite-dbreader](http://localhost:8080/synclite-dbreader), configure your **source** database connection, and point its output at the **same** staging location the Consolidator is watching.
 3. Start the DBReader job. It reads the source (initial snapshot + incremental changes) and writes segments to staging; the Consolidator applies them to the destination.
+
+#### C. SyncLite DB + Consolidator (any language via HTTP/JSON)
+
+Use this when your app is **not** Java/Rust/Python/C++ — SyncLite DB exposes the embedded databases over HTTP + JSON.
+
+1. Start the consolidation job as above (**staging** + **destination**).
+2. Deploy `synclite-db-oss.war` (bundled under `tools/synclite-db/`) to Tomcat and configure its device to log to the **same** staging location.
+3. Send SQL as JSON over HTTP from any language (Go, C#, Node.js, Ruby, …) and watch rows sync to the destination. See [synclite-db/README.md](synclite-db/README.md).
+
+#### D. QReader + Consolidator (IoT / MQTT ingestion)
+
+Use this to stream MQTT sensor/device messages into your destination.
+
+1. Start the consolidation job as above (**staging** + **destination**).
+2. Open [http://localhost:8080/synclite-qreader](http://localhost:8080/synclite-qreader), configure your **MQTT broker** URL and the topic → table mapping, pointing output at the **same** staging location.
+3. Start the QReader job and publish messages to the broker; parsed payloads flow through staging to the destination. See [synclite-qreader/README.md](synclite-qreader/README.md).
 
 > Use [http://localhost:8080/synclite-job-monitor](http://localhost:8080/synclite-job-monitor) to watch both the producer and the Consolidator jobs, their progress, and any errors in one place.
 
