@@ -518,8 +518,8 @@ Use this when you want the central Consolidator + DBReader + QReader + Job Monit
 
 ```bash
 cd bin/
-./deploy.sh      # or deploy.bat on Windows
-./start.sh       # or start.bat on Windows
+./deploy.sh      # or deploy.bat on Windows   (first run: downloads Tomcat + JDK, deploys all WARs)
+./start.sh       # or start.bat on Windows    (starts Tomcat + every SyncLite app)
 ```
 
 | URL | App |
@@ -531,6 +531,26 @@ cd bin/
 | http://localhost:8080/synclite-job-monitor | Manage and schedule all SyncLite jobs |
 | http://localhost:8080/manager | Tomcat manager (user: `synclite` / pwd: `synclite`) |
 
+Once the apps are up, try a tool combo end-to-end (both share one staging location + one Consolidator job):
+
+**Sample Web App → Consolidator** (browser-driven, no external source DB)
+
+1. Open [synclite-consolidator](http://localhost:8080/synclite-consolidator) → configure **staging** + a **destination** DB → start the consolidation job.
+2. Open [synclite-sample-app](http://localhost:8080/synclite-sample-app) → create a device that logs to the **same** staging location.
+3. Run SQL in the sample app and watch rows land in your destination.
+
+**DBReader → Consolidator** (database → database replication/ETL)
+
+1. Open [synclite-consolidator](http://localhost:8080/synclite-consolidator) → configure **staging** + **destination** DB → start the consolidation job.
+2. Open [synclite-dbreader](http://localhost:8080/synclite-dbreader) → configure your **source** DB → point its output at the **same** staging location.
+3. Start the DBReader job and watch source changes replicate to the destination. Track both jobs in [synclite-job-monitor](http://localhost:8080/synclite-job-monitor).
+
+**SyncLite DB → Consolidator** (any language via HTTP/JSON): start the consolidation job (staging + destination), deploy `synclite-db-oss.war` (bundled under `tools/synclite-db/`), point the DB server at the **same** staging location, then send SQL as JSON over HTTP — see [synclite-db/README.md](synclite-db/README.md).
+
+**QReader → Consolidator** (IoT/MQTT): start the consolidation job (staging + destination), open [synclite-qreader](http://localhost:8080/synclite-qreader), configure your MQTT broker + topic mapping to the **same** staging location, and stream device messages straight into your destination — see [synclite-qreader/README.md](synclite-qreader/README.md).
+
+Full walkthrough: [GETTING_STARTED.md § Try the tools together](GETTING_STARTED.md#try-the-tools-together).
+
 #### Docker (all-in-one)
 
 ```bash
@@ -540,6 +560,10 @@ cd bin/
 ./docker-start.sh      # Starts synclite-platform container and optional helpers
 ./docker-stop.sh       # Stops synclite-platform container and optional helpers
 ```
+
+The same app URLs and tool-combo steps above apply once the container is up.
+
+> ⚠️ Docker helper scripts use default credentials. Change usernames, passwords, and enable TLS before any production use.
 
 ---
 
