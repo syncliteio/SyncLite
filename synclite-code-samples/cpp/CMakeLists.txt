@@ -66,13 +66,13 @@ endif()
 if(WIN32)
     file(GLOB _synclite_versioned_libs_underscore
         RELATIVE "${SYNCLITE_LIB_DIR}"
-        "${SYNCLITE_LIB_DIR}/libsynclite_*_*.lib")
+        "${SYNCLITE_LIB_DIR}/synclite_*_*.lib")
     if(_synclite_versioned_libs_underscore)
         set(_synclite_versioned_libs ${_synclite_versioned_libs_underscore})
     else()
         file(GLOB _synclite_versioned_libs
             RELATIVE "${SYNCLITE_LIB_DIR}"
-            "${SYNCLITE_LIB_DIR}/libsynclite_*.lib")
+            "${SYNCLITE_LIB_DIR}/synclite_*.lib")
     endif()
 elseif(APPLE)
     file(GLOB _synclite_versioned_libs_underscore
@@ -145,12 +145,11 @@ message(STATUS "synclite library    : ${SYNCLITE_LIB}")
 if(WIN32)
     file(GLOB _synclite_runtime_dll_candidates
         LIST_DIRECTORIES false
-        "${SYNCLITE_LIB_DIR}/libsynclite_*_*.dll")
+        "${SYNCLITE_LIB_DIR}/synclite_*_*.dll")
     if(NOT _synclite_runtime_dll_candidates)
         file(GLOB _synclite_runtime_dll_candidates
             LIST_DIRECTORIES false
-            "${SYNCLITE_LIB_DIR}/libsynclite_*.dll"
-            "${SYNCLITE_LIB_DIR}/synclite_c.dll")
+            "${SYNCLITE_LIB_DIR}/synclite_*.dll")
     endif()
     if(_synclite_runtime_dll_candidates)
         list(GET _synclite_runtime_dll_candidates 0 SYNCLITE_RUNTIME_DLL)
@@ -189,7 +188,7 @@ if(WIN32)
     endif()
 else()
     # On Unix the cdylib we linked against IS the runtime shared object, so we
-    # stage that exact file (e.g. liblibsynclite_1_0_0.so / .dylib) next to the
+    # stage that exact file (e.g. libsynclite_1_0_0.so / .dylib) next to the
     # sample so developers do not have to fiddle with LD_LIBRARY_PATH.
     set(SYNCLITE_RUNTIME_LIB "${SYNCLITE_LIB}")
 
