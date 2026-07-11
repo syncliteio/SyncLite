@@ -226,6 +226,11 @@
 				<exclude>**/*.trace</exclude>
 				<exclude>**/*.log</exclude>
 				<exclude>derby.log</exclude>
+				<!-- Editor swap / backup files that must never ship. -->
+				<exclude>**/.*.swp</exclude>
+				<exclude>**/*.swp</exclude>
+				<exclude>**/*.swo</exclude>
+				<exclude>**/*~</exclude>
 			</excludes>
 			<fileMode>755</fileMode>
 			<directoryMode>755</directoryMode>
