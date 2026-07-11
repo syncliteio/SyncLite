@@ -785,6 +785,16 @@
 										<exclude name="**/tests/**"/>
 										<exclude name="**/examples/**"/>
 										<exclude name="**/benches/**"/>
+										<!-- Stray local runtime artifacts (databases, logs,
+										     editor swap files) that must not ship in the SDK source. -->
+										<exclude name="**/*.db"/>
+										<exclude name="**/*.duckdb"/>
+										<exclude name="**/*.sqlite"/>
+										<exclude name="**/*.log"/>
+										<exclude name="**/.*.swp"/>
+										<exclude name="**/*.swp"/>
+										<exclude name="**/*.swo"/>
+										<exclude name="**/*~"/>
 									</fileset>
 								</copy>
 								<copy file="${project.basedir}/synclite-logger-rust/Cargo.toml"
