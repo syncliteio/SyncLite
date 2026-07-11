@@ -225,9 +225,11 @@ The fastest way to embed SyncLite is to pull the **published** runtime for your 
 
 | Language | Install | Registry |
 |---|---|---|
-| **Python** | `pip install synclite==1.0.0` | [PyPI](https://pypi.org/project/synclite/) |
-| **Rust** | `cargo add synclite@1.0.0` &nbsp;·&nbsp; or `synclite = "1.0.0"` in `Cargo.toml` | [crates.io](https://crates.io/crates/synclite) |
+| **Python** | `pip install synclite` | [PyPI](https://pypi.org/project/synclite/) |
+| **Rust** | `cargo add synclite` | [crates.io](https://crates.io/crates/synclite) |
 | **Java** | Maven / Gradle coordinates below | Maven Central |
+
+> **Version selection.** `pip install synclite` and `cargo add synclite` grab the **newest** published release automatically; pin a specific version for reproducible builds with `pip install synclite==1.0.0` / `cargo add synclite@1.0.0` (or `synclite = "1.0.0"` in `Cargo.toml`). Maven has no reliable "latest" metaversion (`LATEST` / `RELEASE` are deprecated), so the Java dependency is always pinned to an explicit version.
 
 ```xml
 <!-- Maven — pom.xml -->
@@ -355,14 +357,17 @@ synclite-runtime-1.0.0/
 |   |   +-- synclite.conf                       # Default logger configuration
 |   +-- native/                                 # Multi-arch native cdylibs (Rust runtime)
 |   |   +-- include/                            # C / C++ ABI headers (synclite.h, synclite.hpp)
-|   |   +-- libsynclite_<version>.dll                 # Windows host build
-|   |   +-- libsynclite_<version>.lib                 # Windows import library
-|   |   +-- libsynclite_<version>_linux_x86_64.so     # cross-compiled
+|   |   +-- synclite_<version>.dll                    # Windows host build (no lib prefix)
+|   |   +-- synclite_<version>.dll.lib                # Windows import library (for the DLL)
+|   |   +-- synclite_<version>.lib                    # Windows static library
+|   |   +-- libsynclite_<version>_linux_x86_64.so     # cross-compiled (lib prefix on Unix)
 |   |   +-- libsynclite_<version>_linux_aarch64.so    # cross-compiled
 |   |   +-- libsynclite_<version>.dylib               # only if built on macOS
 |   |   +-- synclite.conf
 |   +-- python/
-|   |   +-- synclite-<version>-cp38-abi3-*.whl  # Host-platform PyO3 wheel
+|   |   +-- synclite-<version>-cp38-abi3-win_amd64.whl            # host wheel (Windows)
+|   |   +-- synclite-<version>-cp38-abi3-manylinux_2_28_x86_64.whl   # Linux x86_64 (via WSL/CI)
+|   |   +-- synclite-<version>-cp38-abi3-manylinux_2_28_aarch64.whl  # Linux aarch64 (via WSL/CI)
 |   +-- rust/
 |       +-- synclite-source/                    # Self-contained Cargo workspace
 |                                               # (synclite facade + logger + consolidator),
