@@ -1897,18 +1897,18 @@ requests.post(BASE, json={
 
 ```bash
 # Windows — default device at %USERPROFILE%\synclite\job1\db\test.db (SQLITE)
-synclite-cli.bat
+synclite-client.bat
 
 # Linux / macOS — default device
-synclite-cli.sh
+synclite-client.sh
 
 # Explicit path and type
-synclite-cli.sh /path/to/myapp.db \
+synclite-client.sh /path/to/myapp.db \
     --device-type SQLITE \
     --synclite-logger-config /path/to/synclite.conf
 
 # Remote mode (via SyncLite DB server)
-synclite-cli.sh /path/to/myapp.db \
+synclite-client.sh /path/to/myapp.db \
     --device-type SQLITE \
     --synclite-logger-config /path/to/synclite.conf \
     --server http://localhost:5555
@@ -1923,7 +1923,7 @@ synclite-cli.sh /path/to/myapp.db \
 ### Interactive Session Example
 
 ```
-$ synclite-cli.sh ~/synclite/db/myapp.db --device-type SQLITE
+$ synclite-client.sh ~/synclite/db/myapp.db --device-type SQLITE
 Connected to SyncLite SQLITE device: /home/alice/synclite/db/myapp.db
 Type SQL statements, or 'exit' to quit.
 
@@ -2399,7 +2399,7 @@ synclite-platform-1.0.0/
 |       +-- synclite-source/            # Cargo workspace consumed offline by sample-apps/rust
 |
 +-- tools/
-|   +-- synclite-client/                # CLI client (synclite-cli.sh / .bat)
+|   +-- synclite-client/                # CLI client (synclite-client.sh / .bat)
 |   +-- synclite-db/                    # SyncLite DB HTTP server
 |   +-- synclite-dbreader/              # DBReader WAR + launcher
 |   +-- synclite-qreader/               # QReader WAR + launcher
