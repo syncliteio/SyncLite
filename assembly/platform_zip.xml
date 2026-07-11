@@ -132,6 +132,10 @@
 				<exclude>**/*.db</exclude>
 				<exclude>**/*.duckdb</exclude>
 				<exclude>**/*.sqlite</exclude>
+				<exclude>**/.*.swp</exclude>
+				<exclude>**/*.swp</exclude>
+				<exclude>**/*.swo</exclude>
+				<exclude>**/*~</exclude>
 			</excludes>
 		</fileSet>
 		<fileSet>
