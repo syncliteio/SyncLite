@@ -142,7 +142,7 @@ Both produce the same `.sqllog` segments, so you can mix devices (some logger-on
 | **SyncLite Consolidator** | Central real-time consolidation engine (WAR) | `http://localhost:8080/synclite-consolidator` |
 | **SyncLite DBReader** | Database ETL / replication / migration tool (WAR) | `http://localhost:8080/synclite-dbreader` |
 | **SyncLite QReader** | IoT MQTT connector (WAR) | `http://localhost:8080/synclite-qreader` |
-| **SyncLite Job Monitor** | Unified job management and scheduling UI (WAR) | `http://localhost:8080/synclite-job-monitor` |
+| **SyncLite Job Monitor** | Unified job management and scheduling UI (WAR) | `http://localhost:8080/synclite-jobmonitor` |
 | **SyncLite Validator** | End-to-end integration testing tool (WAR) | `http://localhost:8080/synclite-validator` |
 | **Sample Web App** | JSP/Servlet demo showing SyncLite Logger in action | `http://localhost:8080/synclite-sample-app` |
 
@@ -344,7 +344,7 @@ To stop:
 | `http://localhost:8080/synclite-sample-app` | Create devices, run SQL workloads, see live sync |
 | `http://localhost:8080/synclite-dbreader` | Set up database ETL/replication pipelines |
 | `http://localhost:8080/synclite-qreader` | Set up IoT MQTT connector pipelines |
-| `http://localhost:8080/synclite-job-monitor` | Manage and schedule all SyncLite jobs |
+| `http://localhost:8080/synclite-jobmonitor` | Manage and schedule all SyncLite jobs |
 | `http://localhost:8080/manager` | Tomcat manager (user: `synclite` / pwd: `synclite`) |
 
 ---
@@ -1489,16 +1489,13 @@ Your App (any language)  --HTTP/JSON-->  SyncLite DB Server  -->  Staging Storag
 
 ### 7.1 Starting the Server
 
-```bash
-# Linux / macOS
-cd tools/synclite-db
-./synclite-db.sh --config synclite_db.conf
+Deploy `synclite-db-1.0.0.war` (bundled under `tools/synclite-db/`) into your Apache Tomcat `webapps/` directory, then open the browser GUI to configure and start the server:
 
-# Windows
-synclite-db.bat --config synclite_db.conf
+```
+http://localhost:8080/synclite-db
 ```
 
-The server binds to `http://localhost:<port>/synclite` (port configured in `synclite_db.conf`).
+The server binds to `http://localhost:<port>/synclite` (port configured in the GUI).
 
 ---
 
@@ -2173,7 +2170,7 @@ SyncLite QReader jobs       ─┘
 
 ### Web UI
 
-Open `http://localhost:8080/synclite-job-monitor` after deployment.
+Open `http://localhost:8080/synclite-jobmonitor` after deployment.
 
 | Page | Description |
 |---|---|
@@ -2406,7 +2403,7 @@ synclite-platform-1.0.0/
 |   +-- synclite-db/                    # SyncLite DB HTTP server
 |   +-- synclite-dbreader/              # DBReader WAR + launcher
 |   +-- synclite-qreader/               # QReader WAR + launcher
-|   +-- synclite-job-monitor/           # Job Monitor WAR
+|   +-- synclite-jobmonitor/           # Job Monitor WAR
 |   +-- synclite-validator/             # Validator WAR
 |   +-- synclite-sample-app/            # JSP/Servlet sample webapp (auto-deployed by bin/deploy.*)
 |
