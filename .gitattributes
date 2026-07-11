@@ -1,0 +1,10 @@
+# Keep shell scripts LF so they run under WSL/Linux bash even when the repo is
+# cloned/checked out on Windows (CRLF would trigger `$'\r': command not found`).
+*.sh text eol=lf
+
+# Other POSIX-executed scripts that must stay LF.
+*.bash text eol=lf
+
+# Windows batch files stay CRLF.
+*.bat text eol=crlf
+*.cmd text eol=crlf
