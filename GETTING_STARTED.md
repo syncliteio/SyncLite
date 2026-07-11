@@ -39,6 +39,24 @@ Pull the **published** SyncLite runtime for your language — no repo checkout, 
 
 The Python wheel and Java jar are self-contained (they bundle the native runtime + DuckDB / JDBC driver); the Rust crate compiles its native DuckDB dependency, so a C/C++ toolchain + CMake are required. Runnable samples for all four languages: [`synclite-code-samples/`](synclite-code-samples/README.md).
 
+## Try the platform tools without building (release zip)
+
+Want to try the **tools** — Consolidator, DBReader, QReader, Job Monitor, Sample Web App — instead of embedding the runtime? Grab the prebuilt platform. No repo checkout, no build, no JDK/Tomcat install:
+
+1. Download the latest **`synclite-platform-<version>.zip`** from [GitHub Releases](https://github.com/syncliteio/SyncLite/releases).
+2. Unzip it and open a terminal in the extracted folder.
+3. Deploy + start (the first run downloads Apache Tomcat + OpenJDK automatically):
+
+   ```bash
+   cd bin/
+   ./deploy.sh      # or deploy.bat on Windows
+   ./start.sh       # or start.bat on Windows
+   ```
+
+4. Open the apps and try a tool combo end-to-end — see [Step 3 — Deploy the Full Platform](#step-3--optional-deploy-the-full-platform).
+
+Prefer Docker? The same zip ships `bin/docker-deploy.sh` / `docker-start.sh` (all-in-one container). Building from source is only needed for development or customization — see [Step 1 — Build SyncLite](#step-1--build-synclite).
+
 ### What you get without installing anything
 
 - **One library, full stack.** Embedded SQL database + write-ahead logger + segment shipper + (optional) in-process consolidator — all inside your process.
@@ -200,6 +218,8 @@ All three surfaces produce the same log format and use the same shipper + consol
 ---
 
 ## Step 1 — Build SyncLite
+
+> **Most users don't need this.** To embed the runtime, use the published packages (`pip install synclite` / `cargo add synclite` / the Maven coordinate above). To try the tools, download the [release zip](#try-the-platform-tools-without-building-release-zip). Build from source only for development or customization.
 
 > **Architecture support.** SyncLite is **64-bit only** — `x86_64` and `aarch64` on Windows / Linux / macOS. 32-bit hosts are not supported because SyncLite Runtime (Rust) depends on the DuckDB engine, which requires a 64-bit host.
 
@@ -363,10 +383,10 @@ The fastest way to see SyncLite in action is to drop the single jar into a Java 
 
 ### Spin up a local PostgreSQL destination
 
-Use the bundled Docker helper:
+Use the bundled Docker helper (from the extracted platform release zip, or your source build output):
 
 ```bash
-cd target/synclite-platform-1.0.0/bin/dst/postgresql/
+cd bin/dst/postgresql/
 ./docker-deploy.sh    # starts PostgreSQL on localhost:5432 (user: postgres / pwd: postgres)
 ```
 
@@ -552,10 +572,12 @@ To relocate these roots, set `local-data-stage-directory` and `work-dir` in `syn
 
 Skip this step if all you need is the embedded runtime. Use it when you want the central **Consolidator + DBReader + QReader + Job Monitor + Sample Web App** running as services.
 
+> **No build required.** Download the latest **`synclite-platform-<version>.zip`** from [GitHub Releases](https://github.com/syncliteio/SyncLite/releases), unzip it, and run the commands below from the extracted folder. (Building from source is only for development — see [Step 1](#step-1--build-synclite).)
+
 ### Native (Windows / Linux / macOS)
 
 ```bash
-cd target/synclite-platform-1.0.0/bin/
+cd bin/
 
 # First run: downloads Tomcat + JDK, deploys all WARs
 ./deploy.sh          # Linux/macOS
@@ -569,7 +591,7 @@ start.bat            # Windows
 ### Docker (all-in-one)
 
 ```bash
-cd target/synclite-platform-1.0.0/bin/
+cd bin/
 
 # Edit STAGE and DST variables at the top of docker-deploy.sh first
 ./docker-deploy.sh   # Builds synclite-platform image + starts containers
