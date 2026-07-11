@@ -407,7 +407,7 @@ synclite-platform-1.0.0/
 |   +-- synclite-db/                  # SyncLite DB server
 |   +-- synclite-dbreader/            # DBReader WAR + launcher
 |   +-- synclite-qreader/             # QReader WAR + launcher
-|   +-- synclite-job-monitor/         # Job Monitor WAR
+|   +-- synclite-jobmonitor/         # Job Monitor WAR
 |   +-- synclite-validator/           # Validator WAR
 |   +-- synclite-sample-app/          # JSP/Servlet sample webapp (auto-deployed by bin/deploy.*)
 |
@@ -530,7 +530,7 @@ cd bin/
 | http://localhost:8080/synclite-sample-app | Create devices, run SQL workloads, see live sync |
 | http://localhost:8080/synclite-dbreader | Set up database ETL/replication pipelines |
 | http://localhost:8080/synclite-qreader | Set up IoT MQTT connector pipelines |
-| http://localhost:8080/synclite-job-monitor | Manage and schedule all SyncLite jobs |
+| http://localhost:8080/synclite-jobmonitor | Manage and schedule all SyncLite jobs |
 | http://localhost:8080/manager | Tomcat manager (user: `synclite` / pwd: `synclite`) |
 
 Once the apps are up, try a tool combo end-to-end (both share one staging location + one Consolidator job):
@@ -545,9 +545,9 @@ Once the apps are up, try a tool combo end-to-end (both share one staging locati
 
 1. Open [synclite-consolidator](http://localhost:8080/synclite-consolidator) → configure **staging** + **destination** DB → start the consolidation job.
 2. Open [synclite-dbreader](http://localhost:8080/synclite-dbreader) → configure your **source** DB → point its output at the **same** staging location.
-3. Start the DBReader job and watch source changes replicate to the destination. Track both jobs in [synclite-job-monitor](http://localhost:8080/synclite-job-monitor).
+3. Start the DBReader job and watch source changes replicate to the destination. Track both jobs in [synclite-jobmonitor](http://localhost:8080/synclite-jobmonitor).
 
-**SyncLite DB → Consolidator** (any language via HTTP/JSON): start the consolidation job (staging + destination), deploy `synclite-db-oss.war` (bundled under `tools/synclite-db/`), point the DB server at the **same** staging location, then send SQL as JSON over HTTP — see [synclite-db/README.md](synclite-db/README.md).
+**SyncLite DB → Consolidator** (any language via HTTP/JSON): start the consolidation job (staging + destination), deploy `synclite-db-1.0.0.war` (bundled under `tools/synclite-db/`), point the DB server at the **same** staging location, then send SQL as JSON over HTTP — see [synclite-db/README.md](synclite-db/README.md).
 
 **QReader → Consolidator** (IoT/MQTT): start the consolidation job (staging + destination), open [synclite-qreader](http://localhost:8080/synclite-qreader), configure your MQTT broker + topic mapping to the **same** staging location, and stream device messages straight into your destination — see [synclite-qreader/README.md](synclite-qreader/README.md).
 
@@ -677,11 +677,7 @@ SyncLite DB is a local-first HTTP/JSON database service that wraps embedded data
 
 The sample below uses Python for brevity; the same HTTP calls work from Go (`net/http`) and Node.js (`fetch` / `axios`).
 
-```bash
-# Start the server
-cd tools/synclite-db
-./synclite-db.sh --config synclite_db.conf
-```
+Deploy `synclite-db-1.0.0.war` (bundled under `tools/synclite-db/`) to Tomcat, open `http://localhost:8080/synclite-db`, and configure + start the DB server from the browser GUI. It then serves the HTTP/JSON API on the port set in the GUI.
 
 ```python
 # Python client (plain HTTP — no SDK needed)
