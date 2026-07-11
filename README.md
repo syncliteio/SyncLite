@@ -512,7 +512,9 @@ For Rust/Python/C++ embedding via SyncLite Runtime, you do not need
 
 ### Path B — Full Platform (deploy scripts)
 
-Use this when you want the central Consolidator + DBReader + QReader + Job Monitor + Sample Web App running as services.
+Use this when you want the central Consolidator + DBReader + QReader + Job Monitor + Sample Web App running as services. **No build required** — grab the prebuilt platform:
+
+> Download the latest **`synclite-platform-<version>.zip`** from [GitHub Releases](https://github.com/syncliteio/SyncLite/releases), unzip it, and open a terminal in the extracted folder. (Building from source is only for development — see [Build SyncLite](#build-synclite).)
 
 #### Native (Windows / Ubuntu)
 
