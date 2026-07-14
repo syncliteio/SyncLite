@@ -57,14 +57,10 @@ import io.synclite.SyncStatus;
  * that show the same data and the same schema on the destination —
  * proving each local change made it across.
  *
- * <p>Prereqs — a reachable PostgreSQL instance with a database and
- * schema for the demo:
- *
- * <pre>
- * CREATE DATABASE syncdb;
- * \c syncdb
- * CREATE SCHEMA syncschema;
- * </pre>
+ * <p>Prereq — a reachable PostgreSQL instance if you want to verify
+ * destination-side results in this run. Local SQLite writes are always
+ * accepted offline; destination apply catches up when PostgreSQL is
+ * reachable.
  *
  * <p>Edit {@link #POSTGRES_URL} / {@link #POSTGRES_USER} /
  * {@link #POSTGRES_PASSWORD} below to match your environment, then
@@ -83,11 +79,6 @@ public class SyncliteSqlitePostgresApp {
     private static final Duration AWAIT_TIMEOUT = Duration.ofSeconds(30);
 
     public static void main(String[] args) throws SQLException {
-        // Make sure the destination DB + schema exist BEFORE we spin up
-        // SyncLite. The in-process consolidator will fail silently in the
-        // background otherwise and awaitSync will only surface the symptom
-        // as a timeout 30s later, with no hint of the real cause.
-        ensurePostgresDatabaseAndSchema();
         appStartup();
         try {
             new SyncliteSqlitePostgresApp().runBusinessLogic();
@@ -96,73 +87,6 @@ public class SyncliteSqlitePostgresApp {
             // for this device. Idempotent; the consolidator jar also installs
             // a JVM shutdown hook as a safety net.
             SQLite.closeDevice(DB_PATH);
-        }
-    }
-
-    private static String postgresServerUrl() {
-        // Strip the database name AND any querystring so we can connect
-        // to the implicit 'postgres' admin DB to issue CREATE DATABASE.
-        // POSTGRES_URL is of the form jdbc:postgresql://host:port/dbname?... .
-        int qm = POSTGRES_URL.indexOf('?');
-        String base = (qm >= 0) ? POSTGRES_URL.substring(0, qm) : POSTGRES_URL;
-        int lastSlash = base.lastIndexOf('/');
-        if (lastSlash < 0) {
-            return POSTGRES_URL;
-        }
-        return base.substring(0, lastSlash + 1) + "postgres";
-    }
-
-    private static void ensurePostgresDatabaseAndSchema() throws SQLException {
-        // CREATE DATABASE must run outside any transaction and cannot be
-        // run against the target DB itself if it doesn't exist yet, so we
-        // connect to the admin 'postgres' DB first, create the target DB
-        // if missing, then reconnect to it and create the schema.
-        banner("PRECHECK on PostgreSQL  --  ensure database + schema exist");
-        // The synclite-oss.jar bundles the PG driver but registers it in
-        // SyncLite's static initializer, which hasn't run yet at this point
-        // (the SyncLite/SQLite classes are first touched in appStartup). The
-        // shaded fat jar also strips META-INF/services/java.sql.Driver, so
-        // JDBC 4 SPI auto-discovery doesn't kick in either. Load it explicitly.
-        try {
-            Class.forName("org.postgresql.Driver");
-        } catch (ClassNotFoundException e) {
-            throw new SQLException("org.postgresql.Driver not on classpath -- "
-                    + "synclite-oss.jar bundles it; verify -cp", e);
-        }
-        String adminUrl = postgresServerUrl();
-        try (Connection admin = DriverManager.getConnection(
-                adminUrl, POSTGRES_USER, POSTGRES_PASSWORD)) {
-            boolean dbExists;
-            try (PreparedStatement pstmt = admin.prepareStatement(
-                    "SELECT 1 FROM pg_database WHERE datname = ?")) {
-                pstmt.setString(1, POSTGRES_DB);
-                try (ResultSet rs = pstmt.executeQuery()) {
-                    dbExists = rs.next();
-                }
-            }
-            if (!dbExists) {
-                System.out.println("[POSTGRES] database \"" + POSTGRES_DB + "\" not found -- creating");
-                try (Statement stmt = admin.createStatement()) {
-                    stmt.execute("CREATE DATABASE \"" + POSTGRES_DB + "\"");
-                }
-            } else {
-                System.out.println("[POSTGRES] database \"" + POSTGRES_DB + "\" exists");
-            }
-        } catch (SQLException e) {
-            System.err.println("[POSTGRES] FAILED to ensure database \"" + POSTGRES_DB
-                    + "\" at " + adminUrl + " : " + e.getMessage());
-            throw e;
-        }
-
-        try (Connection pg = DriverManager.getConnection(
-                POSTGRES_URL, POSTGRES_USER, POSTGRES_PASSWORD);
-             Statement stmt = pg.createStatement()) {
-            stmt.execute("CREATE SCHEMA IF NOT EXISTS \"" + POSTGRES_SCHEMA + "\"");
-            System.out.println("[POSTGRES] schema \"" + POSTGRES_SCHEMA + "\" ready");
-        } catch (SQLException e) {
-            System.err.println("[POSTGRES] FAILED to ensure schema \"" + POSTGRES_SCHEMA
-                    + "\" in database \"" + POSTGRES_DB + "\" : " + e.getMessage());
-            throw e;
         }
     }
 
