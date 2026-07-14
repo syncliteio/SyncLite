@@ -165,7 +165,7 @@
 							<arguments>
 								<argument>test</argument>
 								<argument>-p</argument>
-								<argument>synclite</argument>
+								<argument>synclite-rs</argument>
 								<argument>--test</argument>
 								<argument>device_integration</argument>
 								<argument>--release</argument>
