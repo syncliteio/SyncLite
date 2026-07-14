@@ -22,7 +22,7 @@ publish = false
 # points directly at the workspace crates under
 # synclite-logger-rust/crates/.
 [dependencies]
-synclite          = { path = "../../lib/rust/synclite-source/crates/synclite" }
+synclite          = { path = "../../lib/rust/synclite-source/crates/synclite", package = "synclite-rs" }
 logger-core       = { path = "../../lib/rust/synclite-source/crates/logger/core" }
 logger-db-traits  = { path = "../../lib/rust/synclite-source/crates/logger/db-traits" }
 rusqlite = { version = "0.39", features = ["bundled"] }
