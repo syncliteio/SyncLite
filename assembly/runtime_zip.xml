@@ -70,12 +70,21 @@
 			<outputDirectory>lib/native</outputDirectory>
 		</fileSet>
 		<fileSet>
-			<!-- Host-platform PyO3 wheel built by maturin (see pom.xml build-python-wheel). -->
+			<!--
+			  Host + cross-built PyO3 wheels produced by maturin (see pom.xml
+			  build-python-wheel and build-python-wheels-linux). Ships the same
+			  self-contained wheels as the exploded platform folder
+			  (assembly/platform.xml) and the platform zip (assembly/platform_zip.xml)
+			  so end users `pip install lib/python/synclite-*.whl` without a Rust
+			  toolchain. The glob matches every platform-tagged wheel (Windows +
+			  Linux x86_64/aarch64 + any macOS wheels present).
+			-->
 			<directory>${project.basedir}/synclite-logger-rust/python/dist</directory>
 			<includes>
 				<include>synclite-${revision}-*.whl</include>
 			</includes>
 			<fileMode>644</fileMode>
+			<directoryMode>755</directoryMode>
 			<outputDirectory>lib/python</outputDirectory>
 		</fileSet>
 		<fileSet>
