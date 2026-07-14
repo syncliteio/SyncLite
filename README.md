@@ -226,10 +226,10 @@ The fastest way to embed SyncLite is to pull the **published** runtime for your 
 | Language | Install | Registry |
 |---|---|---|
 | **Python** | `pip install synclite` | [PyPI](https://pypi.org/project/synclite/) |
-| **Rust** | `cargo add synclite` | [crates.io](https://crates.io/crates/synclite) |
+| **Rust** | `cargo add synclite-rs` | [crates.io](https://crates.io/crates/synclite-rs) |
 | **Java** | Maven / Gradle coordinates below | Maven Central |
 
-> **Version selection.** `pip install synclite` and `cargo add synclite` grab the **newest** published release automatically; pin a specific version for reproducible builds with `pip install synclite==1.0.0` / `cargo add synclite@1.0.0` (or `synclite = "1.0.0"` in `Cargo.toml`). Maven has no reliable "latest" metaversion (`LATEST` / `RELEASE` are deprecated), so the Java dependency is always pinned to an explicit version.
+> **Version selection.** `pip install synclite` and `cargo add synclite-rs` grab the **newest** published release automatically; pin a specific version for reproducible builds with `pip install synclite==1.0.0` / `cargo add synclite-rs@1.0.0` (or `synclite = { package = "synclite-rs", version = "1.0.0" }` in `Cargo.toml`). Maven has no reliable "latest" metaversion (`LATEST` / `RELEASE` are deprecated), so the Java dependency is always pinned to an explicit version.
 
 ```xml
 <!-- Maven — pom.xml -->
