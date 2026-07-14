@@ -27,7 +27,7 @@ Top-of-file comments inside `appStartup()` show how to:
 implementation 'io.synclite:synclite:1.0.0'
 ```
 
-The published `synclite` jar is self-contained — it bundles the PostgreSQL JDBC driver **and** the platform `synclite_jni` native libraries (Windows x64, Linux x86_64 / aarch64), so no extra classpath entries or native installs are needed. Then jump to [step 1](#1-pre-create-the-postgres-database--schema-one-time) to create the Postgres DB and run the sample.
+The published `synclite` jar is self-contained — it bundles the PostgreSQL JDBC driver **and** the platform `synclite_jni` native libraries (Windows x64, Linux x86_64 / aarch64), so no extra classpath entries or native installs are needed. Then jump to [step 1](#1-compile--run) to run the sample.
 
 Prefer to run entirely offline from an extracted release zip? Use [Run from the release zip](#run-from-the-release-zip) below instead.
 
@@ -35,17 +35,7 @@ Prefer to run entirely offline from an extracted release zip? Use [Run from the 
 
 You are already in `sample-apps/java/` of an extracted release. The release ships the runtime jar under [`../../lib/java/synclite-1.0.0.jar`](../../lib/java/synclite-1.0.0.jar).
 
-### 1. Pre-create the Postgres database + schema (one-time)
-
-```sql
-CREATE DATABASE syncdb;
-\c syncdb
-CREATE SCHEMA syncschema;
-```
-
-Defaults: `jdbc:postgresql://localhost:5432/syncdb`, user/password `postgres`/`postgres`, schema `syncschema`. Edit the constants at the top of the `.java` to override.
-
-### 2. Compile + run
+### 1. Compile + run
 
 **Windows (cmd.exe / PowerShell):**
 
@@ -65,6 +55,13 @@ java  -cp ../../lib/java/synclite-1.0.0.jar:. SyncliteSqlitePostgresApp
 
 Safe to rerun — each table is `DROP TABLE IF EXISTS`'d before being recreated.
 
+### Optional destination verification
+
+Defaults: `jdbc:postgresql://localhost:5432/syncdb`, user/password `postgres`/`postgres`, schema `syncschema`.
+
+If PostgreSQL is reachable and `syncdb/syncschema` exist, `awaitSync` and the final `[POSTGRES ...]` verification block succeed.
+If PostgreSQL is down or not initialized yet, local SQLite writes still succeed (offline-first), while destination verification fails until connectivity/schema are available.
+
 ## What you'll see
 
 Three flows executed locally on SQLite, each step printing a `[LOCAL ...]` banner:
@@ -77,7 +74,7 @@ Then `SyncLite.awaitSync` blocks until the in-process shipper + consolidator hav
 
 ## Troubleshooting
 
-- **`FATAL: database "syncdb" does not exist`** — run the `CREATE DATABASE` / `CREATE SCHEMA` block above.
+- **`FATAL: database "syncdb" does not exist`** — create `syncdb` and `syncschema`, then rerun to verify destination apply.
 - **`password authentication failed`** — edit `POSTGRES_USER` / `POSTGRES_PASSWORD` at the top of the sample.
 - **Nothing landed on Postgres** — check the trace files documented in [../README.md § Where do the samples write files?](../README.md#where-do-the-samples-write-files).
 
