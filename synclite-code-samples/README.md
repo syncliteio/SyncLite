@@ -16,7 +16,7 @@ Each sample can run against the **published** SyncLite runtime for its language 
 | Language | Install | Registry |
 |---|---|---|
 | Python | `pip install synclite==1.0.0` | [PyPI](https://pypi.org/project/synclite/) |
-| Rust   | `cargo add synclite@1.0.0` (or `synclite = "1.0.0"` in `Cargo.toml`) | [crates.io](https://crates.io/crates/synclite) |
+| Rust   | `cargo add synclite-rs@1.0.0` (or `synclite = { package = "synclite-rs", version = "1.0.0" }` in `Cargo.toml`) | [crates.io](https://crates.io/crates/synclite-rs) |
 | Java   | `io.synclite:synclite:1.0.0` (Maven / Gradle — see [java/README.md](java/README.md#quickest-start--add-the-maven-dependency)) | Maven Central |
 | C++    | Link the native `synclite` cdylib (built from the `synclite` crate / bundled SDK — see [cpp/README.md](cpp/README.md)) | crates.io / release zip |
 
