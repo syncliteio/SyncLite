@@ -7,14 +7,14 @@ Top-of-file comments show where to flip **sync mode** (`REPLICATION` ↔ `CONSOL
 ## Quickest start — add the crate from crates.io
 
 ```bash
-cargo add synclite@1.0.0
+cargo add synclite-rs@1.0.0
 ```
 
 Or add it to your `Cargo.toml` directly:
 
 ```toml
 [dependencies]
-synclite = "1.0.0"
+synclite = { package = "synclite-rs", version = "1.0.0" }
 ```
 
 That pulls the published `synclite` facade crate (logger + in-process consolidator) from crates.io — no repo checkout needed. A C/C++ toolchain + CMake are still required to build its native dependencies (DuckDB); see [Troubleshooting](#troubleshooting). Then jump to [step 1](#1-pre-create-the-postgres-database-one-time) to create the Postgres DB and run the sample.
