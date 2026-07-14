@@ -23,10 +23,10 @@ Pull the **published** SyncLite runtime for your language — no repo checkout, 
 | Language | Install |
 |---|---|
 | **Python** | `pip install synclite` |
-| **Rust** | `cargo add synclite` |
+| **Rust** | `cargo add synclite-rs` |
 | **Java** | Maven: `io.synclite:synclite:1.0.0` &nbsp;·&nbsp; Gradle: `implementation 'io.synclite:synclite:1.0.0'` |
 
-> `pip install synclite` / `cargo add synclite` install the **newest** release; pin with `==1.0.0` / `@1.0.0` for reproducible builds. Maven has no reliable "latest" metaversion, so the Java coordinate is always pinned.
+> `pip install synclite` / `cargo add synclite-rs` install the **newest** release; pin with `==1.0.0` / `@1.0.0` for reproducible builds. Maven has no reliable "latest" metaversion, so the Java coordinate is always pinned.
 
 ```xml
 <!-- Maven — pom.xml -->
@@ -219,7 +219,7 @@ All three surfaces produce the same log format and use the same shipper + consol
 
 ## Step 1 — Build SyncLite
 
-> **Most users don't need this.** To embed the runtime, use the published packages (`pip install synclite` / `cargo add synclite` / the Maven coordinate above). To try the tools, download the [release zip](#try-the-platform-tools-without-building-release-zip). Build from source only for development or customization.
+> **Most users don't need this.** To embed the runtime, use the published packages (`pip install synclite` / `cargo add synclite-rs` / the Maven coordinate above). To try the tools, download the [release zip](#try-the-platform-tools-without-building-release-zip). Build from source only for development or customization.
 
 > **Architecture support.** SyncLite is **64-bit only** — `x86_64` and `aarch64` on Windows / Linux / macOS. 32-bit hosts are not supported because SyncLite Runtime (Rust) depends on the DuckDB engine, which requires a 64-bit host.
 
@@ -671,7 +671,7 @@ Use this to stream MQTT sensor/device messages into your destination.
 
 The entire SyncLite Runtime is now packaged as a single embeddable Rust
 crate, [`synclite`](https://github.com/syncliteio/SyncLite/tree/main/synclite-logger-rust).
-No JVM, no JAR — just `cargo add synclite` and ship a single binary.
+No JVM, no JAR — just `cargo add synclite-rs` and ship a single binary.
 
 The crate embeds the `synclitecdc` native CDC helper (extracted on first
 use) so SQL devices work out of the box for Linux x86_64/x86 and
