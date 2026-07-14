@@ -17,7 +17,7 @@ Embed the SyncLite runtime by pulling the **published** package for your languag
 | Language | Install | Registry |
 |---|---|---|
 | **Python** | `pip install synclite==1.0.0` | PyPI |
-| **Rust** | `cargo add synclite@1.0.0` (or `synclite = "1.0.0"` in `Cargo.toml`) | crates.io |
+| **Rust** | `cargo add synclite-rs@1.0.0` (or `synclite = { package = "synclite-rs", version = "1.0.0" }` in `Cargo.toml`) | crates.io |
 | **Java** | Maven: `io.synclite:synclite:1.0.0` &nbsp;·&nbsp; Gradle: `implementation 'io.synclite:synclite:1.0.0'` | Maven Central |
 
 ```xml
@@ -1301,7 +1301,7 @@ Consolidator (and vice versa).
 ```toml
 # Cargo.toml
 [dependencies]
-synclite = "<latest>"
+synclite = { package = "synclite-rs", version = "<latest>" }
 ```
 
 **Hello, SyncLite (Rust)**
