@@ -9,6 +9,14 @@
     <a href="https://github.com/syncliteio/SyncLite/blob/main/DOCUMENTATION.md">Documentation</a>
     ·
   </p>
+    <p align="center">
+        <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg?style=flat-square" alt="License: Apache 2.0"></a>
+        <a href="DOCUMENTATION.md"><img src="https://img.shields.io/badge/Docs-Read_the_Guide-0f766e.svg?style=flat-square" alt="Documentation"></a>
+        <a href="GETTING_STARTED.md"><img src="https://img.shields.io/badge/Quickstart-Get_Started-f59e0b.svg?style=flat-square" alt="Getting Started"></a>
+        <a href="https://www.synclite.io"><img src="https://img.shields.io/badge/Website-synclite.io-2563eb.svg?style=flat-square" alt="Website"></a>
+        <a href="README.md#synclite--build-anything-sync-anywhere-"><img src="https://img.shields.io/badge/Runtime-Embeddable-7c3aed.svg?style=flat-square" alt="Embeddable Runtime"></a>
+        <a href="README.md#what-you-get-without-installing-anything"><img src="https://img.shields.io/badge/Languages-Java%20%7C%20Rust%20%7C%20Python-16a34a.svg?style=flat-square" alt="Java, Rust, and Python"></a>
+    </p>
 </p>
 
 # SyncLite — Build Anything, Sync Anywhere !
