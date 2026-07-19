@@ -1,78 +1,51 @@
-{
-  "$schema": "https://fundingjson.org/schema/v1.1.0.json",
-  "version": "v1.0.0",
-  "entity": {
-    "type": "individual",
-    "role": "owner",
-    "name": "Mahendra Chavan",
-    "email": "mahendra.chavan@synclite.io",
-    "description": "Founder and maintainer of SyncLite, an open-source platform focused on making data synchronization simple, reliable, and vendor-neutral.",
-    "webpageUrl": {
-      "url": "https://synclite.io"
-    }
-  },
-  "projects": [
+"funding": {
+  "description": "SyncLite is developed in the open under the Apache 2.0 License. Community funding helps ensure the project remains free, vendor-neutral, well-maintained, and accessible to developers worldwide. Contributions support engineering, testing, documentation, security, CI/CD infrastructure, cross-platform SDKs, and long-term maintenance.",
+
+  "channels": [
     {
-      "guid": "synclite",
-      "name": "SyncLite",
-      "description": "SyncLite is an open-source platform that makes edge-to-cloud data synchronization boring again. It enables developers to build offline-first, cloud-sync-ready applications with exactly-once data delivery, low-code APIs, and vendor-neutral replication into databases, data warehouses, and data lakes.",
-      "webpageUrl": {
-        "url": "https://synclite.io"
-      },
-      "repositoryUrl": {
-        "url": "https://github.com/syncliteio/SyncLite"
-      },
-      "licenses": [
-        "spdx:Apache-2.0"
-      ],
-      "tags": [
-        "data-sync",
-        "replication",
-        "cdc",
-        "edge-computing",
-        "offline-first",
-        "database",
-        "sqlite",
-        "duckdb",
-        "etl",        
-        "open-source"
-      ]
+      "guid": "github-sponsors",
+      "type": "payment-provider",
+      "address": "https://github.com/sponsors/syncliteio",
+      "description": "Support the long-term sustainability of SyncLite through GitHub Sponsors."
     }
   ],
-  "funding": {
-    "channels": [
-      {
-        "guid": "github-sponsors",
-        "type": "payment-provider",
-        "address": "https://github.com/sponsors/syncliteio",
-        "description": "Support the continued development of SyncLite through GitHub Sponsors."
-      }
-    ],
-    "plans": [
-      {
-        "guid": "community-support",
-        "status": "active",
-        "name": "Community Support",
-        "description": "Help keep SyncLite free, open source, and vendor-neutral by supporting ongoing maintenance, documentation, testing, and community engagement.",
-        "amount": 0,
-        "currency": "USD",
-        "frequency": "one-time",
-        "channels": [
-          "github-sponsors"
-        ]
-      },
-      {
-        "guid": "sustaining-development",
-        "status": "active",
-        "name": "Sustaining Development",
-        "description": "Support full-time development of new connectors, the Open Replication Format, platform compatibility, testing infrastructure, documentation, and long-term maintenance.",
-        "amount": 3000,
-        "currency": "USD",
-        "frequency": "monthly",
-        "channels": [
-          "github-sponsors"
-        ]
-      }
-    ]
-  }
+
+  "plans": [
+    {
+      "guid": "community-supporter",
+      "status": "active",
+      "name": "Community Supporter",
+      "description": "Support ongoing maintenance, bug fixes, documentation, and releases.",
+      "amount": 10,
+      "currency": "USD",
+      "frequency": "monthly",
+      "channels": [
+        "github-sponsors"
+      ]
+    },
+    {
+      "guid": "project-sponsor",
+      "status": "active",
+      "name": "Project Sponsor",
+      "description": "Help fund new connectors, SDKs, platform compatibility, automated testing, and developer tooling.",
+      "amount": 100,
+      "currency": "USD",
+      "frequency": "monthly",
+      "channels": [
+        "github-sponsors"
+      ]
+    },
+    {
+      "guid": "ecosystem-sponsor",
+      "status": "active",
+      "name": "Ecosystem Sponsor",
+      "description": "Support strategic investments in the SyncLite ecosystem, including the Open Replication Format, AI integrations, community initiatives, security, performance, and long-term sustainability.",
+      "amount": 500,
+      "currency": "USD",
+      "frequency": "monthly",
+      "channels": [
+        "github-sponsors"
+      ]
+    }
+  ]
 }
