@@ -6,7 +6,7 @@
     "role": "owner",
     "name": "SyncLite Project",
     "email": "support@synclite.io",
-    "description": "The SyncLite Project develops and maintains Apache 2.0 licensed open-source software for reliable, vendor-neutral edge-to-cloud data synchronization.",
+    "description": "The SyncLite Project develops and maintains Apache 2.0 licensed open-source software for reliable, vendor-neutral data synchronization.",
     "webpageUrl": {
       "url": "https://synclite.io"
     }
@@ -15,7 +15,7 @@
     {
       "guid": "synclite",
       "name": "SyncLite",
-      "description": "SyncLite is an Apache 2.0 licensed open-source platform for offline-first and edge-to-cloud data synchronization. It enables developers to build reliable, exactly-once data replication pipelines into databases, data warehouses, data lakes, and analytics platforms using open standards and developer-friendly APIs.",
+      "description": "Apache 2.0 licensed open-source platform for reliable edge-to-cloud data synchronization.",
       "webpageUrl": {
         "url": "https://synclite.io"
       },
@@ -26,37 +26,33 @@
         "spdx:Apache-2.0"
       ],
       "tags": [
-        "data-sync",
-        "replication",
-        "cdc",
-        "edge-computing",
-        "offline-first",
         "database",
+        "replication",
         "sqlite",
         "duckdb",
         "developer-tools",
-        "open-source"
+        "data-sync",
+        "offline-first",
+        "edge-computing"
       ]
     }
   ],
   "funding": {
-    "description": "SyncLite is developed in the open under the Apache 2.0 License. Community funding helps ensure the project remains free, vendor-neutral, well-maintained, and accessible to developers worldwide. Contributions support engineering, testing, documentation, security, CI/CD infrastructure, cross-platform SDKs, connectors, developer experience, and the long-term sustainability of the project.",
-
+    "description": "Community funding helps keep SyncLite free, vendor-neutral, secure, well-tested, and sustainably maintained. Contributions support engineering, testing, documentation, CI/CD, cross-platform SDKs, connectors, and long-term project maintenance.",
     "channels": [
       {
         "guid": "github-sponsors",
         "type": "payment-provider",
         "address": "https://github.com/sponsors/syncliteio",
-        "description": "Support the long-term sustainability of the SyncLite Project through GitHub Sponsors."
+        "description": "Support the SyncLite Project through GitHub Sponsors."
       }
     ],
-
     "plans": [
       {
         "guid": "community-supporter",
         "status": "active",
         "name": "Community Supporter",
-        "description": "Help support maintenance, bug fixes, documentation, testing, and regular releases.",
+        "description": "Support maintenance, bug fixes, documentation, testing, and releases.",
         "amount": 10,
         "currency": "USD",
         "frequency": "monthly",
@@ -68,7 +64,7 @@
         "guid": "project-sponsor",
         "status": "active",
         "name": "Project Sponsor",
-        "description": "Help fund new connectors, SDKs, platform compatibility, developer tooling, and continuous integration.",
+        "description": "Support new features, SDKs, connectors, developer tooling, and continuous integration.",
         "amount": 100,
         "currency": "USD",
         "frequency": "monthly",
@@ -80,7 +76,7 @@
         "guid": "ecosystem-sponsor",
         "status": "active",
         "name": "Ecosystem Sponsor",
-        "description": "Support the growth of the SyncLite ecosystem through investments in the Open Replication Format, performance, reliability, security, documentation, community initiatives, and long-term sustainability.",
+        "description": "Support ecosystem growth, documentation, performance, security, reliability, and long-term sustainability.",
         "amount": 500,
         "currency": "USD",
         "frequency": "monthly",
