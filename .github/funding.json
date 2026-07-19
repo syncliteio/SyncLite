@@ -34,10 +34,7 @@
         "database",
         "sqlite",
         "duckdb",
-        "etl",
-        "streaming",
         "developer-tools",
-        "data-engineering",
         "open-source"
       ]
     }
