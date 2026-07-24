@@ -20,7 +20,8 @@
         "url": "https://synclite.io"
       },
       "repositoryUrl": {
-        "url": "https://github.com/syncliteio/SyncLite"
+        "url": "https://github.com/syncliteio/SyncLite",
+        "wellKnown": "https://github.com/syncliteio/SyncLite/blob/main/.github/.well-known/funding-manifest-urls"
       },
       "licenses": [
         "spdx:Apache-2.0"
