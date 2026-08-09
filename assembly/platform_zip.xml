@@ -118,6 +118,16 @@
 			<outputDirectory>lib/python</outputDirectory>
 		</fileSet>
 		<fileSet>
+			<!-- Host-platform N-API npm tarball for offline npm installation. -->
+			<directory>${project.basedir}/synclite-logger-rust/nodejs/dist</directory>
+			<includes>
+				<include>synclite-${revision}-*.tgz</include>
+			</includes>
+			<fileMode>644</fileMode>
+			<directoryMode>755</directoryMode>
+			<outputDirectory>lib/nodejs</outputDirectory>
+		</fileSet>
+		<fileSet>
 			<directory>${project.basedir}/synclite-code-samples</directory>
 			<outputDirectory>/sample-apps/</outputDirectory>
 			<excludes>
