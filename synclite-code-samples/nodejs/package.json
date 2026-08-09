@@ -1,0 +1,13 @@
+{
+  "name": "synclite-nodejs-postgres-sample",
+  "private": true,
+  "version": "1.0.0",
+  "type": "commonjs",
+  "scripts": {
+    "install:runtime": "node install-synclite.js",
+    "start": "node synclite_sqlite_postgres.js"
+  },
+  "dependencies": {
+    "pg": "^8.12.0"
+  }
+}
