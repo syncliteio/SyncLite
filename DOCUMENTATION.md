@@ -17,6 +17,7 @@ Embed the SyncLite runtime by pulling the **published** package for your languag
 | Language | Install | Registry |
 |---|---|---|
 | **Python** | `pip install synclite==1.0.0` | PyPI |
+| **Node.js** | `npm install synclite@1.0.0` | npm |
 | **Rust** | `cargo add synclite-rs@1.0.0` (or `synclite = { package = "synclite-rs", version = "1.0.0" }` in `Cargo.toml`) | crates.io |
 | **Java** | Maven: `io.synclite:synclite:1.0.0` &nbsp;·&nbsp; Gradle: `implementation 'io.synclite:synclite:1.0.0'` | Maven Central |
 
@@ -29,7 +30,7 @@ Embed the SyncLite runtime by pulling the **published** package for your languag
 </dependency>
 ```
 
-The Python wheel and Java jar are self-contained (they bundle the platform native runtime plus DuckDB / the PostgreSQL driver); the Rust crate compiles its native DuckDB dependency, so a C/C++ toolchain + CMake are required — see [Prerequisites & Build](#4-prerequisites--build). To build everything from source instead, follow the same section.
+The Python wheel, Node.js npm tarball, and Java jar are self-contained (they bundle the platform native runtime plus DuckDB / the PostgreSQL driver); the Rust crate compiles its native DuckDB dependency, so a C/C++ toolchain + CMake are required — see [Prerequisites & Build](#4-prerequisites--build). To build everything from source instead, follow the same section.
 
 ---
 
@@ -40,7 +41,7 @@ The Python wheel and Java jar are self-contained (they bundle the platform nativ
 3. [Components](#3-components)
 4. [Prerequisites & Build](#4-prerequisites--build)
 5. [Filesystem Layout](#5-filesystem-layout)
-6. [SyncLite Logger (Java JDBC) + SyncLite Runtime (Rust/Python/C++)](#6-synclite-logger-java-jdbc--synclite-runtime-rustpythonc)
+6. [SyncLite Logger (Java JDBC) + SyncLite Runtime (Rust/Python/Node.js/C++)](#6-synclite-logger-java-jdbc--synclite-runtime-rustpythonnodejsc)
    - [Device Types](#61-device-types)
    - [Configuration Reference](#62-configuration-reference-syncliteconf)
    - [Java JDBC API](#63-java-jdbc-api)
@@ -49,6 +50,7 @@ The Python wheel and Java jar are self-contained (they bundle the platform nativ
    - [Jedis (Redis-Compatible) API](#66-jedis-redis-compatible-api)
    - [Kafka Producer API](#67-kafka-producer-api)
    - [Python Usage](#68-python-usage)
+    - [Node.js Usage](#681-nodejs-usage)
    - [Device Encryption](#69-device-encryption)
    - [Command Handler](#610-command-handler)
    - [Rust Library](#611-rust-library)
@@ -165,6 +167,7 @@ Both produce the same `.sqllog` segments, so you can mix devices (some logger-on
 | Python interpreter (`python` on `PATH`) | 3.8+ (auto-detected — `python`/`py`/`python3`; override with `-DpythonExecutable=...`) |
 | [`maturin`](https://www.maturin.rs/) (PyO3 wheel builder; `python -m pip install maturin`) | latest stable |
 | Per-OS wheel-repair tool (bundles native DLL/SO/dylib deps into the wheel) | Windows: `pip install delvewheel` — Linux: `pip install auditwheel` — macOS: `pip install delocate` |
+| Node.js + npm (for `lib/nodejs/synclite-*.tgz`) | Node.js 18+ |
 | WSL + a Linux build toolchain (**Windows hosts only, optional**) — build local `manylinux` Linux wheels | WSL2 + a glibc distro (e.g. Ubuntu) with `rustup`+`cargo`, `python3`, `patchelf`, `maturin`, `zig` |
 
 > **Rust alone is not sufficient — you also need the platform's native C/C++ toolchain** so `cargo` can invoke the system linker and so the DuckDB / SQLite crates can build their native code:
@@ -190,7 +193,7 @@ SyncLite has **three** top-level reactor build flavors, ordered from largest to 
 |---|---|---|---|
 | 1 | **Full platform** (default) | `target/synclite-platform-<rev>.zip` — Tomcat scripts + WARs + tools + samples + multi-arch native | Required |
 | 2 | **Full platform, Java-only** | Same as #1 but no `lib/native/` | Not required |
-| 3 | **Runtime** | `target/synclite-runtime-<rev>.zip` — just `lib/java/` + multi-arch `lib/native/` | Required |
+| 3 | **Runtime** | `target/synclite-runtime-<rev>.zip` — `lib/java/` + multi-arch `lib/native/` + `lib/python/` + `lib/nodejs/` | Required |
 
 ```bash
 # 1. Full platform (default)
@@ -211,6 +214,8 @@ These switches combine with any flavor above:
 
 - `-DskipTests` — skip JUnit + Rust device-integration tests.
 - `-DskipRustCrossCompile=true` — skip the two Linux cross-compile cargo executions **and** the best-effort local `manylinux` Python wheel build (use on hosts without `cargo-zigbuild` + `zig`, or without WSL + a Linux toolchain; host-arch cdylib + host wheel still built). Only relevant for flavors #1 and #3.
+- `-DskipPythonWheel=true` — skip building and staging `lib/python/synclite-*.whl`.
+- `-DskipNodePackage=true` — skip building and staging `lib/nodejs/synclite-*.tgz` (use on hosts without Node.js/npm).
 
 ```bash
 # Fastest full platform build
@@ -328,7 +333,7 @@ When these individual builds complete, their artifacts appear under their respec
 - Downloads OpenJDK 25
 - Deploys all SyncLite WAR files into Tomcat
 
-If your use case is Rust/Python/C++ embedding through the Rust runtime, you do not need these deploy scripts. They are only for the web applications (Consolidator, DBReader, QReader, Job Monitor, Sample App).
+If your use case is Rust/Python/Node.js/C++ embedding through the Rust runtime, you do not need these deploy scripts. They are only for the web applications (Consolidator, DBReader, QReader, Job Monitor, Sample App).
 
 To stop:
 
@@ -409,7 +414,7 @@ Everything else — the per-device sub-directory naming `synclite_<deviceName>_<
 
 ---
 
-## 6. SyncLite Logger (Java JDBC) + SyncLite Runtime (Rust/Python/C++)
+## 6. SyncLite Logger (Java JDBC) + SyncLite Runtime (Rust/Python/Node.js/C++)
 
 **SyncLite Logger** is an embeddable Java library (JDBC driver) that makes Java applications sync-ready with minimal code changes. It wraps popular embedded databases and transparently captures every SQL transaction into compact binary log files.
 
@@ -1118,6 +1123,71 @@ conn.close()
 
 For DuckDB, swap `sl.Connection` for `sl.DuckDBConnection` and pass
 `device_type="DUCKDB"` to `sl.initialize`.
+
+**Parameter / row data-type mapping.** Pass parameters as a `list` or
+`tuple`; `query(...)` returns `list[tuple]` using the same mapping in
+reverse:
+
+| Python                | Rust `Value`      |
+| --------------------- | ----------------- |
+| `None`                | `Value::Null`     |
+| `bool`                | `Value::Int` (0/1)|
+| `int`                 | `Value::Int`      |
+| `float`               | `Value::Real`     |
+| `str`                 | `Value::Text`     |
+| `bytes`               | `Value::Blob`     |
+
+#### 6.8.1 Node.js Usage
+
+The Node.js entry point is the `synclite` N-API package. It embeds the
+same Rust runtime used by the Python wheel: SQLite/DuckDB device, segment
+shipper, and in-process consolidator. Install it from npm:
+
+```bash
+npm install synclite@1.0.0
+```
+
+An offline tarball is also staged in an extracted platform release under
+`lib/nodejs/` for air-gapped installs:
+
+```bash
+npm install ./lib/nodejs/synclite-1.0.0-<platform>.tgz
+```
+
+Configure destination settings in `synclite.conf`, then use the SQLite or
+DuckDB connection API:
+
+```javascript
+const { SqliteConnection, awaitSync } = require('synclite');
+
+const conn = SqliteConnection.initializeWithConfig('synclite.conf');
+conn.execute('CREATE TABLE IF NOT EXISTS events(id INTEGER PRIMARY KEY, payload TEXT)');
+conn.execute('INSERT INTO events(id, payload) VALUES(?, ?)', [1, 'hello from Node.js']);
+conn.execute('INSERT INTO events(id, payload) VALUES(?, ?)', [2, 'row two']);
+
+console.log(conn.query('SELECT id, payload FROM events ORDER BY id'));
+conn.commit();
+conn.flush();
+awaitSync('sampledevice.db', 30);
+conn.close();
+```
+
+**Parameter / row data-type mapping.** Pass parameters as a JavaScript
+array; `query(...)` returns an array of row arrays using the same mapping
+in reverse. Blobs are represented as plain byte arrays (numbers `0–255`),
+not `Buffer` / `Uint8Array`:
+
+| JavaScript                    | Rust `Value`       |
+| ----------------------------- | ------------------ |
+| `null` / `undefined`          | `Value::Null`      |
+| `boolean`                     | `Value::Int` (0/1) |
+| `number` (integer)            | `Value::Int`       |
+| `number` (fractional)         | `Value::Real`      |
+| `string`                      | `Value::Text`      |
+| `number[]` (each `0–255`)     | `Value::Blob`      |
+
+See the full replication sample at
+[`synclite-code-samples/nodejs/synclite_sqlite_postgres.js`](synclite-code-samples/nodejs/synclite_sqlite_postgres.js).
 
 ##### Store / Streaming devices
 

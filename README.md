@@ -15,7 +15,7 @@
         <a href="GETTING_STARTED.md"><img src="https://img.shields.io/badge/Quickstart-Get_Started-f59e0b.svg?style=flat-square" alt="Getting Started"></a>
         <a href="https://www.synclite.io"><img src="https://img.shields.io/badge/Website-synclite.io-2563eb.svg?style=flat-square" alt="Website"></a>
         <a href="README.md#synclite--build-anything-sync-anywhere-"><img src="https://img.shields.io/badge/Runtime-Embeddable-7c3aed.svg?style=flat-square" alt="Embeddable Runtime"></a>
-        <a href="README.md#get-started-in-30-seconds"><img src="https://img.shields.io/badge/Languages-Java%20%7C%20Rust%20%7C%20Python-16a34a.svg?style=flat-square" alt="Java, Rust, and Python"></a>
+        <a href="README.md#get-started-in-30-seconds"><img src="https://img.shields.io/badge/Languages-Java%20%7C%20Rust%20%7C%20Python%20%7C%20Node.js-16a34a.svg?style=flat-square" alt="Java, Rust, Python, and Node.js"></a>
     </p>
 </p>
 
@@ -69,6 +69,10 @@ Pick your language and add one dependency. No server to install. No service to c
 
 ```bash
 pip install synclite            # Python — self-contained wheel, batteries included
+```
+
+```bash
+npm install ./lib/nodejs/synclite-1.0.0-<platform>.tgz  # Node.js — bundled offline N-API package
 ```
 
 ```bash
@@ -130,6 +134,28 @@ conn.close()
 ```
 
 Every `INSERT` / `UPDATE` / `DELETE` — and every `ALTER TABLE` — is durably logged and applied to PostgreSQL in the background, whether your app is online or not. Full sample: [`synclite-code-samples/python/synclite_rusqlite_postgres.py`](synclite-code-samples/python/synclite_rusqlite_postgres.py).
+
+---
+
+## Node.js — SQLite → PostgreSQL
+
+```javascript
+const { SqliteConnection, awaitSync } = require('synclite');
+
+// Configure the destination in synclite.conf, then initialize logger,
+// shipper, and embedded consolidator with the local SQLite device.
+const conn = SqliteConnection.initializeWithConfig('synclite.conf');
+conn.execute('CREATE TABLE IF NOT EXISTS orders(id INTEGER PRIMARY KEY, item TEXT, qty INTEGER)');
+conn.execute('INSERT INTO orders(id, item, qty) VALUES(?, ?, ?)', [1, 'widget', 100]);
+conn.execute('UPDATE orders SET qty = ? WHERE id = ?', [150, 1]);
+conn.commit();
+
+conn.flush();
+awaitSync('sampledevice.db', 30);
+conn.close();
+```
+
+The bundled npm package contains the same embedded Rust runtime as the Python wheel: local SQLite/DuckDB, change capture, shipper, and consolidator. Full sample: [`synclite-code-samples/nodejs/synclite_sqlite_postgres.js`](synclite-code-samples/nodejs/synclite_sqlite_postgres.js).
 
 ---
 
@@ -492,6 +518,12 @@ flowchart TB
   # Windows: pip install delvewheel  |  Linux: pip install auditwheel  |  macOS: pip install delocate
   ```
   Skip with `-DskipPythonWheel=true` (also skipped automatically by `-DskipNonJavaLoggers=true`).
+- **Node.js 18+ and npm** — for the host-platform Node.js N-API package staged under `lib/nodejs/`:
+    ```bash
+    node --version
+    npm --version
+    ```
+    Skip with `-DskipNodePackage=true` (also skipped automatically by `-DskipNonJavaLoggers=true`).
 
 ```bash
 git clone --recurse-submodules https://github.com/syncliteio/SyncLite.git SyncLite
@@ -504,7 +536,7 @@ cd SyncLite
 |---|---|---|
 | 1 | **Full platform** (default) | `target/synclite-platform-<rev>.zip` — Tomcat scripts + WARs + tools + samples + multi-arch native runtime |
 | 2 | **Full platform, Java-only** | Same as #1 but no `lib/native/` (no Rust toolchain required) |
-| 3 | **Runtime** (recommended for app developers) | `target/synclite-runtime-<rev>.zip` — slim zip with `lib/java/` (synclite jar) + multi-arch `lib/native/` (Rust cdylibs) + cross-language `sample-apps/{cpp,java,python,rust}` |
+| 3 | **Runtime** (recommended for app developers) | `target/synclite-runtime-<rev>.zip` — slim zip with `lib/java/` (synclite jar) + multi-arch `lib/native/` (Rust cdylibs) + `lib/python/` wheels + `lib/nodejs/` npm package + cross-language `sample-apps/{cpp,java,nodejs,python,rust}` |
 
 ```bash
 # 1. Full platform (default)

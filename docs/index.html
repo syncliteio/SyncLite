@@ -520,7 +520,7 @@
 <section id="code" class="code-section">
   <div class="tabs-wrap">
     <h2>Start Syncing in Minutes</h2>
-    <p class="sub">Native libraries for Rust, Python, and C++ — plus the Java JDBC driver and a language-agnostic HTTP API. Pick your stack, SyncLite handles the rest.</p>
+    <p class="sub">Native libraries for Rust, Python, Node.js, and C++ — plus the Java JDBC driver and a language-agnostic HTTP API. Pick your stack, SyncLite handles the rest.</p>
 
     <!-- Published packages: install from PyPI / crates.io / Maven Central, no build required -->
     <div class="install-strip">
@@ -531,6 +531,10 @@
           <code>pip install synclite</code>
         </div>
         <div class="install-cmd">
+          <span class="install-cmd-tag">Node.js</span>
+          <code>npm install ./lib/nodejs/synclite-1.0.0-&lt;platform&gt;.tgz</code>
+        </div>
+        <div class="install-cmd">
           <span class="install-cmd-tag">Rust</span>
           <code>cargo add synclite-rs</code>
         </div>
@@ -539,13 +543,14 @@
           <code>io.synclite:synclite:1.0.0</code>
         </div>
       </div>
-      <div class="install-strip-note">Python (PyPI) &amp; Rust (crates.io) grab the newest release automatically — add <code>==1.0.0</code> / <code>@1.0.0</code> to pin. Maven has no reliable “latest”, so pin the version. Python wheel &amp; Java jar bundle the native runtime; the Rust crate builds it. Full setup: <a href="https://github.com/syncliteio/SyncLite/blob/main/GETTING_STARTED.md" target="_blank">Getting Started →</a></div>
+      <div class="install-strip-note">Python (PyPI) and Rust (crates.io) grab the newest release automatically. Node.js ships as an offline npm tarball in the platform release. Python wheel, Node package, and Java jar bundle the native runtime; the Rust crate builds it. Full setup: <a href="https://github.com/syncliteio/SyncLite/blob/main/GETTING_STARTED.md" target="_blank">Getting Started →</a></div>
     </div>
 
     <div class="tabs">
-      <button class="tab-btn active" onclick="showTab('rust')">Rust <span style="font-size:.65rem;padding:.1em .45em;margin-left:.3em;border-radius:99px;background:var(--green);color:#0a0e1a;font-weight:800;letter-spacing:.04em;">NEW</span></button>
-      <button class="tab-btn" onclick="showTab('python')">Python <span style="font-size:.65rem;padding:.1em .45em;margin-left:.3em;border-radius:99px;background:var(--green);color:#0a0e1a;font-weight:800;letter-spacing:.04em;">NEW</span></button>
-      <button class="tab-btn" onclick="showTab('cpp')">C++ <span style="font-size:.65rem;padding:.1em .45em;margin-left:.3em;border-radius:99px;background:var(--green);color:#0a0e1a;font-weight:800;letter-spacing:.04em;">NEW</span></button>
+      <button class="tab-btn active" onclick="showTab('rust')">Rust</button>
+      <button class="tab-btn" onclick="showTab('python')">Python</button>
+      <button class="tab-btn" onclick="showTab('nodejs')">Node.js <span style="font-size:.65rem;padding:.1em .45em;margin-left:.3em;border-radius:99px;background:var(--green);color:#0a0e1a;font-weight:800;letter-spacing:.04em;">NEW</span></button>
+      <button class="tab-btn" onclick="showTab('cpp')">C++</button>
       <button class="tab-btn" onclick="showTab('jdbc')">Java (JDBC)</button>
       <button class="tab-btn" onclick="showTab('store')">SyncLiteStore</button>
       <button class="tab-btn" onclick="showTab('stream')">SyncLiteStream</button>
@@ -554,6 +559,41 @@
       <button class="tab-btn" onclick="showTab('http')">SyncLite DB (HTTP)</button>
       <button class="tab-btn" onclick="showTab('dbreader')">DBReader ETL</button>
       <button class="tab-btn" onclick="showTab('qreader')">QReader MQTT</button>
+    </div>
+
+    <!-- Node.js -->
+    <div id="tab-nodejs" class="tab-pane">
+<pre><span class="cmt">// Node.js via the synclite N-API package. Offline-first SQLite syncing to PostgreSQL.</span>
+<span class="cmt">// The connection API mirrors the Rust and Python samples one-for-one.</span>
+<span class="kw">const</span> { <span class="fn">initialize</span>, <span class="cls">SqliteConnection</span>, <span class="fn">awaitSync</span> } = <span class="fn">require</span>(<span class="str">'synclite'</span>);
+
+<span class="cmt">// Wire up logger + shipper + embedded consolidator in one call.</span>
+<span class="fn">initialize</span>({
+  device_type: <span class="str">'SQLITE'</span>,
+  device_name: <span class="str">'orders-device'</span>,                 <span class="cmt">// device name</span>
+  db_path: <span class="str">'orders.db'</span>,                          <span class="cmt">// local SQLite path</span>
+  destination: {
+    dst_type: <span class="str">'POSTGRES'</span>,
+    dst_connection_string: <span class="str">'postgresql://postgres:postgres@localhost:5432/syncdb'</span>,
+    dst_database: <span class="str">'syncdb'</span>,
+    dst_schema: <span class="str">'syncschema'</span>,
+    dst_sync_mode: <span class="str">'REPLICATION'</span>,
+  },
+});
+
+<span class="cmt">// From here on the app talks to a plain local SQLite database.</span>
+<span class="kw">const</span> conn = <span class="cls">SqliteConnection</span>.<span class="fn">open</span>(<span class="str">'orders.db'</span>);
+conn.<span class="fn">execute</span>(<span class="str">'CREATE TABLE IF NOT EXISTS orders(id INTEGER, item TEXT, qty INTEGER)'</span>);
+conn.<span class="fn">execute</span>(<span class="str">'INSERT INTO orders VALUES(?, ?, ?)'</span>, [<span class="num">1</span>, <span class="str">'widget'</span>, <span class="num">100</span>]);
+conn.<span class="fn">commit</span>();
+
+<span class="cmt">// Roll the active log segment, then block until the apply lands in PostgreSQL.</span>
+<span class="cmt">// NOTE: awaitSync is only used here to demonstrate SyncLite's background sync in action —</span>
+<span class="cmt">// apps normally just keep writing; SyncLite ships changes asynchronously in the background.</span>
+conn.<span class="fn">flush</span>();
+<span class="fn">awaitSync</span>(<span class="str">'orders.db'</span>, <span class="num">30</span>);
+conn.<span class="fn">close</span>();
+<span class="cmt">// ↑ logged + shipped + consolidated into PostgreSQL.</span></pre>
     </div>
 
     <!-- Rust -->

@@ -13,6 +13,9 @@
 pip install synclite                     # Python - self-contained, batteries included
 ```
 ```bash
+npm install ./lib/nodejs/synclite-1.0.0-<platform>.tgz  # Node.js - bundled offline N-API runtime
+```
+```bash
 cargo add synclite-rs                    # Rust - cdylib also usable from C/C++, Go, Node, Ruby, C#
 ```
 ```xml
@@ -28,7 +31,7 @@ cargo add synclite-rs                    # Rust - cdylib also usable from C/C++,
 implementation 'io.synclite:synclite:1.0.0'
 ```
 
-The Python wheel and Java jar are **self-contained** - they bundle the native runtime, DuckDB, and the PostgreSQL driver. `pip install` is genuinely all you need on Windows, Linux, and macOS.
+The Python wheel, Node.js npm tarball, and Java jar are **self-contained** - they bundle the native runtime, DuckDB, and the PostgreSQL driver. The Node package is installed from `lib/nodejs` in an extracted platform release.
 
 ---
 
@@ -71,6 +74,28 @@ conn.close()
 ```
 
 Full sample: [`synclite-code-samples/python/synclite_rusqlite_postgres.py`](synclite-code-samples/python/synclite_rusqlite_postgres.py)
+
+---
+
+### Node.js
+
+```javascript
+const { SqliteConnection, awaitSync } = require('synclite');
+
+// Destination settings live in synclite.conf. This initializes the local
+// SQLite device, shipper, and embedded consolidator in one call.
+const conn = SqliteConnection.initializeWithConfig('synclite.conf');
+conn.execute('CREATE TABLE IF NOT EXISTS orders(id INTEGER PRIMARY KEY, item TEXT, qty INTEGER)');
+conn.execute('INSERT INTO orders(id, item, qty) VALUES(?, ?, ?)', [1, 'widget', 100]);
+conn.execute('UPDATE orders SET qty = ? WHERE id = ?', [150, 1]);
+conn.commit();
+
+conn.flush();
+awaitSync('sampledevice.db', 30);
+conn.close();
+```
+
+Full sample: [`synclite-code-samples/nodejs/synclite_sqlite_postgres.js`](synclite-code-samples/nodejs/synclite_sqlite_postgres.js). The release zip bundles the installable npm tarball under `lib/nodejs`.
 
 ---
 
@@ -354,7 +379,7 @@ cd SyncLite
 - Java 25
 - Apache Maven 3.8.6+
 
-**Full build (including Rust runtime and Python wheel):**
+**Full build (including Rust runtime, Python wheel, and Node.js package):**
 - All of the above, plus:
 - Rust toolchain 1.86.0 + Cargo 1.86.0 (bundled with Rust)
 - **Native C/C++ toolchain (system linker):**
@@ -376,6 +401,12 @@ cd SyncLite
   # macOS:   pip install delocate
   ```
   Skip with `-DskipPythonWheel=true` (also skipped automatically by `-DskipNonJavaLoggers=true`).
+- **Node.js 18+ and npm** (for the host-platform Node.js N-API npm package):
+    ```bash
+    node --version
+    npm --version
+    ```
+    Skip with `-DskipNodePackage=true` (also skipped automatically by `-DskipNonJavaLoggers=true`).
 
 ### Build flavors
 
@@ -383,7 +414,7 @@ cd SyncLite
 |---|---|---|
 | 1 | **Full platform** (default) | `target/synclite-platform-<rev>.zip` - Tomcat scripts + WARs + tools + samples + multi-arch native runtime |
 | 2 | **Full platform, Java-only** | Same as #1 but no `lib/native/` (no Rust toolchain required) |
-| 3 | **Runtime** (recommended for app developers) | `target/synclite-runtime-<rev>.zip` - slim zip with `lib/java/` (synclite jar) + multi-arch `lib/native/` (Rust cdylibs) + cross-language `sample-apps/{cpp,java,python,rust}` |
+| 3 | **Runtime** (recommended for app developers) | `target/synclite-runtime-<rev>.zip` - slim zip with `lib/java/` (synclite jar) + multi-arch `lib/native/` (Rust cdylibs) + `lib/python/` wheels + `lib/nodejs/` npm package + cross-language `sample-apps/{cpp,java,nodejs,python,rust}` |
 
 ```bash
 # 1. Full platform (default)

@@ -6,6 +6,7 @@ One end-to-end sample per language, each demonstrating the same story: a local S
 |---|---|---|
 | Java   | [`SyncliteSqlitePostgresApp.java`](java/SyncliteSqlitePostgresApp.java)            | [java/README.md](java/README.md) |
 | Python | [`synclite_rusqlite_postgres.py`](python/synclite_rusqlite_postgres.py)            | [python/README.md](python/README.md) |
+| Node.js | [`synclite_sqlite_postgres.js`](nodejs/synclite_sqlite_postgres.js)               | [nodejs/README.md](nodejs/README.md) |
 | Rust   | [`synclite_rusqlite_postgres.rs`](rust/synclite_rusqlite_postgres.rs)              | [rust/README.md](rust/README.md) |
 | C++    | [`synclite_rusqlite_postgres.cpp`](cpp/synclite_rusqlite_postgres.cpp)             | [cpp/README.md](cpp/README.md) |
 
@@ -16,19 +17,20 @@ Each sample can run against the **published** SyncLite runtime for its language 
 | Language | Install | Registry |
 |---|---|---|
 | Python | `pip install synclite==1.0.0` | [PyPI](https://pypi.org/project/synclite/) |
+| Node.js | `npm install synclite@1.0.0` | [npm](https://www.npmjs.com/package/synclite) |
 | Rust   | `cargo add synclite-rs@1.0.0` (or `synclite = { package = "synclite-rs", version = "1.0.0" }` in `Cargo.toml`) | [crates.io](https://crates.io/crates/synclite-rs) |
 | Java   | `io.synclite:synclite:1.0.0` (Maven / Gradle — see [java/README.md](java/README.md#quickest-start--add-the-maven-dependency)) | Maven Central |
 | C++    | Link the native `synclite` cdylib (built from the `synclite` crate / bundled SDK — see [cpp/README.md](cpp/README.md)) | crates.io / release zip |
 
-The Python wheel and Java jar are self-contained (they bundle their native runtime + DuckDB). The Rust crate and C++ binding compile the native DuckDB dependency, so a C/C++ toolchain + CMake are required. Prefer a fully offline flow? Every folder README also documents running straight from an extracted release zip.
+The Python wheel, Java jar, and Node npm tarball are self-contained (they bundle their native runtime + DuckDB). The Rust crate and C++ binding compile the native DuckDB dependency, so a C/C++ toolchain + CMake are required. Prefer a fully offline flow? Every folder README also documents running straight from an extracted release zip.
 
-All four samples share the same story:
+All five samples share the same story:
 
 1. **users** — `INSERT` / `UPDATE` / batched `INSERT`.
 2. **products** — `ALTER TABLE ADD / RENAME / DROP COLUMN`.
 3. **orders → orders_archive** — `ALTER TABLE RENAME TO`.
 
-Each step prints a `[LOCAL ...]` banner. After `awaitSync` / `await_sync`, Java / Python / Rust reconnect to Postgres and print `[POSTGRES ...]` lines that show the same data and the same schema on the destination. The C++ sample prints copy-paste `psql` queries for the same verification (avoids linking `libpq`).
+Each step prints a `[LOCAL ...]` banner. After `awaitSync` / `await_sync`, Java / Python / Node.js / Rust reconnect to Postgres and print `[POSTGRES ...]` lines that show the same data and the same schema on the destination. The C++ sample prints copy-paste `psql` queries for the same verification (avoids linking `libpq`).
 
 Every sample is **safe to rerun on the same device** — each table is `DROP TABLE IF EXISTS`'d before being recreated.
 
@@ -51,7 +53,7 @@ Each sample picks one of two destination sync modes — set on the device at `in
 
 - **`CONSOLIDATION`** (the advanced mode) — **many devices → one shared destination table.** Lets you fan in writes from thousands of edge devices into a single warehouse table. The consolidator is conservative on shared state: it ignores `DROP TABLE` / `DROP COLUMN`, rewrites `RENAME COLUMN` as `ADD COLUMN` and `RENAME TABLE` as `CREATE TABLE`, and skips bulk `DELETE WHERE` / `UPDATE WHERE` (only PK-targeted row ops are applied). This protects the table from a single misbehaving device.
 
-For the full per-operation truth table see [DOCUMENTATION.md §9.5](../DOCUMENTATION.md#95-sync-modes-replication-vs-consolidation). The Java and Rust / Python / C++ runtimes apply identical semantics in both modes.
+For the full per-operation truth table see [DOCUMENTATION.md §9.5](../DOCUMENTATION.md#95-sync-modes-replication-vs-consolidation). The Java and Rust / Python / Node.js / C++ runtimes apply identical semantics in both modes.
 
 To flip a sample to `CONSOLIDATION`, change the literal in the `DestinationOptions` block at the top of the sample:
 
@@ -63,7 +65,7 @@ To flip a sample to `CONSOLIDATION`, change the literal in the `DestinationOptio
 | C++    | `dst_sync_mode =`  | `"REPLICATION"`             | `"CONSOLIDATION"` |
 | Conf   | `dst-sync-mode=`   | `REPLICATION`               | `CONSOLIDATION` |
 
-## Postgres prereq (all four samples)
+## Postgres prereq (all five samples)
 
 One-time, on the Postgres server:
 
@@ -73,9 +75,9 @@ CREATE DATABASE syncdb;
 CREATE SCHEMA syncschema;
 ```
 
-All four samples default to `postgresql://postgres:postgres@localhost:5432/syncdb` and schema `syncschema`. Edit the constants at the top of the sample to match your environment.
+All five samples default to `postgresql://postgres:postgres@localhost:5432/syncdb` and schema `syncschema`. Edit the constants at the top of the sample to match your environment.
 
-> **Rust, Python, and C++ samples** drive the Rust runtime, which auto-creates the destination schema on first run (`CREATE SCHEMA IF NOT EXISTS`). For those three the `CREATE SCHEMA` line above is optional. The Java sample still expects the schema to exist.
+> **Rust, Python, Node.js, and C++ samples** drive the Rust runtime, which auto-creates the destination schema on first run (`CREATE SCHEMA IF NOT EXISTS`). For those four the `CREATE SCHEMA` line above is optional. The Java sample still expects the schema to exist.
 
 ## Where do the samples write files?
 

@@ -41,6 +41,12 @@
 		-->
 		<skipPythonWheel>false</skipPythonWheel>
 		<!--
+		  Skip the host-platform Node.js N-API package. The addon is built
+		  through napi-rs and packed as an offline npm tarball under lib/nodejs.
+		  Prereq on the build host: Node.js (npm) plus the Rust toolchain.
+		-->
+		<skipNodePackage>false</skipNodePackage>
+		<!--
 		  Skip the manylinux (Linux x86_64 + aarch64) Python wheel build that
 		  runs via WSL (or natively on a Linux host). Defaults to false; set
 		  -DskipLinuxWheels=true to build only the host wheel and leave the
@@ -291,6 +297,117 @@
 							</arguments>
 						</configuration>
 					</execution>
+					<!-- Build the host Node.js N-API addon, then package the npm
+					     tarball for offline installation from lib/nodejs. Linux
+					     cross-target packages and macOS packages are supplied by
+					     their respective release hosts. -->
+					<execution>
+						<id>install-node-package-tools</id>
+						<phase>package</phase>
+						<goals><goal>exec</goal></goals>
+						<configuration>
+							<skip>${effectiveSkipNodePackage}</skip>
+							<workingDirectory>${project.basedir}/synclite-logger-rust/nodejs</workingDirectory>
+							<executable>npm</executable>
+							<arguments><argument>install</argument></arguments>
+						</configuration>
+					</execution>
+					<execution>
+						<id>build-node-package</id>
+						<phase>package</phase>
+						<goals><goal>exec</goal></goals>
+						<configuration>
+							<skip>${effectiveSkipNodePackage}</skip>
+							<workingDirectory>${project.basedir}/synclite-logger-rust/nodejs</workingDirectory>
+							<executable>npm</executable>
+							<environmentVariables>
+								<SYNCLITE_RUST_ARTIFACT_VERSION>${revision}</SYNCLITE_RUST_ARTIFACT_VERSION>
+								<DUCKDB_DOWNLOAD_LIB>${duckdbDownloadLib}</DUCKDB_DOWNLOAD_LIB>
+							</environmentVariables>
+							<arguments><argument>run</argument><argument>build</argument></arguments>
+						</configuration>
+					</execution>
+					<execution>
+						<id>pack-node-package</id>
+						<phase>package</phase>
+						<goals><goal>exec</goal></goals>
+						<configuration>
+							<skip>${effectiveSkipNodePackage}</skip>
+							<workingDirectory>${project.basedir}/synclite-logger-rust/nodejs</workingDirectory>
+							<executable>npm</executable>
+							<arguments><argument>run</argument><argument>pack:offline</argument></arguments>
+						</configuration>
+					</execution>
+					<!-- Build Linux Node packages through the same WSL/native launcher
+					     pattern used by the Python manylinux wheel build. -->
+					<execution>
+						<id>build-node-packages-linux</id>
+						<phase>package</phase>
+						<goals><goal>exec</goal></goals>
+						<configuration>
+							<skip>${effectiveSkipLinuxNodePackages}</skip>
+							<workingDirectory>${project.basedir}/synclite-logger-rust/nodejs</workingDirectory>
+							<executable>${pythonExecutable}</executable>
+							<arguments>
+								<argument>${project.basedir}/synclite-logger-rust/nodejs/scripts/build_linux_packages_launcher.py</argument>
+								<argument>${project.basedir}/synclite-logger-rust/nodejs</argument>
+							</arguments>
+						</configuration>
+					</execution>
+					<execution>
+						<id>build-node-package-linux-x86_64</id>
+						<!-- Retained as documentation only; superseded by the launcher. -->
+						<phase>none</phase>
+						<goals><goal>exec</goal></goals>
+						<configuration>
+							<!-- Superseded by build-node-packages-linux launcher. -->
+							<skip>true</skip>
+							<workingDirectory>${project.basedir}/synclite-logger-rust/nodejs</workingDirectory>
+							<executable>npm</executable>
+							<environmentVariables>
+								<SYNCLITE_RUST_ARTIFACT_VERSION>${revision}</SYNCLITE_RUST_ARTIFACT_VERSION>
+								<DUCKDB_DOWNLOAD_LIB>${duckdbDownloadLib}</DUCKDB_DOWNLOAD_LIB>
+							</environmentVariables>
+							<arguments><argument>run</argument><argument>build:linux:x64</argument></arguments>
+						</configuration>
+					</execution>
+					<execution>
+						<id>pack-node-package-linux-x86_64</id>
+						<phase>none</phase>
+						<goals><goal>exec</goal></goals>
+						<configuration>
+							<skip>true</skip>
+							<workingDirectory>${project.basedir}/synclite-logger-rust/nodejs</workingDirectory>
+							<executable>npm</executable>
+							<arguments><argument>run</argument><argument>pack:offline</argument><argument>--</argument><argument>linux-x64-gnu</argument></arguments>
+						</configuration>
+					</execution>
+					<execution>
+						<id>build-node-package-linux-aarch64</id>
+						<phase>none</phase>
+						<goals><goal>exec</goal></goals>
+						<configuration>
+							<skip>true</skip>
+							<workingDirectory>${project.basedir}/synclite-logger-rust/nodejs</workingDirectory>
+							<executable>npm</executable>
+							<environmentVariables>
+								<SYNCLITE_RUST_ARTIFACT_VERSION>${revision}</SYNCLITE_RUST_ARTIFACT_VERSION>
+								<DUCKDB_DOWNLOAD_LIB>${duckdbDownloadLib}</DUCKDB_DOWNLOAD_LIB>
+							</environmentVariables>
+							<arguments><argument>run</argument><argument>build:linux:arm64</argument></arguments>
+						</configuration>
+					</execution>
+					<execution>
+						<id>pack-node-package-linux-aarch64</id>
+						<phase>none</phase>
+						<goals><goal>exec</goal></goals>
+						<configuration>
+							<skip>true</skip>
+							<workingDirectory>${project.basedir}/synclite-logger-rust/nodejs</workingDirectory>
+							<executable>npm</executable>
+							<arguments><argument>run</argument><argument>pack:offline</argument><argument>--</argument><argument>linux-arm64-gnu</argument></arguments>
+						</configuration>
+					</execution>
 					<!--
 					  Cross-build the Linux x86_64 + aarch64 Python wheels via
 					  maturin's zig-backed build (maturin build with a Linux
@@ -494,9 +611,14 @@
 								  when no `zig` binary is found), so accept EITHER form here.
 								-->
 								<probe prop="zigPresent"      wincmd="where zig >NUL 2>NUL || ${pythonExecutable} -m ziglang version >NUL 2>NUL"             nixcmd="command -v zig >/dev/null 2>&amp;1 || ${pythonExecutable} -m ziglang version >/dev/null 2>&amp;1"/>
+								<!-- napi-rs requires a standalone zig executable; its
+								     Python ziglang fallback is not accepted by napi zig mode. -->
+								<probe prop="nodeZigPresent"  wincmd="where zig >NUL 2>NUL"  nixcmd="command -v zig >/dev/null 2>&amp;1"/>
 								<probe prop="zigbuildPresent" wincmd="where cargo-zigbuild >NUL 2>NUL"  nixcmd="command -v cargo-zigbuild >/dev/null 2>&amp;1"/>
 								<!-- maturin (via the detected interpreter): host Python wheel. -->
 								<probe prop="maturinPresent"  wincmd="${pythonExecutable} -m maturin --version >NUL 2>NUL" nixcmd="${pythonExecutable} -m maturin --version >/dev/null 2>&amp;1"/>
+								<!-- npm: host Node.js N-API package. -->
+								<probe prop="npmPresent"      wincmd="where npm >NUL 2>NUL"      nixcmd="command -v npm >/dev/null 2>&amp;1"/>
 
 								<!-- WSL: dispatch target for manylinux Linux wheels on Windows. -->
 								<available property="wslPresent" file="${env.SystemRoot}/System32/wsl.exe"/>
@@ -553,6 +675,27 @@
 								</condition>
 								<property name="effectiveSkipHostWheel" value="false"/>
 
+								<!-- Host Node package: needs cargo (napi invokes it) + npm. -->
+								<condition property="effectiveSkipNodePackage" value="true">
+									<or>
+										<istrue value="${skipNonJavaLoggers}"/>
+										<istrue value="${skipNodePackage}"/>
+										<isfalse value="${cargoPresent}"/>
+										<isfalse value="${npmPresent}"/>
+									</or>
+								</condition>
+								<property name="effectiveSkipNodePackage" value="false"/>
+
+								<!-- Linux Node packages need cargo + cargo-zigbuild + a
+								     standalone zig binary because napi-rs invokes zig directly. -->
+								<condition property="effectiveSkipNodeCross" value="true">
+									<or>
+										<istrue value="${effectiveSkipCross}"/>
+										<isfalse value="${nodeZigPresent}"/>
+									</or>
+								</condition>
+								<property name="effectiveSkipNodeCross" value="false"/>
+
 								<!--
 								  manylinux wheels: the launcher must at least start, so a
 								  Python interpreter has to exist; the launcher itself is
@@ -573,6 +716,19 @@
 									</or>
 								</condition>
 								<property name="effectiveSkipLinuxWheels" value="false"/>
+
+								<!-- Linux Node packages use the same Python-driven WSL/native
+								     launcher model as the manylinux Python wheels. The launcher
+								     validates its native Linux Node/npm/Rust/Zig toolchain. -->
+								<condition property="effectiveSkipLinuxNodePackages" value="true">
+									<or>
+										<istrue value="${skipNonJavaLoggers}"/>
+										<istrue value="${skipNodePackage}"/>
+										<istrue value="${skipRustCrossCompile}"/>
+										<isfalse value="${pythonPresent}"/>
+									</or>
+								</condition>
+								<property name="effectiveSkipLinuxNodePackages" value="false"/>
 
 								<!--
 								  Per-artifact status = 3-way (disabled by a skip flag /
@@ -598,6 +754,10 @@
 								<condition property="status.hostWheel" value="SKIP (needs cargo + maturin)"><or><isfalse value="${cargoPresent}"/><isfalse value="${maturinPresent}"/></or></condition>
 								<property name="status.hostWheel" value="BUILD"/>
 
+								<condition property="status.nodePackage" value="disabled (skip flag)"><or><istrue value="${skipNonJavaLoggers}"/><istrue value="${skipNodePackage}"/></or></condition>
+								<condition property="status.nodePackage" value="SKIP (needs cargo + npm)"><or><isfalse value="${cargoPresent}"/><isfalse value="${npmPresent}"/></or></condition>
+								<property name="status.nodePackage" value="BUILD"/>
+
 								<condition property="status.linuxWheels" value="disabled (skip flag)">
 									<or><istrue value="${skipNonJavaLoggers}"/><istrue value="${skipPythonWheel}"/><istrue value="${skipRustCrossCompile}"/></or>
 								</condition>
@@ -606,6 +766,15 @@
 									<and><os family="windows"/><isfalse value="${wslPresent}"/></and>
 								</condition>
 								<property name="status.linuxWheels" value="ATTEMPT (best-effort in Linux/WSL)"/>
+
+								<condition property="status.linuxNodePackages" value="disabled (skip flag)">
+									<or><istrue value="${skipNonJavaLoggers}"/><istrue value="${skipNodePackage}"/><istrue value="${skipRustCrossCompile}"/></or>
+								</condition>
+								<condition property="status.linuxNodePackages" value="SKIP (no Python launcher)"><isfalse value="${pythonPresent}"/></condition>
+								<condition property="status.linuxNodePackages" value="SKIP (WSL not available)">
+									<and><os family="windows"/><isfalse value="${wslPresent}"/></and>
+								</condition>
+								<property name="status.linuxNodePackages" value="ATTEMPT (best-effort in Linux/WSL)"/>
 
 								<condition property="status.rustTests" value="disabled (skip flag)"><istrue value="${skipRustTests}"/></condition>
 								<condition property="status.rustTests" value="SKIP (cargo not found)"><isfalse value="${cargoPresent}"/></condition>
@@ -618,8 +787,10 @@
 								<echo level="info" message="  Python           : ${pythonExecutable}"/>
 								<echo level="info" message="  cargo (Rust)     : ${cargoPresent}"/>
 								<echo level="info" message="  zig              : ${zigPresent}"/>
+								<echo level="info" message="  zig (napi host)  : ${nodeZigPresent}"/>
 								<echo level="info" message="  cargo-zigbuild   : ${zigbuildPresent}"/>
 								<echo level="info" message="  maturin          : ${maturinPresent}"/>
+								<echo level="info" message="  npm (Node.js)    : ${npmPresent}"/>
 								<echo level="info" message="  WSL (wsl.exe)    : ${wslPresent}"/>
 								<echo level="info" message="---------------------------------------------------------------"/>
 								<echo level="info" message="Planned artifacts:"/>
@@ -628,6 +799,8 @@
 								<echo level="info" message="  JNI native (host OS)            : ${status.jni}"/>
 								<echo level="info" message="  Linux cdylib + JNI (x64/arm64)  : ${status.cross}"/>
 								<echo level="info" message="  Python wheel (host OS)          : ${status.hostWheel}"/>
+								<echo level="info" message="  Node.js package (host OS)       : ${status.nodePackage}"/>
+								<echo level="info" message="  Node.js packages (Linux)        : ${status.linuxNodePackages}"/>
 								<echo level="info" message="  Python wheels (manylinux)       : ${status.linuxWheels}"/>
 								<echo level="info" message="  Rust integration tests          : ${status.rustTests}"/>
 								<echo level="info" message="==============================================================="/>
