@@ -87,6 +87,16 @@
 			<outputDirectory>lib/python</outputDirectory>
 		</fileSet>
 		<fileSet>
+			<!-- Host-platform N-API npm tarball built by pom.xml build-node-package. -->
+			<directory>${project.basedir}/synclite-logger-rust/nodejs/dist</directory>
+			<includes>
+				<include>synclite-${revision}-*.tgz</include>
+			</includes>
+			<fileMode>644</fileMode>
+			<directoryMode>755</directoryMode>
+			<outputDirectory>lib/nodejs</outputDirectory>
+		</fileSet>
+		<fileSet>
 			<!--
 			  Self-contained Rust SDK source tree staged by pom.xml's
 			  `stage-rust-source-tree` antrun step. Cargo workspace with all
