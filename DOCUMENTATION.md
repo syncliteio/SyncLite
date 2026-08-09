@@ -1154,13 +1154,28 @@ An offline tarball is also staged in an extracted platform release under
 npm install ./lib/nodejs/synclite-1.0.0-<platform>.tgz
 ```
 
-Configure destination settings in `synclite.conf`, then use the SQLite or
-DuckDB connection API:
+Use the `initialize(...)` API to wire up the destination, then the SQLite
+or DuckDB connection API:
 
 ```javascript
-const { SqliteConnection, awaitSync } = require('synclite');
+const { initialize, SqliteConnection, awaitSync } = require('synclite');
 
-const conn = SqliteConnection.initializeWithConfig('synclite.conf');
+// One call wires up the local logger, the segment shipper,
+// and the embedded consolidator that drains into PostgreSQL.
+initialize({
+  device_type: 'SQLITE',
+  device_name: 'sampledevice',
+  db_path: 'sampledevice.db',
+  destination: {
+    dst_type: 'POSTGRES',
+    dst_connection_string: 'postgresql://postgres:postgres@localhost:5432/syncdb',
+    dst_database: 'syncdb',
+    dst_schema: 'syncschema',
+    dst_sync_mode: 'REPLICATION',
+  },
+});
+
+const conn = SqliteConnection.open('sampledevice.db');
 conn.execute('CREATE TABLE IF NOT EXISTS events(id INTEGER PRIMARY KEY, payload TEXT)');
 conn.execute('INSERT INTO events(id, payload) VALUES(?, ?)', [1, 'hello from Node.js']);
 conn.execute('INSERT INTO events(id, payload) VALUES(?, ?)', [2, 'row two']);
