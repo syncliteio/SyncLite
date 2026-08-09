@@ -72,7 +72,7 @@ pip install synclite            # Python — self-contained wheel, batteries inc
 ```
 
 ```bash
-npm install ./lib/nodejs/synclite-1.0.0-<platform>.tgz  # Node.js — bundled offline N-API package
+npm install synclite            # Node.js — self-contained N-API package, batteries included
 ```
 
 ```bash
