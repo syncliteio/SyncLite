@@ -140,11 +140,24 @@ Every `INSERT` / `UPDATE` / `DELETE` — and every `ALTER TABLE` — is durably 
 ## Node.js — SQLite → PostgreSQL
 
 ```javascript
-const { SqliteConnection, awaitSync } = require('synclite');
+const { initialize, SqliteConnection, awaitSync } = require('synclite');
 
-// Configure the destination in synclite.conf, then initialize logger,
-// shipper, and embedded consolidator with the local SQLite device.
-const conn = SqliteConnection.initializeWithConfig('synclite.conf');
+// One call wires up the local logger, the segment shipper,
+// and the embedded consolidator that drains into PostgreSQL.
+initialize({
+  device_type: 'SQLITE',
+  device_name: 'sampledevice',
+  db_path: 'sampledevice.db',
+  destination: {
+    dst_type: 'POSTGRES',
+    dst_connection_string: 'postgresql://postgres:postgres@localhost:5432/syncdb',
+    dst_database: 'syncdb',
+    dst_schema: 'syncschema',
+    dst_sync_mode: 'REPLICATION',
+  },
+});
+
+const conn = SqliteConnection.open('sampledevice.db');
 conn.execute('CREATE TABLE IF NOT EXISTS orders(id INTEGER PRIMARY KEY, item TEXT, qty INTEGER)');
 conn.execute('INSERT INTO orders(id, item, qty) VALUES(?, ?, ?)', [1, 'widget', 100]);
 conn.execute('UPDATE orders SET qty = ? WHERE id = ?', [150, 1]);
@@ -155,7 +168,7 @@ awaitSync('sampledevice.db', 30);
 conn.close();
 ```
 
-The bundled npm package contains the same embedded Rust runtime as the Python wheel: local SQLite/DuckDB, change capture, shipper, and consolidator. Full sample: [`synclite-code-samples/nodejs/synclite_sqlite_postgres.js`](synclite-code-samples/nodejs/synclite_sqlite_postgres.js).
+The npm package contains the same embedded Rust runtime as the Python wheel: local SQLite/DuckDB, change capture, shipper, and consolidator. Full sample: [`synclite-code-samples/nodejs/synclite_sqlite_postgres.js`](synclite-code-samples/nodejs/synclite_sqlite_postgres.js).
 
 ---
 
