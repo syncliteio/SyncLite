@@ -84,13 +84,13 @@ cargo add synclite-rs           # Rust — cdylib also embeddable from C/C++, Go
 <dependency>
     <groupId>io.synclite</groupId>
     <artifactId>synclite</artifactId>
-    <version>1.0.0</version>
+    <version>1.1.0</version>
 </dependency>
 ```
 
 ```groovy
 // Java / Gradle
-implementation 'io.synclite:synclite:1.0.0'
+implementation 'io.synclite:synclite:1.1.0'
 ```
 
 The Python wheel and Java jar are **self-contained** — they bundle the native runtime, DuckDB, and the PostgreSQL driver. `pip install` is genuinely all you need on Windows, Linux, and macOS.
@@ -179,7 +179,7 @@ The npm package contains the same embedded Rust runtime as the Python wheel: loc
 <dependency>
     <groupId>io.synclite</groupId>
     <artifactId>synclite</artifactId>
-    <version>1.0.0</version>
+    <version>1.1.0</version>
 </dependency>
 ```
 
@@ -553,16 +553,16 @@ cd SyncLite
 
 ```bash
 # 1. Full platform (default)
-mvn -Drevision=1.0.0 clean install
+mvn -Drevision=1.1.0 clean install
 
 # 2. Full platform, Java-only (no Rust toolchain required)
-mvn -Drevision=1.0.0 -DskipNonJavaLoggers=true clean install
+mvn -Drevision=1.1.0 -DskipNonJavaLoggers=true clean install
 
 # 3. Runtime only — slim embeddable zip
-mvn -Drevision=1.0.0 -DruntimeOnly=true clean install
+mvn -Drevision=1.1.0 -DruntimeOnly=true clean install
 
 # Fastest build on a host without zig
-mvn -Drevision=1.0.0 -DruntimeOnly=true -DskipRustCrossCompile=true -DskipTests clean install
+mvn -Drevision=1.1.0 -DruntimeOnly=true -DskipRustCrossCompile=true -DskipTests clean install
 ```
 
 > For just the Java jar or just the Rust cdylibs, build individual subprojects directly: `cd synclite-logger-java && mvn install` or `cd synclite-logger-rust && cargo build --workspace --release`.
@@ -582,7 +582,7 @@ rustup target add x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu
 ### Runtime-only zip (`-DruntimeOnly=true`)
 
 ```
-synclite-runtime-1.0.0/
+synclite-runtime-1.1.0/
 +-- lib/
 |   +-- java/
 |   |   +-- synclite-<version>.jar              # Add to your app classpath
@@ -614,7 +614,7 @@ synclite-runtime-1.0.0/
 ### Full platform zip (default)
 
 ```
-synclite-platform-1.0.0/
+synclite-platform-1.1.0/
 +-- bin/
 |   +-- deploy.sh / deploy.bat        # One-command setup: downloads Tomcat + JDK, deploys WARs
 |   +-- start.sh / start.bat          # Start Tomcat + all SyncLite apps
@@ -740,7 +740,7 @@ SyncLite DB is a local-first HTTP/JSON database service that wraps embedded data
 
 The sample below uses Python for brevity; the same HTTP calls work from Go (`net/http`) and Node.js (`fetch` / `axios`).
 
-Deploy `synclite-db-1.0.0.war` (bundled under `tools/synclite-db/`) to Tomcat, open `http://localhost:8080/synclite-db`, and configure + start the DB server from the browser GUI. It then serves the HTTP/JSON API on the port set in the GUI.
+Deploy `synclite-db-1.1.0.war` (bundled under `tools/synclite-db/`) to Tomcat, open `http://localhost:8080/synclite-db`, and configure + start the DB server from the browser GUI. It then serves the HTTP/JSON API on the port set in the GUI.
 
 ```python
 # Python client (plain HTTP — no SDK needed)

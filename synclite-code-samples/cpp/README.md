@@ -162,7 +162,7 @@ Common fixes:
 1. Ensure the SyncLite runtime DLL is next to the built `.exe`
 2. Ensure `duckdb.dll` is next to the `.exe` when required by your runtime build
 
-If your package only has the versioned runtime DLL, keep it next to the exe as-is (for example `libsynclite_1.0.0.dll`).
+If your package only has the versioned runtime DLL, keep it next to the exe as-is (for example `libsynclite_1.1.0.dll`).
 
 ### No rows appear in PostgreSQL
 
