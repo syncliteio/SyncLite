@@ -17,14 +17,14 @@ Top-of-file comments inside `appStartup()` show how to:
 <dependency>
     <groupId>io.synclite</groupId>
     <artifactId>synclite</artifactId>
-    <version>1.0.0</version>
+    <version>1.1.0</version>
 </dependency>
 ```
 
 **Gradle** (`build.gradle`):
 
 ```groovy
-implementation 'io.synclite:synclite:1.0.0'
+implementation 'io.synclite:synclite:1.1.0'
 ```
 
 The published `synclite` jar is self-contained — it bundles the PostgreSQL JDBC driver **and** the platform `synclite_jni` native libraries (Windows x64, Linux x86_64 / aarch64), so no extra classpath entries or native installs are needed. Then jump to [step 1](#1-compile--run) to run the sample.
@@ -33,22 +33,22 @@ Prefer to run entirely offline from an extracted release zip? Use [Run from the 
 
 ## Run from the release zip
 
-You are already in `sample-apps/java/` of an extracted release. The release ships the runtime jar under [`../../lib/java/synclite-1.0.0.jar`](../../lib/java/synclite-1.0.0.jar).
+You are already in `sample-apps/java/` of an extracted release. The release ships the runtime jar under [`../../lib/java/synclite-1.1.0.jar`](../../lib/java/synclite-1.1.0.jar).
 
 ### 1. Compile + run
 
 **Windows (cmd.exe / PowerShell):**
 
 ```bat
-javac -cp ..\..\lib\java\synclite-1.0.0.jar SyncliteSqlitePostgresApp.java
-java  -cp ..\..\lib\java\synclite-1.0.0.jar;. SyncliteSqlitePostgresApp
+javac -cp ..\..\lib\java\synclite-1.1.0.jar SyncliteSqlitePostgresApp.java
+java  -cp ..\..\lib\java\synclite-1.1.0.jar;. SyncliteSqlitePostgresApp
 ```
 
 **Linux / macOS:**
 
 ```bash
-javac -cp ../../lib/java/synclite-1.0.0.jar SyncliteSqlitePostgresApp.java
-java  -cp ../../lib/java/synclite-1.0.0.jar:. SyncliteSqlitePostgresApp
+javac -cp ../../lib/java/synclite-1.1.0.jar SyncliteSqlitePostgresApp.java
+java  -cp ../../lib/java/synclite-1.1.0.jar:. SyncliteSqlitePostgresApp
 ```
 
 (Classpath separator: `;` on Windows, `:` on Linux / macOS.)

@@ -10,27 +10,36 @@
 
 ---
 
-## Quick Install (published packages, v1.0.0)
+## Quick Install (published packages, v1.1.0)
 
 Embed the SyncLite runtime by pulling the **published** package for your language — no repo checkout or source build required:
 
 | Language | Install | Registry |
 |---|---|---|
-| **Python** | `pip install synclite==1.0.0` | PyPI |
-| **Node.js** | `npm install synclite@1.0.0` | npm |
-| **Rust** | `cargo add synclite-rs@1.0.0` (or `synclite = { package = "synclite-rs", version = "1.0.0" }` in `Cargo.toml`) | crates.io |
-| **Java** | Maven: `io.synclite:synclite:1.0.0` &nbsp;·&nbsp; Gradle: `implementation 'io.synclite:synclite:1.0.0'` | Maven Central |
+| **Python** | `pip install synclite==1.1.0` | PyPI |
+| **Node.js** | `npm install synclite@1.1.0` | npm |
+| **Rust** | `cargo add synclite-rs@1.1.0` (or `synclite = { package = "synclite-rs", version = "1.1.0" }` in `Cargo.toml`) | crates.io |
+| **Java** | Maven: `io.synclite:synclite:1.1.0` &nbsp;·&nbsp; Gradle: `implementation 'io.synclite:synclite:1.1.0'` | Maven Central |
 
 ```xml
 <!-- Maven — pom.xml -->
 <dependency>
     <groupId>io.synclite</groupId>
     <artifactId>synclite</artifactId>
-    <version>1.0.0</version>
+    <version>1.1.0</version>
 </dependency>
 ```
 
-The Python wheel, Node.js npm tarball, and Java jar are self-contained (they bundle the platform native runtime plus DuckDB / the PostgreSQL driver); the Rust crate compiles its native DuckDB dependency, so a C/C++ toolchain + CMake are required — see [Prerequisites & Build](#4-prerequisites--build). To build everything from source instead, follow the same section.
+The Python wheel and Node.js npm tarball are self-contained (they bundle the platform native runtime). The Java jar bundles SQLite and PostgreSQL dependencies; DuckDB JDBC is intentionally marked `provided` and should be added by DuckDB users. The Rust crate builds the native runtime with SQLite and DuckDB support from Cargo-managed dependencies, so a C/C++ toolchain + CMake are required — see [Prerequisites & Build](#4-prerequisites--build). To build everything from source instead, follow the same section.
+
+### Bundled SQLite and DuckDB versions (runtime v1.1.0)
+
+These are the SQLite/DuckDB versions used by the SyncLite runtime line in general for `1.1.0`:
+
+| Runtime surface | SQLite | DuckDB |
+|---|---|---|
+| Java (`io.synclite:synclite`) | `org.xerial:sqlite-jdbc:3.53.0.0` | `org.duckdb:duckdb_jdbc:1.5.2.0` (declared by SyncLite as `provided`; add explicitly in your app when using DuckDB devices) |
+| Rust runtime (`synclite-rs`) and its Python/Node bindings | `rusqlite:0.39.0` with `libsqlite3-sys:0.37.0` (`bundled` feature enabled) | `duckdb:1.10502.0` (maps to DuckDB `1.5.2`) |
 
 ---
 
@@ -225,8 +234,8 @@ mvn -Drevision=1.0.0 -DskipTests clean install
 mvn -Drevision=1.0.0 -DruntimeOnly=true -DskipRustCrossCompile=true -DskipTests clean install
 ```
 
-The full platform release is assembled under `SyncLite/target/synclite-platform-1.0.0/`.
-The runtime build produces `SyncLite/target/synclite-runtime-1.0.0/` (and `.zip`).
+The full platform release is assembled under `SyncLite/target/synclite-platform-1.1.0/`.
+The runtime build produces `SyncLite/target/synclite-runtime-1.1.0/` (and `.zip`).
 
 If you only want the embedded Rust runtime (`synclite` crate) and not the full Tomcat web stack, build just the Rust workspace:
 
@@ -1144,14 +1153,14 @@ same Rust runtime used by the Python wheel: SQLite/DuckDB device, segment
 shipper, and in-process consolidator. Install it from npm:
 
 ```bash
-npm install synclite@1.0.0
+npm install synclite@1.1.0
 ```
 
 An offline tarball is also staged in an extracted platform release under
 `lib/nodejs/` for air-gapped installs:
 
 ```bash
-npm install ./lib/nodejs/synclite-1.0.0-<platform>.tgz
+npm install ./lib/nodejs/synclite-1.1.0-<platform>.tgz
 ```
 
 Use the `initialize(...)` API to wire up the destination, then the SQLite
@@ -1574,7 +1583,7 @@ Your App (any language)  --HTTP/JSON-->  SyncLite DB Server  -->  Staging Storag
 
 ### 7.1 Starting the Server
 
-Deploy `synclite-db-1.0.0.war` (bundled under `tools/synclite-db/`) into your Apache Tomcat `webapps/` directory, then open the browser GUI to configure and start the server:
+Deploy `synclite-db-1.1.0.war` (bundled under `tools/synclite-db/`) into your Apache Tomcat `webapps/` directory, then open the browser GUI to configure and start the server:
 
 ```
 http://localhost:8080/synclite-db
@@ -2453,7 +2462,7 @@ bin/dst/mysql/docker-start.sh
 ## 17. Release Structure
 
 ```
-synclite-platform-1.0.0/
+synclite-platform-1.1.0/
 +-- bin/
 |   +-- deploy.sh / deploy.bat          # One-command setup: downloads Tomcat + JDK, deploys WARs
 |   +-- start.sh / start.bat            # Start Tomcat + all SyncLite apps

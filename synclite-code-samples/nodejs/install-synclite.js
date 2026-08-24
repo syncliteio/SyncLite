@@ -16,10 +16,10 @@ if (!tag) {
   process.exit(1);
 }
 
-const packagePath = path.resolve(__dirname, '..', '..', 'lib', 'nodejs', `synclite-1.0.0-${tag}.tgz`);
+const packagePath = path.resolve(__dirname, '..', '..', 'lib', 'nodejs', `synclite-1.1.0-${tag}.tgz`);
 if (!fs.existsSync(packagePath)) {
   console.error(`SyncLite Node package not found: ${packagePath}`);
-  console.error('Build or install a platform release that contains lib/nodejs/synclite-1.0.0-<platform>.tgz.');
+  console.error('Build or install a platform release that contains lib/nodejs/synclite-1.1.0-<platform>.tgz.');
   process.exit(1);
 }
 

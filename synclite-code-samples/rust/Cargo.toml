@@ -26,7 +26,7 @@ synclite          = { path = "../../lib/rust/synclite-source/crates/synclite", p
 logger-core       = { path = "../../lib/rust/synclite-source/crates/logger/core" }
 logger-db-traits  = { path = "../../lib/rust/synclite-source/crates/logger/db-traits" }
 rusqlite = { version = "0.39", features = ["bundled"] }
-postgres = "0.19"
+postgres = "0.19.14"
 
 [[example]]
 name = "synclite_rusqlite_postgres"

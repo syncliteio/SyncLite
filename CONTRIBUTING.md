@@ -88,7 +88,7 @@ Optional but recommended:
 
 4. **Build the project** to verify your environment:
    ```bash
-   mvn -Drevision=1.0.0 clean install
+   mvn -Drevision=1.1.0 clean install
    ```
    A successful build creates the platform release under `target/synclite-platform-1.0.0/`.
 
@@ -105,10 +105,10 @@ Optional but recommended:
    mvn -Drevision=1.0.0 clean install
 
    # 2. Full platform, Java-only
-   mvn -Drevision=1.0.0 -DskipNonJavaLoggers=true clean install
+   mvn -Drevision=1.1.0 -DskipNonJavaLoggers=true clean install
 
    # 3. Runtime
-   mvn -Drevision=1.0.0 -DruntimeOnly=true clean install
+   mvn -Drevision=1.1.0 -DruntimeOnly=true clean install
    ```
 
    > For just the synclite logger jar, or just the Rust cdylibs, build the subproject directly (`cd synclite-logger-java && mvn install`, or `cd synclite-logger-rust && cargo build --workspace --release`).
@@ -120,7 +120,7 @@ Optional but recommended:
 
    ```bash
    # Fastest full platform build
-   mvn -Drevision=1.0.0 -DskipTests clean install
+   mvn -Drevision=1.1.0 -DskipTests clean install
 
    # Fastest runtime build on a host without zig
    mvn -Drevision=1.0.0 -DruntimeOnly=true -DskipRustCrossCompile=true -DskipTests clean install
@@ -207,7 +207,7 @@ Run the Maven test phase for the specific submodule you changed:
 ```bash
 # Example: test the logger
 cd synclite-logger-java/logger
-mvn -Drevision=1.0.0 test
+mvn -Drevision=1.1.0 test
 ```
 
 ### Integration tests (SyncLite Validator)
@@ -218,7 +218,7 @@ Refer to [synclite-validator/README.md](synclite-validator/README.md) for setup 
 
 ### What we check in CI
 
-- `mvn -Drevision=1.0.0 clean install` (full multi-module build)
+- `mvn -Drevision=1.1.0 clean install` (full multi-module build)
 - All unit tests pass
 - No compiler warnings treated as errors
 

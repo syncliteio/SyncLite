@@ -7,7 +7,7 @@ Top-of-file comments show where to flip **sync mode** (`REPLICATION` ↔ `CONSOL
 ## Quickest start — install from npm
 
 ```bash
-npm install synclite@1.0.0
+npm install synclite@1.1.0
 ```
 
 That's it — the published `synclite` npm package is self-contained (bundles its native runtime + DuckDB) and installs on Linux (x86_64 / aarch64), Windows (x64), and macOS with no repo checkout and no Rust toolchain. Then skip straight to [step 2](#2-install-pg-for-the-post-sync-postgres-verification) to add the Postgres client and run the sample.
@@ -21,7 +21,7 @@ You are already in `sample-apps/nodejs/` of an extracted release. The release sh
 ### 1. Install the bundled package
 
 ```bash
-npm install ../../lib/nodejs/synclite-1.0.0-win32-x64-msvc.tgz
+npm install ../../lib/nodejs/synclite-1.1.0-win32-x64-msvc.tgz
 ```
 
 > Substitute the platform tag matching your OS/arch:
@@ -79,7 +79,7 @@ Then `awaitSync` blocks until the in-process shipper + consolidator have drained
 If you're working from a `synclite` repo checkout instead of an extracted release, install from the built npm tarball:
 
 ```bash
-npm install ../../synclite-logger-rust/nodejs/dist/synclite-1.0.0-<tag>.tgz
+npm install ../../synclite-logger-rust/nodejs/dist/synclite-1.1.0-<tag>.tgz
 ```
 
 Or build from source by running the root Maven build, which produces the tarball and places it in the release staging area
@@ -114,13 +114,13 @@ npm install
 Then run the full Maven package build from the repository root:
 
 ```powershell
-mvn -Drevision=1.0.0 clean install
+mvn -Drevision=1.1.0 clean install
 ```
 
 The resulting artifacts are staged under:
 
 ```text
-target/synclite-platform-1.0.0/lib/nodejs/
+target/synclite-platform-1.1.0/lib/nodejs/
 ```
 
 If WSL/Linux, Zig, or the Linux toolchain is unavailable, Maven still builds

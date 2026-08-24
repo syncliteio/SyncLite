@@ -7,7 +7,7 @@ Top-of-file comments show where to flip **sync mode** (`REPLICATION` ↔ `CONSOL
 ## Quickest start — install from PyPI
 
 ```bash
-pip install synclite==1.0.0
+pip install synclite==1.1.0
 ```
 
 That's it — the published `synclite` wheel is self-contained (bundles its native runtime + DuckDB) and installs on Linux (`manylinux_2_28` x86_64 / aarch64), Windows (`win_amd64`), and macOS with no repo checkout and no Rust toolchain. Then skip straight to [step 2](#2-install-psycopg-for-the-post-sync-postgres-verification) to add the Postgres client and run the sample.
@@ -21,7 +21,7 @@ You are already in `sample-apps/python/` of an extracted release. The release sh
 ### 1. Install the bundled wheel
 
 ```pwsh
-pip install ..\..\lib\python\synclite-1.0.0-cp38-abi3-win_amd64.whl
+pip install ..\..\lib\python\synclite-1.1.0-cp38-abi3-win_amd64.whl
 ```
 
 > The release zip ships a Windows `cp38-abi3` wheel. On Linux / macOS, see [Developing against the repo](#developing-against-the-repo) below to build a wheel from the bundled Rust source under [`../../lib/rust/synclite-source/`](../../lib/rust/synclite-source/).
