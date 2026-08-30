@@ -23,6 +23,8 @@
 
 **Your app writes to a local embedded database. SyncLite makes every write land in PostgreSQL transactionally — automatically, durably, offline-tolerant — with no CDC pipeline, no message bus, no replication agent to wire up.**
 
+Your AI agent can build and persist its own local intelligence in a lightweight embedded database, and that intelligence can sync upward into a central intelligence layer that thousands of agents can leverage. The loop is two-way: local agents can also pull from that central intelligence to learn faster, adapt sooner, and align with the collective memory of the organization. Local memory stays fast, private, and resilient; central intelligence remains current without forcing every agent onto a slow, fragile network dependency.
+
 Drop one library into your application and you get a fully-featured embedded database (SQLite, DuckDB, Derby, H2, or HyperSQL) whose every write is durably logged and continuously synced to your destination in the background. Your hot path never touches the network. Your app keeps working offline and catches up when connectivity returns.
 
 ```mermaid
@@ -35,14 +37,14 @@ flowchart TB
 
     subgraph Before["TRADITIONAL — app bound to a remote DB"]
         direction LR
-        A1["Your App"]:::app
+        A1["Your App / Agent"]:::app
         PG1[("PostgreSQL<br/>(network-bound)")]:::bad
         A1 -- "every read/write<br/>over the network" --> PG1
     end
 
     subgraph After["SYNCLITE — local-first + background sync"]
         direction LR
-        A2["Your App"]:::app
+        A2["Your App / Agent"]:::app
         EDB[("Embedded DB<br/>SQLite / DuckDB<br/>local, always available")]:::edb
         RT["SyncLite Runtime<br/>log + shipper + sync"]:::rt
         PG2[("PostgreSQL")]:::dst
@@ -482,14 +484,14 @@ flowchart TB
 
     subgraph Before["TRADITIONAL — app bound to a remote DB"]
         direction LR
-        A1["Your App"]:::app
+        A1["Your App / Agent"]:::app
         PG1[("PostgreSQL<br/>(network-bound)")]:::bad
         A1 -- "every read/write<br/>over the network" --> PG1
     end
 
     subgraph After["SYNCLITE — local-first + background sync"]
         direction LR
-        A2["Your App"]:::app
+        A2["Your App / Agent"]:::app
         EDB[("Embedded DB<br/>SQLite / DuckDB<br/>local, always available")]:::edb
         RT["SyncLite Runtime<br/>log + shipper + sync"]:::rt
         PG2[("PostgreSQL")]:::dst
