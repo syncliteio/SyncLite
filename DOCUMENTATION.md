@@ -581,6 +581,8 @@ SyncLite devices are grouped into three user-facing categories:
 
 - **SQL Devices**: Full SQL-compatible embedded databases (SQLite, DuckDB, Apache Derby, H2, HyperSQL). These provide complete SQL semantics and are well suited when applications need to run arbitrary queries or DDL locally. For replication, SyncLite captures SQL/command logs produced by these devices; the Consolidator then deduces CDC-style operations from those logs before applying them to destinations.
 
+> **SQL dialect: SQLite syntax for all embedded databases.** Regardless of the underlying embedded database you choose (SQLite, DuckDB, Apache Derby, H2, or HyperSQL), the SQL statements you write against a SyncLite SQL device must use **SQLite SQL syntax**. SyncLite presents a uniform SQLite-compatible SQL surface across every SQL device type, so your application code stays portable across embedded databases without rewriting queries or DDL.
+
 - **Store Devices**: CRUD-oriented store variants (`*_STORE`) that expose the `SyncLiteStore` API (`insert`, `update`, `delete`, `selectAll`) instead of a free-form SQL surface. Store devices:
   - Offer a typed, simpler CRUD API with automatic schema evolution (auto-adding missing columns).
   - Produce logs that the Consolidator applies directly to destinations — they do not require a separate two-step deduce-and-apply processing used for SQL devices.
