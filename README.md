@@ -629,7 +629,7 @@ synclite-platform-1.1.0/
 |   +-- synclite-client/  synclite-db/  synclite-dbreader/
 |   +-- synclite-qreader/ synclite-jobmonitor/ synclite-validator/
 |   +-- synclite-sample-app/
-+-- sample-apps/                      # cpp / java / python / rust
++-- sample-apps/                      # cpp / java / python / rust / nodejs
 ```
 
 ---
