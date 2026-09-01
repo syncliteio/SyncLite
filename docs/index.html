@@ -149,8 +149,14 @@
     .hero-pillar .hp-icon { font-size: 1.4rem; margin-bottom: .6rem; }
     .hero-pillar .hp-title { font-size: .88rem; font-weight: 800; color: var(--text); margin-bottom: .35rem; }
     .hero-pillar .hp-desc { font-size: .8rem; color: var(--muted); line-height: 1.55; }
-    .hero-actions { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; margin-bottom: 3.5rem; }
+    .hero-sub a { color: var(--accent); text-decoration: none; font-weight: 600; }
+    .hero-sub a:hover { text-decoration: underline; }
+    .hero-sub-ai { max-width: 640px; }
+    .hero-actions { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; margin-bottom: 1rem; }
     .btn-lg { padding: .75rem 1.75rem; font-size: 1rem; border-radius: 10px; }
+    .hero-doclink { margin-bottom: 3.25rem; }
+    .hero-doclink a { color: var(--muted); font-size: .85rem; text-decoration: none; }
+    .hero-doclink a:hover { color: var(--accent); text-decoration: underline; }
 
     .hero-pills { display: flex; flex-wrap: wrap; gap: .6rem; justify-content: center; }
     .pill {
@@ -159,6 +165,33 @@
       font-size: .78rem; color: var(--muted); font-weight: 500;
       background: var(--bg2);
     }
+
+    /* ── AI AGENT STORY ── */
+    .ai-section { border-top: 1px solid var(--border); }
+    .ai-flow {
+      display: flex; align-items: center; justify-content: center;
+      gap: 1.5rem; flex-wrap: wrap; margin-top: .5rem;
+    }
+    .ai-agents-col { display: flex; flex-direction: column; gap: .75rem; }
+    .ai-agent {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 12px; padding: .8rem 1.2rem;
+      font-weight: 700; font-size: .9rem;
+      display: flex; align-items: center; gap: .6rem; min-width: 220px;
+    }
+    .ai-agent small { color: var(--muted); font-weight: 500; font-size: .72rem; margin-left: auto; }
+    .ai-agent-icon { font-size: 1.2rem; }
+    .ai-flow-arrows { display: flex; flex-direction: column; align-items: center; color: var(--accent); }
+    .ai-flow-arrows .ai-arrow { font-size: 2rem; line-height: 1; }
+    .ai-arrow-label { font-size: .72rem; color: var(--muted); font-family: 'JetBrains Mono', monospace; letter-spacing: .02em; }
+    .ai-hub {
+      background: linear-gradient(135deg, rgba(34,197,94,.12), rgba(59,130,246,.12));
+      border: 1px solid rgba(34,197,94,.35);
+      border-radius: 16px; padding: 1.5rem 2rem; text-align: center; min-width: 220px;
+    }
+    .ai-hub-icon { font-size: 2rem; }
+    .ai-hub-title { font-weight: 800; font-size: 1rem; margin-top: .4rem; }
+    .ai-hub-sub { color: var(--muted); font-size: .78rem; margin-top: .25rem; }
 
     /* ── PIPELINE DIAGRAM ── */
     .pipeline-wrap { max-width: 900px; margin: 0 auto; padding: 4rem 2rem; }
@@ -399,12 +432,11 @@
     The <span class="grad">Sync Layer</span><br/>Your App Has Been Missing
   </h1>
   <p class="hero-sub">
-    <strong>Your app should never wait on a network call to write data.</strong><br/>
-    Embed a real local database — SQLite, DuckDB, Derby, H2, or HyperSQL — with full ACID transactions at native speed, and SyncLite replicates every committed transaction to your central store automatically.
+    <strong>Write to a local database at native speed — SyncLite streams every committed transaction to your cloud store automatically.</strong><br/>
+    Embed SQLite, DuckDB, Derby, H2, or HyperSQL. Full ACID transactions. Works offline. Zero data loss.
   </p>
-  <p class="hero-sub">
-    <strong>Your AI agent should never lose what it learns.</strong><br/>
-    Each agent persists its own local intelligence in an embedded database and syncs it into a shared central layer — a two-way loop where agents learn faster and act smarter together.
+  <p class="hero-sub hero-sub-ai">
+    <strong>Building AI agents?</strong> Same engine, new frontier — give every agent durable local memory that syncs into a shared intelligence layer. <a href="#ai-agents">See the agent story →</a>
   </p>
   <p class="hero-conviction">
     <span class="hero-conviction-items">
@@ -434,9 +466,10 @@
   </div>
 
   <div class="hero-actions">
-    <a class="btn btn-primary btn-lg" href="https://github.com/syncliteio/SyncLite/blob/main/DOCUMENTATION.md" target="_blank">Read the Docs →</a>
-    <a class="btn btn-outline btn-lg" href="https://github.com/syncliteio/SyncLite" target="_blank">View on GitHub</a>
+    <a class="btn btn-primary btn-lg" href="https://github.com/syncliteio/SyncLite/blob/main/GETTING_STARTED.md" target="_blank">Get Started in Minutes →</a>
+    <a class="btn btn-outline btn-lg" href="https://github.com/syncliteio/SyncLite" target="_blank">★ View on GitHub</a>
   </div>
+  <div class="hero-doclink"><a href="https://github.com/syncliteio/SyncLite/blob/main/DOCUMENTATION.md" target="_blank">Or read the full documentation →</a></div>
   <div class="hero-pills">
     <span class="pill">Local-First Apps</span>
     <span class="pill">Edge-to-Cloud Sync</span>
@@ -475,6 +508,33 @@
     Sources produce compact binary logs → shipped to staging → Consolidator delivers in real time. Sub-second latency on local stages.
   </p>
 </div>
+
+<div class="divider"></div>
+
+<!-- ═══════════════════════  AI AGENT STORY  ═════════════════════ -->
+<section id="ai-agents" class="section ai-section">
+  <div class="section-inner">
+    <div class="section-label">For AI Builders</div>
+    <h2>Local Memory → Collective Intelligence</h2>
+    <p class="section-desc">Every agent writes what it learns to its own embedded database — no network on the hot path. SyncLite streams that memory into a shared central layer, so your whole fleet learns from what any single agent discovers.</p>
+    <div class="ai-flow">
+      <div class="ai-agents-col">
+        <div class="ai-agent"><span class="ai-agent-icon">🤖</span> Agent A <small>local memory</small></div>
+        <div class="ai-agent"><span class="ai-agent-icon">🤖</span> Agent B <small>local memory</small></div>
+        <div class="ai-agent"><span class="ai-agent-icon">🤖</span> Agent C <small>local memory</small></div>
+      </div>
+      <div class="ai-flow-arrows">
+        <div class="ai-arrow-label">learn ⇅ contribute</div>
+        <div class="ai-arrow">⇄</div>
+      </div>
+      <div class="ai-hub">
+        <div class="ai-hub-icon">🧠</div>
+        <div class="ai-hub-title">Central Intelligence</div>
+        <div class="ai-hub-sub">PostgreSQL · shared memory</div>
+      </div>
+    </div>
+  </div>
+</section>
 
 <div class="divider"></div>
 
