@@ -118,10 +118,15 @@
 			<outputDirectory>lib/python</outputDirectory>
 		</fileSet>
 		<fileSet>
-			<!-- Host-platform N-API npm tarball for offline npm installation. -->
+			<!-- Host-platform + cross-compiled N-API npm tarballs built by
+			     pom.xml build-node-package / pack-node-package executions via
+			     scripts/pack-offline.js. Includes the main "synclite" package
+			     (optionalDependencies-based loader) and the scoped
+			     "synclite-synclite-<platform>" per-platform packages. -->
 			<directory>${project.basedir}/synclite-logger-rust/nodejs/dist</directory>
 			<includes>
-				<include>synclite-${revision}-*.tgz</include>
+				<include>synclite-${revision}.tgz</include>
+				<include>synclite-synclite-*-${revision}.tgz</include>
 			</includes>
 			<fileMode>644</fileMode>
 			<directoryMode>755</directoryMode>
