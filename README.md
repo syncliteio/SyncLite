@@ -21,11 +21,15 @@
 
 # SyncLite — Build Anything, Sync Anywhere
 
-**Your app writes to a local embedded database. SyncLite makes every write land in PostgreSQL transactionally — automatically, durably, offline-tolerant — with no CDC pipeline, no message bus, no replication agent to wire up.**
+### **Your database. Everywhere. Always in sync.**
 
-Your AI agent can build and persist its own local intelligence in a lightweight embedded database, and that intelligence can sync upward into a central intelligence layer that thousands of agents can leverage. The loop is two-way: local agents can also pull from that central intelligence to learn faster, adapt sooner, and align with the collective memory of the organization. Local memory stays fast, private, and resilient; central intelligence remains current without forcing every agent onto a slow, fragile network dependency.
+**Your app writes to a local embedded database. SyncLite makes every write land in PostgreSQL transactionally — automatically, durably, offline-tolerant.**
 
-Drop one library into your application and you get a fully-featured embedded database (SQLite, DuckDB, Derby, H2, or HyperSQL) whose every write is durably logged and continuously synced to your destination in the background. Your hot path never touches the network. Your app keeps working offline and catches up when connectivity returns.
+Drop **one library** into your app and get a fully-featured embedded database (SQLite, DuckDB, Derby, H2, or HyperSQL) whose every transaction is durably logged and continuously consolidated to your central database or data lake.
+
+**Offline by default. Transactionally consistent. No CDC. No Kafka. No replication agent to wire up.**
+
+Your hot path never touches the network. Your app keeps working offline and catches up when connectivity returns.
 
 ```mermaid
 flowchart TB
@@ -62,6 +66,54 @@ flowchart TB
 | Works offline | ✗ fails without connectivity | **✓ fully offline, syncs on reconnect** |
 | Delivery guarantee | app must build retries/dedup | **✓ durable log, exactly-once** |
 | Moving parts | app + DB + custom CDC/queue | **✓ one embedded library** |
+
+---
+
+### **For AI agents: local memory → collective intelligence**
+
+Each agent gets fast, private, persistent local memory in a lightweight embedded database. That knowledge flows **upward** into a shared intelligence layer thousands of agents can draw on — and collective knowledge flows **back down** so every agent learns faster and adapts sooner.
+
+**Write locally. Learn collectively. Sync automatically.**
+
+```mermaid
+flowchart TB
+    classDef hub   fill:#f0fff4,stroke:#2f855a,stroke-width:1.5px,color:#22543d
+    classDef agent fill:#eef6ff,stroke:#2b6cb0,stroke-width:1px,color:#1a365d
+    classDef mem   fill:#fffaf0,stroke:#c98a00,stroke-width:1px,color:#5c3a00
+
+    Hub[("CENTRAL INTELLIGENCE<br/>shared, always-current<br/>collective memory")]:::hub
+
+    subgraph Fleet["Agent fleet — local-first memory, no network on the hot path"]
+        direction LR
+
+        subgraph A["Agent A"]
+            direction TB
+            AA["Agent A"]:::agent
+            MA[("Local Memory<br/>embedded DB")]:::mem
+            AA -- "in-process<br/>read/write" --> MA
+        end
+
+        subgraph B["Agent B"]
+            direction TB
+            AB["Agent B"]:::agent
+            MB[("Local Memory<br/>embedded DB")]:::mem
+            AB -- "in-process<br/>read/write" --> MB
+        end
+
+        subgraph C["Agent C"]
+            direction TB
+            AC["Agent C"]:::agent
+            MC[("Local Memory<br/>embedded DB")]:::mem
+            AC -- "in-process<br/>read/write" --> MC
+        end
+    end
+
+    MA <== "learn ⇅ contribute" ==> Hub
+    MB <== "learn ⇅ contribute" ==> Hub
+    MC <== "learn ⇅ contribute" ==> Hub
+```
+
+<sub>Local memory stays fast, private, and resilient. Central intelligence stays current — without forcing any agent onto a slow, fragile network dependency in its hot path. Knowledge flows up (each agent contributes) and back down (every agent learns).</sub>
 
 ---
 
