@@ -21,15 +21,17 @@ You are already in `sample-apps/nodejs/` of an extracted release. The release sh
 ### 1. Install the bundled package
 
 ```bash
-npm install ../../lib/nodejs/synclite-1.1.0-win32-x64-msvc.tgz
+npm install ../../lib/nodejs/synclite-1.1.0.tgz
 ```
 
-> Substitute the platform tag matching your OS/arch:
-> - Windows x64: `synclite-1.0.0-win32-x64-msvc.tgz`
-> - Linux x86_64: `synclite-1.0.0-linux-x64-gnu.tgz`
-> - Linux aarch64: `synclite-1.0.0-linux-arm64-gnu.tgz`
-> - macOS x64: `synclite-1.0.0-darwin-x64.tgz`
-> - macOS arm64: `synclite-1.0.0-darwin-arm64.tgz`
+The main tarball bundles the native addon for every supported platform (Windows x64, Linux x86_64/aarch64, macOS) — `index.js` picks the right one for your OS/arch at load time, so this single command works unchanged everywhere. No platform substitution needed.
+
+> Publishing to a private npm registry instead? Per-platform tarballs are also
+> available (`synclite-synclite-win32-x64-msvc-1.1.0.tgz`,
+> `synclite-synclite-linux-x64-gnu-1.1.0.tgz`,
+> `synclite-synclite-linux-arm64-gnu-1.1.0.tgz`) for use as `optionalDependencies`
+> alongside the main package — see
+> [`synclite-logger-rust/nodejs/NPM_PACKAGING.md`](../../../synclite-logger-rust/nodejs/NPM_PACKAGING.md).
 
 ### 2. Install `pg` (for the post-sync Postgres verification)
 
