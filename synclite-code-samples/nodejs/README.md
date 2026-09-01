@@ -10,7 +10,12 @@ Top-of-file comments show where to flip **sync mode** (`REPLICATION` ↔ `CONSOL
 npm install synclite@1.1.0
 ```
 
-That's it — the published `synclite` npm package is self-contained (bundles its native runtime + DuckDB) and installs on Linux (x86_64 / aarch64), Windows (x64), and macOS with no repo checkout and no Rust toolchain. Then skip straight to [step 2](#2-install-pg-for-the-post-sync-postgres-verification) to add the Postgres client and run the sample.
+That's it — npm automatically installs the matching native optional dependency
+(`@synclite/native-win32-x64-msvc`, `@synclite/native-linux-x64-gnu`, or
+`@synclite/native-linux-arm64-gnu`). It runs without a repo checkout or Rust
+toolchain on Windows x64, Linux x86_64, and Linux aarch64. Then skip straight
+to [step 2](#2-install-pg-for-the-post-sync-postgres-verification) to add the
+Postgres client and run the sample.
 
 Prefer to run entirely offline from an extracted release zip? Use [Run from the release zip](#run-from-the-release-zip) below instead.
 
@@ -18,20 +23,19 @@ Prefer to run entirely offline from an extracted release zip? Use [Run from the 
 
 You are already in `sample-apps/nodejs/` of an extracted release. The release ships the `synclite` npm tarball under [`../../lib/nodejs/`](../../lib/nodejs/).
 
-### 1. Install the bundled package
+### 1. Install the bundled packages
 
 ```bash
-npm install ../../lib/nodejs/synclite-1.1.0.tgz
+node install-synclite.js
 ```
 
-The main tarball bundles the native addon for every supported platform (Windows x64, Linux x86_64/aarch64, macOS) — `index.js` picks the right one for your OS/arch at load time, so this single command works unchanged everywhere. No platform substitution needed.
+The installer detects your OS/architecture and installs `synclite-1.1.0.tgz`
+plus its matching scoped native package from `../../lib/nodejs/`. It works
+unchanged on Windows x64, Linux x86_64, and Linux aarch64 — no registry access,
+native build, or manual platform selection required.
 
-> Publishing to a private npm registry instead? Per-platform tarballs are also
-> available (`synclite-synclite-win32-x64-msvc-1.1.0.tgz`,
-> `synclite-synclite-linux-x64-gnu-1.1.0.tgz`,
-> `synclite-synclite-linux-arm64-gnu-1.1.0.tgz`) for use as `optionalDependencies`
-> alongside the main package — see
-> [`synclite-logger-rust/nodejs/NPM_PACKAGING.md`](../../../synclite-logger-rust/nodejs/NPM_PACKAGING.md).
+> For a registry install, use `npm install synclite`. npm resolves the matching
+> `@synclite/native-<platform>` optional dependency automatically.
 
 ### 2. Install `pg` (for the post-sync Postgres verification)
 
