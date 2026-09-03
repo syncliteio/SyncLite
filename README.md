@@ -654,6 +654,11 @@ synclite-runtime-1.1.0/
 |   |   +-- synclite-<version>-cp38-abi3-win_amd64.whl
 |   |   +-- synclite-<version>-cp38-abi3-manylinux_2_28_x86_64.whl
 |   |   +-- synclite-<version>-cp38-abi3-manylinux_2_28_aarch64.whl
+|   +-- nodejs/
+|   |   +-- synclite-1.1.0.tgz
+|   |   +-- synclite-native-win32-x64-msvc-1.1.0.tgz
+|   |   +-- synclite-native-linux-arm64-gnu-1.1.0.tgz
+|   |   +-- synclite-native-linux-x64-gnu-1.1.0.tgz
 |   +-- rust/
 |       +-- synclite-source/                    # Self-contained Cargo workspace
 +-- sample-apps/                                # One sample per language
@@ -661,6 +666,7 @@ synclite-runtime-1.1.0/
 |   +-- java/                                   # javac + lib/java/synclite-<version>.jar
 |   +-- python/                                 # pip install lib/python/*.whl
 |   +-- rust/                                   # cargo run, path-deps into lib/rust
+|   +-- nodejs/                                 # npm install lib/nodejs/synclite-1.1.0.tgz
 +-- LICENSE
 +-- synclite_platform_version.txt
 ```
