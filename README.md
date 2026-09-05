@@ -147,7 +147,7 @@ cargo add synclite-rs           # Rust — cdylib also embeddable from C/C++, Go
 implementation 'io.synclite:synclite:1.1.0'
 ```
 
-The Python wheel and Java jar are **self-contained** — they bundle the native runtime, DuckDB, and the PostgreSQL driver. `pip install` is genuinely all you need on Windows, Linux, and macOS.
+The Python wheel, Java JAR, Node.js package, Rust crate, and C++ distribution are self-contained — they bundle the native runtime and required dependencies, including DuckDB and the PostgreSQL driver where applicable. No separate runtime installation or native dependency setup is required. Just install or add the package for your language, and you’re ready to use SyncLite on Windows, Linux, and macOS.
 
 ---
 
