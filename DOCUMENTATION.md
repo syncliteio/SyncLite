@@ -53,7 +53,9 @@ These are the SQLite/DuckDB versions used by the SyncLite runtime line in genera
 6. [SyncLite Logger (Java JDBC) + SyncLite Runtime (Rust/Python/Node.js/C++)](#6-synclite-logger-java-jdbc--synclite-runtime-rustpythonnodejsc)
    - [Device Types](#61-device-types)
    - [Configuration Reference](#62-configuration-reference-syncliteconf)
+    - [Multiple-Destination Initialization](#621-multiple-destination-initialization)
    - [Java JDBC API](#63-java-jdbc-api)
+        - [Spring Boot + Hibernate: SQLite to PostgreSQL](SPRING_BOOT_HIBERNATE.md)
    - [SyncLiteStore API](#64-synclitestore-api)
    - [SyncLiteStream API](#65-synclitestream-api)
    - [Jedis (Redis-Compatible) API](#66-jedis-redis-compatible-api)
@@ -136,7 +138,7 @@ SyncLite Consolidator (central always-on sink)  OR  Embedded Consolidator (in-pr
 **Two consolidator topologies, same wire format.** The Consolidator engine is available in two interchangeable forms:
 
 - **Standalone (central) Consolidator WAR** — the always-on web app at `http://<host>:8080/synclite-consolidator`. Best when many devices fan in to one place and you want centralized monitoring.
-- **Embedded Consolidator** — the same engine running *in-process* inside your application. The Java jar (`synclite-<version>.jar`) and the Rust runtime (`synclite` crate) both bundle it via a JNI-loaded native engine. Best for single-process deployments — drop in one library, point it at a destination, and the app self-replicates with no separate service.
+- **Embedded Consolidator** — the same engine running *in-process* inside your application. The Java jar (`synclite-<version>.jar`) loads it through JNI; the Rust runtime (`synclite` crate) runs it natively and exposes it to Python and Node.js bindings. Best for single-process deployments — drop in one library, point it at one or more destinations, and the app self-replicates with no separate service.
 
 Both produce the same `.sqllog` segments, so you can mix devices (some logger-only against the central Consolidator, others fully embedded) on the same staging storage.
 
@@ -146,8 +148,8 @@ Both produce the same `.sqllog` segments, so you can mix devices (some logger-on
 
 | Component | Description | Port / URL |
 |---|---|---|
-| **SyncLite for Java** | One jar (`synclite-<version>.jar`) = JDBC / Store / Stream APIs + logger + shipper + in-process consolidator (via bundled `synclite_jni` native). Logger-only or full-runtime is just an API-call choice at `initialize(...)` time. | (embedded library — no port) |
-| **SyncLite Rust Runtime** | Same runtime in Rust (`synclite` crate) — logger + shipper + in-process consolidator. Consumable from Rust, Python, Node.js, C/C++, Go, Ruby, C# via a single `cdylib`. | (embedded library — no port) |
+| **SyncLite for Java** | One jar (`synclite-<version>.jar`) = JDBC / Store / Stream APIs + logger + shipper + in-process consolidator (via bundled `synclite_jni` native). The `initialize(...)` overloads accept one `DestinationOptions` or an ordered `List<DestinationOptions>`. Logger-only or full-runtime is an API-call choice at initialization time. | (embedded library — no port) |
+| **SyncLite Rust Runtime** | Same runtime in Rust (`synclite` crate) — logger + shipper + in-process consolidator. Its generic `initialize(...)` accepts zero, one, or an ordered vector of destinations. Consumable from Rust, Python, Node.js, C/C++, Go, Ruby, C# via a single `cdylib`. | (embedded library — no port) |
 | **SyncLite DB** | Standalone HTTP/JSON database server for any language | Configurable (default `5555`) |
 | **SyncLite Client** | Interactive CLI for SyncLite devices | (CLI tool — no port) |
 | **SyncLite Consolidator** | Central real-time consolidation engine (WAR) | `http://localhost:8080/synclite-consolidator` |
@@ -155,7 +157,7 @@ Both produce the same `.sqllog` segments, so you can mix devices (some logger-on
 | **SyncLite QReader** | IoT MQTT connector (WAR) | `http://localhost:8080/synclite-qreader` |
 | **SyncLite Job Monitor** | Unified job management and scheduling UI (WAR) | `http://localhost:8080/synclite-jobmonitor` |
 | **SyncLite Validator** | End-to-end integration testing tool (WAR) | `http://localhost:8080/synclite-validator` |
-| **Sample Web App** | JSP/Servlet demo showing SyncLite Logger in action | `http://localhost:8080/synclite-sample-app` |
+| **Sample Web App** | JSP/Servlet demo showing standalone logging or embedded fan-out to one or more ordered destinations | `http://localhost:8080/synclite-sample-app` |
 
 ---
 
@@ -274,7 +276,7 @@ Producing a **PyPI-acceptable `manylinux` Linux wheel** (x86_64 / aarch64) has a
   # zig (for the aarch64 cross-target): install from https://ziglang.org/download/ and put it on PATH
   ```
 - **This step is entirely best-effort.** If WSL or the Linux toolchain is missing, the build prints a skip notice and **still succeeds** — you simply get no local Linux wheels. It is governed by the same `-DskipRustCrossCompile` flag (pass `=true` to skip it explicitly).
-- **The authoritative, full multi-platform wheel set** (Linux x86_64/aarch64 + Windows x64 + macOS x86_64/arm64) is produced by CI — see [`.github/workflows/python-wheels.yml`](.github/workflows/python-wheels.yml). macOS wheels can only be built on a macOS runner (no redistributable Apple SDK), so they are never produced locally on Windows/Linux.
+- **The authoritative, full multi-platform wheel set** (Linux x86_64/aarch64 + Windows x64 + macOS x86_64/arm64) is produced by release CI — see the [Python wheel guide](synclite-logger-rust/python/README.md#distribution-wheels-per-platform). macOS wheels can only be built on a macOS runner (no redistributable Apple SDK), so they are never produced locally on Windows/Linux.
 
 ### Build individual components
 
@@ -367,7 +369,7 @@ To stop:
 
 SyncLite uses **three** roots on disk. Only the first is chosen by your application; the other two are derived from sensible defaults under `<userHome>/synclite/job1/` and are overridable via `synclite.conf`.
 
-> **Why the shared `<userHome>/synclite/job1/` root?** Keeping `stageDir/` and `workDir/` under a single shared root (rather than alongside each DB) means the embedded runtime and the standalone Consolidator WAR can point at the **same** directories with zero file moves. Switching a deployment from in-process consolidation to the central Consolidator topology — or back — is just a call-site change (`initialize(dbPath, deviceName, dst)` ↔ `initialize(dbPath, conf)`) plus starting / stopping the Consolidator app; the on-disk segments and consolidator state remain in place.
+> **Why the shared `<userHome>/synclite/job1/` root?** Keeping `stageDir/` and `workDir/` under a single shared root (rather than alongside each DB) means the embedded runtime and the standalone Consolidator WAR can point at the **same** directories with zero file moves. Switching a deployment from in-process consolidation to the central Consolidator topology — or back — is just a call-site change (`initialize(dbPath, deviceName, destinationOrList)` ↔ `initialize(dbPath, conf)`) plus starting / stopping the Consolidator app; the on-disk segments and consolidator state remain in place.
 
 ### The three roots
 
@@ -378,6 +380,8 @@ SyncLite uses **three** roots on disk. Only the first is chosen by your applicat
 | Outbound log segments | `<userHome>/synclite/job1/stageDir/synclite_<deviceName>_<uuid>/` | SyncLite default; override via `local-data-stage-directory` in `synclite.conf` | Logger writes `.sqllog` segments; shipper / Consolidator reads them |
 | In-process consolidator state + `synclite_device.trace` | `<userHome>/synclite/job1/workDir/synclite_<deviceName>_<uuid>/` | SyncLite default; override via `work-dir` in `synclite.conf` | In-process consolidator (embedded runtime) **or** standalone Consolidator |
 | Standalone Consolidator global trace | `<workDir>/synclite_consolidator.trace` | Standalone Consolidator app | **Standalone Consolidator only** — the embedded runtime never writes this file |
+
+The Sample Web App uses a user-selected job name instead of the literal `job1`. Its default local destination databases are `<userHome>/synclite/<jobName>/workDir/consolidated_db_N.sqlite` and `<userHome>/synclite/<jobName>/workDir/consolidated_db_N.duckdb`; source device databases remain under that job's `db/` directory.
 
 ### Two traces to know about when something breaks
 
@@ -390,22 +394,22 @@ For the **standalone Consolidator app**, both of the above are still produced pe
 
 ### Example layout on disk
 
-For a sample whose DB is `orders.db` and `deviceName = "orders-device"`:
+For a sample whose DB is `orders.db` and `deviceName = "ordersdevice"`:
 
 ```text
 <your app's cwd>/
 +-- orders.db                                 # your local SQLite / DuckDB / ... DB
 +-- orders.db.synclite/
     +-- orders.db.trace                       # logger trace (per-DB)
-    +-- reinitialize.orders-device            # (optional) trigger file you drop here
-    +-- pause_sync.orders-device              # (optional)
-    +-- resume_sync.orders-device             # (optional)
+    +-- reinitialize.ordersdevice             # (optional) trigger file you drop here
+    +-- pause_sync.ordersdevice               # (optional)
+    +-- resume_sync.ordersdevice              # (optional)
 
 <userHome>/synclite/job1/
 +-- stageDir/
-|   +-- synclite_orders-device_<uuid>/        # outbound .sqllog segments
+|   +-- synclite_ordersdevice_<uuid>/         # outbound .sqllog segments
 +-- workDir/
-    +-- synclite_orders-device_<uuid>/
+    +-- synclite_ordersdevice_<uuid>/
         +-- synclite_device.trace             # in-process consolidator trace
         +-- ... (consolidator metadata / sentinel files)
 ```
@@ -794,12 +798,65 @@ device-name=my-edge-device-001
 
 ---
 
+### 6.2.1 Multiple-Destination Initialization
+
+The embedded Java, Rust, Python, and Node.js runtimes can fan one device's ordered change stream out to one or more **SQLite, DuckDB, or PostgreSQL** destinations. There is no separate multi-destination method: use the same public `initialize` entry point used for a single destination.
+
+| SDK | Single-destination form | Multiple-destination form |
+|---|---|---|
+| Java | `initialize(..., DestinationOptions)` | matching `initialize(..., List<DestinationOptions>)` overload |
+| Rust | `initialize(..., Some(destination), options)` or `initialize(..., destination, options)` | `initialize(..., vec![destination_1, destination_2], options)` |
+| Python | `initialize(..., destination=destination)` | `initialize(..., destinations=[destination_1, destination_2])` |
+| Node.js | `initialize({ ..., destination })` | `initialize({ ..., destinations: [destination1, destination2] })` |
+
+The existing single-destination forms remain backward compatible. In Python and Node.js, `destination` and `destinations` are mutually exclusive; a `destinations` collection must not be empty.
+
+**Ordering and failure contract**
+
+1. Collection order is preserved and defines stable one-based destination indexes.
+2. SyncLite validates the complete collection before starting destination workers.
+3. One logger and shipper serve the device; destination workers start **sequentially**, in list order.
+4. If a later worker cannot start, SyncLite rolls back the workers started by that initialization call.
+5. `SyncLite.awaitSync(...)` / `await_sync(...)` waits in the Rust logger until the minimum checkpoint across all configured destinations reaches the source commit, using one shared timeout budget.
+
+**Indexed destination fields**
+
+Programmatic APIs build the indexed configuration automatically. When destinations are represented as fields — including the Sample Web App form contract — use this canonical shape:
+
+```properties
+num-destinations=2
+
+dst-type-1=POSTGRES
+dst-connection-string-1=postgresql://user:password@localhost:5432/syncdb
+dst-database-1=syncdb
+dst-schema-1=public
+dst-sync-mode-1=REPLICATION
+
+dst-type-2=SQLITE
+dst-connection-string-2=/var/synclite/work/orders-destination-2.sqlite
+dst-database-2=
+dst-schema-2=
+dst-sync-mode-2=REPLICATION
+```
+
+`num-destinations` is only the Sample Web App's count field; the app converts those form fields into a Java `List<DestinationOptions>`. The Rust-backed runtime (including its Python and Node.js bindings) can also discover configuration-file destinations from numbered `dst-*-N` keys. Its existing unsuffixed keys (`dst-type`, `dst-connection-string`, `dst-database`, `dst-schema`, and `dst-sync-mode`) remain valid for one destination. Java embedded initialization does not discover numbered destination keys from `synclite.conf`; pass a `DestinationOptions` or `List<DestinationOptions>` instead. Use one representation consistently within an initialization.
+
+`dst-sync-mode-N` is **per embedded destination**, so one destination can use `REPLICATION` while another uses `CONSOLIDATION`. This is distinct from the standalone Consolidator job's global `dst-sync-mode`; see [Sync Modes](#95-sync-modes-replication-vs-consolidation).
+
+---
+
 ### 6.3 Java JDBC API
+
+#### Spring Boot and Hibernate
+
+Use the `SQLite` device with the `jdbc:synclite_sqlite:` URL. Initialize it before Spring creates the connection pool; the recommended pattern is a SyncLite lifecycle bean on which the application `DataSource` explicitly depends. Do not defer initialization to `ApplicationRunner`, `CommandLineRunner`, `ApplicationReadyEvent`, or an unordered `@PostConstruct`, because Hibernate or HikariCP may have opened the first connection already.
+
+See the complete [Spring Boot + Hibernate: SQLite to PostgreSQL guide](SPRING_BOOT_HIBERNATE.md) for the dependency, `application.yml`, lifecycle-managed initialization, Hibernate entity, REST endpoint, destination verification, and troubleshooting.
 
 #### Initializing and using a SQLite device
 
 ```java
-import io.synclite.logger.*;
+import io.synclite.*;
 import java.nio.file.Path;
 import java.sql.*;
 
@@ -810,7 +867,7 @@ public class MyEdgeApp {
         Path conf   = dbDir.resolve("synclite.conf");
 
         // Load the SyncLite JDBC driver for SQLite
-        Class.forName("io.synclite.logger.SQLite");
+        Class.forName("io.synclite.SQLite");
 
         // Initialize SyncLite Logger (reads conf, sets up staging)
         SQLite.initialize(dbPath, conf);
@@ -827,17 +884,47 @@ public class MyEdgeApp {
 }
 ```
 
+#### Embedded runtime with one or many destinations
+
+Every Java device facade (`SQLite`, `DuckDB`, `Derby`, `H2`, `HyperSQL`, their Store/Appender variants, and `Streaming`) keeps its existing single-`DestinationOptions` overload and also provides a matching ordered-list overload:
+
+```java
+import io.synclite.*;
+import java.nio.file.Path;
+import java.util.List;
+
+Path dbPath = Path.of("orders.db");
+
+DestinationOptions destination1 = DestinationOptions.builder()
+    .dstType(DstType.POSTGRES)
+    .connectionString("jdbc:postgresql://localhost:5432/syncdb?user=user&password=password")
+    .database("syncdb")
+    .schema("public")
+    .syncMode(DstSyncMode.REPLICATION)
+    .build();
+
+DestinationOptions destination2 = DestinationOptions.builder()
+    .dstType(DstType.SQLITE)
+    .connectionString("jdbc:sqlite:orders-destination-2.sqlite")
+    .syncMode(DstSyncMode.REPLICATION)
+    .build();
+
+SQLite.initialize(dbPath, "ordersdevice", List.of(destination1, destination2));
+```
+
+Use `SQLite.initialize(dbPath, "ordersdevice", destination1)` when only one destination is required. Both forms use the same method name and lifecycle APIs.
+
 #### Switching the embedded database engine
 
 Replace `SQLite` / `synclite_sqlite` with the corresponding class and URL prefix:
 
 | Engine | Driver Class | JDBC URL Prefix |
 |---|---|---|
-| SQLite | `io.synclite.logger.SQLite` | `jdbc:synclite_sqlite:` |
-| DuckDB | `io.synclite.logger.DuckDB` | `jdbc:synclite_duckdb:` |
-| Apache Derby | `io.synclite.logger.Derby` | `jdbc:synclite_derby:` |
-| H2 | `io.synclite.logger.H2` | `jdbc:synclite_h2:` |
-| HyperSQL | `io.synclite.logger.HyperSQL` | `jdbc:synclite_hsqldb:` |
+| SQLite | `io.synclite.SQLite` | `jdbc:synclite_sqlite:` |
+| DuckDB | `io.synclite.DuckDB` | `jdbc:synclite_duckdb:` |
+| Apache Derby | `io.synclite.Derby` | `jdbc:synclite_derby:` |
+| H2 | `io.synclite.H2` | `jdbc:synclite_h2:` |
+| HyperSQL | `io.synclite.HyperSQL` | `jdbc:synclite_hsqldb:` |
 
 #### PreparedStatement and batch operations
 
@@ -856,7 +943,7 @@ try (Connection c = DriverManager.getConnection("jdbc:synclite_sqlite:" + dbPath
 #### Store device (typed CRUD over SQL backend)
 
 ```java
-Class.forName("io.synclite.logger.SQLiteStore");
+Class.forName("io.synclite.SQLiteStore");
 SQLiteStore.initialize(dbPath, conf);
 
 try (SyncLiteStore store = SQLiteStore.open(dbPath)) {
@@ -873,7 +960,7 @@ SQLiteStore.closeDevice(dbPath);
 #### Streaming device (high-throughput append-only)
 
 ```java
-Class.forName("io.synclite.logger.Streaming");
+Class.forName("io.synclite.Streaming");
 Streaming.initialize(dbPath, conf);
 
 try (SyncLiteStream stream = SyncLiteStream.open(dbPath)) {
@@ -896,12 +983,12 @@ Streaming.closeDevice(dbPath);
 **STORE devices** expose a typed, schema-evolution-aware CRUD API. No raw SQL required. Missing columns are automatically added when a new key appears in an `insert` / `update` map.
 
 ```java
-import io.synclite.logger.SQLiteStore;
-import io.synclite.logger.SyncLiteStore;
+import io.synclite.SQLiteStore;
+import io.synclite.SyncLiteStore;
 import java.util.*;
 import java.nio.file.Path;
 
-Class.forName("io.synclite.logger.SQLiteStore");
+Class.forName("io.synclite.SQLiteStore");
 Path dbPath = Path.of("mystore.db");
 SQLiteStore.initialize(dbPath, Path.of("synclite.conf"));
 
@@ -948,12 +1035,12 @@ The same API is available for DuckDB, Derby, H2, and HyperSQL backends — repla
 `SyncLiteStream` wraps the `STREAMING` device with a fluent append-only API. UPDATE and DELETE are intentionally absent — this models event flow, not mutable records.
 
 ```java
-import io.synclite.logger.Streaming;
-import io.synclite.logger.SyncLiteStream;
+import io.synclite.Streaming;
+import io.synclite.SyncLiteStream;
 import java.util.*;
 import java.nio.file.Path;
 
-Class.forName("io.synclite.logger.Streaming");
+Class.forName("io.synclite.Streaming");
 Path dbPath = Path.of("events.db");
 Streaming.initialize(dbPath, Path.of("synclite.conf"));
 
@@ -988,12 +1075,12 @@ try (SyncLiteStream stream = SyncLiteStream.open(dbPath)) {
 
 ### 6.6 Jedis (Redis-Compatible) API
 
-`io.synclite.logger.Jedis` is a drop-in subclass of the `redis.clients.jedis.Jedis` class. Every write is **durably committed to a `SQLITE_STORE` SyncLite device** before being forwarded to Redis. On the next startup the cache is automatically repopulated from the store, so Redis data survives restarts. All captured mutations flow through SyncLite Consolidator to any downstream destination.
+`io.synclite.Jedis` is a drop-in subclass of the `redis.clients.jedis.Jedis` class. Every write is **durably committed to a `SQLITE_STORE` SyncLite device** before being forwarded to Redis. On the next startup the cache is automatically repopulated from the store, so Redis data survives restarts. All captured mutations flow through SyncLite Consolidator to any downstream destination.
 
 #### Managed mode (Jedis handles SyncLiteStore lifecycle)
 
 ```java
-import io.synclite.logger.Jedis;
+import io.synclite.Jedis;
 import java.nio.file.Path;
 
 Path dbPath = Path.of("cache.db");
@@ -1043,10 +1130,10 @@ try (SyncLiteStore store = SQLiteStore.open(dbPath)) {
 
 ### 6.7 Kafka Producer API
 
-`io.synclite.logger.KafkaProducer` is a drop-in replacement for `org.apache.kafka.clients.producer.KafkaProducer`. It accepts the same `Properties` map and `ProducerRecord` arguments that standard Kafka producer code uses, but durably persists every record to a `STREAMING` SyncLite device before forwarding to the broker. This lets you adopt SyncLite persistence behind existing Kafka producer code with no structural changes.
+`io.synclite.KafkaProducer` is a drop-in replacement for `org.apache.kafka.clients.producer.KafkaProducer`. It accepts the same `Properties` map and `ProducerRecord` arguments that standard Kafka producer code uses, but durably persists every record to a `STREAMING` SyncLite device before forwarding to the broker. This lets you adopt SyncLite persistence behind existing Kafka producer code with no structural changes.
 
 ```java
-import io.synclite.logger.KafkaProducer;
+import io.synclite.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import java.nio.file.Path;
 import java.util.Properties;
@@ -1079,7 +1166,7 @@ runtime. No JVM, no JAR, no `jaydebeapi` / `jpype` bridge.
 |---|---|
 | Backed by | PyO3 over the SyncLite Rust runtime |
 | Install (source) | `pip install maturin && cd synclite-logger-rust/python && maturin develop --release` |
-| Install (wheel) | `pip install synclite` (PyPI release on the roadmap) |
+| Install (wheel) | `pip install synclite==1.1.0` |
 | Surface | `Connection` / `Statement`, `DuckDBConnection` / `DuckDBStatement`, plus module-level `initialize`, `await_sync`, `pause_sync`, `resume_sync` |
 | Parameter binding | Yes (full SQL parameter binding, batched and unbatched) |
 | CPython matrix | Any 3.8+ on any OS/arch the Rust runtime supports |
@@ -1131,6 +1218,32 @@ sl.await_sync(DB_PATH, 30.0)
 # sl.resume_sync(DB_PATH)
 conn.close()
 ```
+
+For fan-out, pass a non-empty sequence through the keyword-only `destinations` argument:
+
+```python
+destination_1 = sl.DestinationOptions(
+    dst_type="POSTGRES",
+    dst_connection_string="postgresql://user:pw@localhost:5432/syncdb",
+    dst_database="syncdb",
+    dst_schema="public",
+    dst_sync_mode="REPLICATION",
+)
+destination_2 = sl.DestinationOptions(
+    dst_type="SQLITE",
+    dst_connection_string="orders-destination-2.sqlite",
+    dst_sync_mode="REPLICATION",
+)
+
+sl.initialize(
+    device_type="SQLITE",
+    device_name="sampledevice",
+    db_path=DB_PATH,
+    destinations=[destination_1, destination_2],
+)
+```
+
+Use either `destination=` or `destinations=`, never both. The sequence must be non-empty and its order defines the stable destination indexes.
 
 For DuckDB, swap `sl.Connection` for `sl.DuckDBConnection` and pass
 `device_type="DUCKDB"` to `sl.initialize`.
@@ -1197,6 +1310,34 @@ conn.flush();
 awaitSync('sampledevice.db', 30);
 conn.close();
 ```
+
+For fan-out, replace `destination` with a non-empty ordered `destinations` array:
+
+```javascript
+initialize({
+    device_type: 'SQLITE',
+    device_name: 'sampledevice',
+    db_path: 'sampledevice.db',
+    destinations: [
+        // Destination 1
+        {
+            dst_type: 'POSTGRES',
+            dst_connection_string: 'postgresql://postgres:postgres@localhost:5432/syncdb',
+            dst_database: 'syncdb',
+            dst_schema: 'syncschema',
+            dst_sync_mode: 'REPLICATION',
+        },
+        // Destination 2
+        {
+            dst_type: 'SQLITE',
+            dst_connection_string: 'orders-destination-2.sqlite',
+            dst_sync_mode: 'REPLICATION',
+        },
+    ],
+});
+```
+
+The object may contain `destination` or `destinations`, but not both. Array order defines the stable one-based destination indexes.
 
 **Parameter / row data-type mapping.** Pass parameters as a JavaScript
 array; `query(...)` returns an array of row arrays using the same mapping
@@ -1294,7 +1435,7 @@ local-command-stage-directory=/path/to/local/command/stage
 For `INTERNAL`, you must register a `SyncLiteCommandHandlerCallback` implementation **before** calling `initialize()`. If no callback is registered, `initialize()` throws a `SQLException`.
 
 ```java
-import io.synclite.logger.*;
+import io.synclite.*;
 import java.nio.file.Path;
 
 // 1. Implement the callback interface
@@ -1409,10 +1550,10 @@ use postgres::{Client, NoTls};
 
 fn main() -> Result<()> {
     const DB_PATH: &str = "orders.db";
-    const DEVICE_NAME: &str = "orders-device";
+    const DEVICE_NAME: &str = "ordersdevice";
 
     synclite::initialize(
-        DeviceType::Sqlite,
+        DeviceType::SQLITE,
         DEVICE_NAME,
         DB_PATH,
         Some(DestinationOptions {
@@ -1468,13 +1609,44 @@ fn main() -> Result<()> {
 }
 ```
 
+**Multiple destinations**
+
+The same generic `initialize` function accepts `Option<DestinationOptions>`, a single `DestinationOptions`, or `Vec<DestinationOptions>` through `Into<Destinations>`. Pass a non-empty vector for fan-out:
+
+```rust
+let destination_1 = DestinationOptions {
+    dst_type: DstType::Postgres,
+    dst_connection_string: "postgresql://user:pw@localhost:5432/syncdb".into(),
+    dst_database: Some("syncdb".into()),
+    dst_schema: Some("public".into()),
+    dst_sync_mode: DstSyncMode::Replication,
+};
+let destination_2 = DestinationOptions {
+    dst_type: DstType::Sqlite,
+    dst_connection_string: "orders-destination-2.sqlite".into(),
+    dst_database: None,
+    dst_schema: None,
+    dst_sync_mode: DstSyncMode::Replication,
+};
+
+synclite::initialize(
+    DeviceType::SQLITE,
+    "ordersdevice",
+    "orders.db",
+    vec![destination_1, destination_2],
+    SyncLiteOptions::default(),
+)?;
+```
+
+Vector order is preserved. SyncLite validates the complete vector before startup, starts destination workers sequentially, and rolls back workers created by the call if a later startup fails.
+
 **API surface**
 
 | Item | Notes |
 |------|-------|
-| `initialize(device_type, device_name, db_path, destination, options)` | One-shot bootstrap. Idempotent per `db_path`. `device_name` must be alphanumeric. |
-| `DeviceType` | `Sqlite`, `Duckdb` (SQL device); `Sqlite` also backs STORE/STREAMING devices. |
-| `DestinationOptions` | `dst_type` (`Sqlite` / `Duckdb` / `Postgres`), `dst_connection_string`, `dst_database` (required for Postgres/DuckDB, rejected for SQLite), `dst_schema` (required for Postgres, optional for DuckDB, rejected for SQLite), `dst_sync_mode` (`Consolidation` / `Replication`). |
+| `initialize(device_type, device_name, db_path, destinations, options)` | One-shot bootstrap accepting no destination, one destination, or a non-empty destination vector. Idempotent per `db_path`. `device_name` must be alphanumeric. |
+| `DeviceType` | `SQLITE`, `DUCKDB` (SQL devices); `SQLITE_STORE`, `DUCKDB_STORE`, and `STREAMING` cover Store/Streaming devices. |
+| `DestinationOptions` | `dst_type` (`Sqlite` / `DuckDb` / `Postgres`), `dst_connection_string`, `dst_database` (required for Postgres/DuckDB, rejected for SQLite), `dst_schema` (required for Postgres, optional for DuckDB, rejected for SQLite), `dst_sync_mode` (`Consolidation` / `Replication`). |
 | `SyncLiteOptions` | Mirrors most Java `synclite.conf` keys (log batch size, ship interval, retention, etc.; device encryption is not supported yet in Rust runtime). |
 | `synclite::SyncLite` | Type alias for `Logger`, kept for symmetry with the Java `SyncLite` facade. |
 
@@ -2114,7 +2286,7 @@ Key configuration options set through the web UI (stored internally by Consolida
 
 ### 9.5 Sync Modes: Replication vs Consolidation
 
-Every destination in a Consolidator job runs in exactly one of two **sync modes**, set via `dst-sync-mode-N` (default `CONSOLIDATION` when the source is a logger / SyncLite DB, default `REPLICATION` when the source is DBReader). The mode controls how operations from one or more source devices are mapped to objects on the destination — and therefore what schema you see, how DDL is handled, and how multi-device topologies coexist.
+Every destination runs in exactly one of two **sync modes**. A standalone Consolidator job uses its global `dst-sync-mode` setting (default `CONSOLIDATION` when the source is a logger / SyncLite DB, default `REPLICATION` when the source is DBReader). An embedded multi-destination runtime stores the mode per destination as `dst-sync-mode-N`, or receives it directly through each `DestinationOptions`. The mode controls how operations from one or more source devices are mapped to objects on the destination — and therefore what schema you see, how DDL is handled, and how multi-device topologies coexist.
 
 **`REPLICATION`** — one schema per device. Each source device gets its own destination schema named after its UUID and/or device name (configurable via `dst-device-schema-name-policy-N`). The destination tables mirror the source 1:1 — same columns, same primary keys, no extra bookkeeping columns. Best fit for **1-source → 1-destination** mirroring or for keeping each edge device's data physically separated on the destination.
 
@@ -2144,7 +2316,7 @@ The mode also changes how individual operations are handled. The table below lis
 - Use `REPLICATION` when each source device's data should remain physically separate on the destination — for example when you want one Postgres schema per branch office, per IoT gateway, or per tenant; or when you are migrating exactly one source database and expect a faithful 1:1 mirror including DDL.
 - Use `CONSOLIDATION` when you want a single unified view of data from many devices — for example one analytical Postgres table per business entity that contains rows from every device, or when you want to run cross-device SQL aggregations on the destination without UNIONing many per-device schemas.
 
-The Rust runtime and the Java Consolidator implement the same mode contract; samples in `synclite-code-samples/` use `REPLICATION` because each sample drives a single device, but flipping `dst_sync_mode` (or `dst-sync-mode=CONSOLIDATION` in a `.conf` file) at any point — even before starting a brand-new job — switches the destination to the consolidation behavior described above.
+The embedded runtimes and the standalone Java Consolidator implement the same mode behavior. Samples in `synclite-code-samples/` use `REPLICATION` because each sample drives a single device. For an embedded destination list, set `dst_sync_mode` / `syncMode(...)` independently on each `DestinationOptions` (represented as `dst-sync-mode-N` internally). For a standalone Consolidator job, set the global `dst-sync-mode=CONSOLIDATION` to switch the whole job to consolidation behavior.
 
 ---
 
@@ -2312,7 +2484,7 @@ Validator (workload generator)
 
 ## 14. Sample Web App
 
-The **SyncLite Sample Web App** is a fully functional JSP/Servlet web application that demonstrates how to embed SyncLite Logger into a Java web application.
+The **SyncLite Sample Web App** is a fully functional JSP/Servlet web application that demonstrates both SyncLite Logger's standalone topology and the full Java embedded runtime with one or more destinations.
 
 Open `http://localhost:8080/synclite-sample-app` after deployment.
 
@@ -2321,9 +2493,26 @@ Open `http://localhost:8080/synclite-sample-app` after deployment.
 | Feature | Description |
 |---|---|
 | **Device creation** | Create one or many SyncLite devices (SQLite, DuckDB, Derby, H2, HyperSQL, Streaming) from a web form |
+| **Embedded multi-destination fan-out** | Add, remove, and configure up to 16 SQLite, DuckDB, or PostgreSQL destinations, each with its own sync mode; displayed card order defines initialization order |
 | **SQL workload execution** | Run configurable INSERT / UPDATE / DELETE workloads on N devices in parallel |
 | **Multi-device consolidation** | Watch hundreds of devices consolidating into a single destination DB |
-| **Configuration** | Shows how to pass a `synclite.conf` to `SyncLite.initialize()` |
+| **Configuration** | Shows both logger-only `initialize(dbPath, conf)` and embedded `initialize(..., List<DestinationOptions>)` initialization |
+
+### Embedded multi-destination workflow
+
+1. Select **Embedded** as the consolidator type on the device-creation page.
+2. Configure **Destination 1**, then select **Add Destination** for Destination 2 and each additional target. **Remove** deletes a destination card; the displayed order is the initialization order.
+3. Choose `REPLICATION` or `CONSOLIDATION` independently for each destination.
+4. Create the device. The app validates every destination and rejects duplicate targets before calling the Java list-based `initialize` overload.
+
+The form submits the canonical indexed fields `num-destinations`, `dst-type-N`, `dst-connection-string-N`, `dst-database-N`, `dst-schema-N`, and `dst-sync-mode-N`. Local destination defaults are created under the job's work directory, not its source-device directory:
+
+```text
+<userHome>/synclite/<jobName>/workDir/consolidated_db_N.sqlite
+<userHome>/synclite/<jobName>/workDir/consolidated_db_N.duckdb
+```
+
+The source device databases remain under `<userHome>/synclite/<jobName>/db/`. Select **Standalone** when the device should only publish logs to staging for a separately configured Consolidator WAR.
 
 ### Architecture
 
@@ -2332,12 +2521,14 @@ Browser  --HTTP-->  SyncLite Sample Web App (Tomcat)
                          │  SyncLite Logger (embedded JDBC)
                  v
                    Edge Databases (SQLite / DuckDB / …)
-                         │  sync log files
-                 v
-                   Local staging directory
-                         │
-                 v
-             SyncLite Consolidator  -->  Destination DB
+                 │
+         +-----------+--------------------------------+
+         │ Embedded                                  │ Standalone
+         v                                           v
+   In-process Consolidator                     Local staging directory
+     │          │          │                            │
+     v          v          v                            v
+ Destination 1  Destination 2  Destination N   Consolidator WAR --> Destination(s)
 ```
 
 Source entry points in `synclite-sample-web-app/web/src/`:
