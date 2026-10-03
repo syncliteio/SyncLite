@@ -21,9 +21,9 @@
 
 # SyncLite — Build Anything, Sync Anywhere
 
-**Your app writes to a local embedded database. SyncLite makes every write land in PostgreSQL transactionally — automatically, durably, offline-tolerant — with no CDC pipeline, no message bus, no replication agent to wire up.**
+**Your app writes to a local embedded database. SyncLite makes every write land in one or more destinations transactionally — automatically, durably, offline-tolerant — with no CDC pipeline, no message bus, no replication agent to wire up.**
 
-Drop one library into your application and you get a fully-featured embedded database (SQLite, DuckDB, Derby, H2, or HyperSQL) whose every write is durably logged and continuously synced to your destination in the background. Your hot path never touches the network. Your app keeps working offline and catches up when connectivity returns.
+Drop one library into your application and you get a fully-featured embedded database (SQLite, DuckDB, Derby, H2, or HyperSQL) whose every write is durably logged and continuously synced to your destinations in the background. Your hot path never touches the network. Your app keeps working offline and catches up when connectivity returns.
 
 ```mermaid
 flowchart TB
@@ -135,6 +135,32 @@ conn.close()
 
 Every `INSERT` / `UPDATE` / `DELETE` — and every `ALTER TABLE` — is durably logged and applied to PostgreSQL in the background, whether your app is online or not. Full sample: [`synclite-code-samples/python/synclite_rusqlite_postgres.py`](synclite-code-samples/python/synclite_rusqlite_postgres.py).
 
+To fan out to multiple destinations, keep the same `initialize` function and replace the singular `destination=` argument with the keyword-only `destinations=` sequence:
+
+```python
+destination_1 = sl.DestinationOptions(
+    dst_type="POSTGRES",
+    dst_connection_string=POSTGRES,
+    dst_database=DB,
+    dst_schema=SCHEMA,
+    dst_sync_mode="REPLICATION",
+)
+destination_2 = sl.DestinationOptions(
+    dst_type="SQLITE",
+    dst_connection_string="orders-destination-2.sqlite",
+    dst_sync_mode="REPLICATION",
+)
+
+sl.initialize(
+    device_type="SQLITE",
+    device_name="sampledevice",
+    db_path=DB_PATH,
+    destinations=[destination_1, destination_2],
+)
+```
+
+Do not supply `destination` and `destinations` together.
+
 ---
 
 ## Node.js — SQLite → PostgreSQL
@@ -170,9 +196,37 @@ conn.close();
 
 The npm package contains the same embedded Rust runtime as the Python wheel: local SQLite/DuckDB, change capture, shipper, and consolidator. Full sample: [`synclite-code-samples/nodejs/synclite_sqlite_postgres.js`](synclite-code-samples/nodejs/synclite_sqlite_postgres.js).
 
+For multiple destinations, use the mutually exclusive `destinations` array on the same options object:
+
+```javascript
+initialize({
+    device_type: 'SQLITE',
+    device_name: 'sampledevice',
+    db_path: 'sampledevice.db',
+    destinations: [
+        // Destination 1
+        {
+            dst_type: 'POSTGRES',
+            dst_connection_string: 'postgresql://postgres:postgres@localhost:5432/syncdb',
+            dst_database: 'syncdb',
+            dst_schema: 'syncschema',
+            dst_sync_mode: 'REPLICATION',
+        },
+        // Destination 2
+        {
+            dst_type: 'SQLITE',
+            dst_connection_string: 'orders-destination-2.sqlite',
+            dst_sync_mode: 'REPLICATION',
+        },
+    ],
+});
+```
+
 ---
 
 ## Java — one jar, full JDBC
+
+> Building with Spring Data JPA or Hibernate? Follow the complete [Spring Boot + Hibernate SQLite-to-PostgreSQL example](SPRING_BOOT_HIBERNATE.md). It initializes the `SQLite` device before HikariCP and configures an embedded PostgreSQL destination.
 
 ```xml
 <!-- Maven -->
@@ -219,6 +273,25 @@ SQLite.closeDevice(DB_PATH);
 ```
 
 The in-process consolidator is bundled inside the jar — no external service needed. Full JDBC surface: arbitrary `SELECT`, `JOIN`, multi-statement transactions, stored procedures. Full sample: [`synclite-code-samples/java/SyncliteSqlitePostgresApp.java`](synclite-code-samples/java/SyncliteSqlitePostgresApp.java).
+
+For multiple destinations, use the matching `List<DestinationOptions>` overload. The existing single-`DestinationOptions` overload remains unchanged:
+
+```java
+DestinationOptions destination1 = DestinationOptions.builder()
+    .dstType(DstType.POSTGRES)
+    .connectionString(POSTGRES_URL)
+    .database(POSTGRES_DB).schema(POSTGRES_SCHEMA)
+    .syncMode(DstSyncMode.REPLICATION)
+    .build();
+DestinationOptions destination2 = DestinationOptions.builder()
+    .dstType(DstType.SQLITE)
+    .connectionString("jdbc:sqlite:orders-destination-2.sqlite")
+    .syncMode(DstSyncMode.REPLICATION)
+    .build();
+
+SQLite.initialize(DB_PATH, DEVICE_NAME,
+    java.util.List.of(destination1, destination2));
+```
 
 > **Sample failing?** Check `<dbPath>.synclite/<dbName>.trace` (logger errors) and `<userHome>/synclite/job1/workDir/synclite_<deviceName>_<uuid>/synclite_device.trace` (consolidator errors).
 
@@ -271,19 +344,49 @@ conn.close()?;
 
 The Rust crate is also a `cdylib` — embeddable from **Python, Node.js, C/C++, Go, Ruby, C#** via a single native library. Full sample: [`synclite-code-samples/rust/synclite_rusqlite_postgres.rs`](synclite-code-samples/rust/synclite_rusqlite_postgres.rs).
 
+The same generic `initialize` function also accepts a non-empty vector:
+
+```rust
+let destination_1 = DestinationOptions {
+    dst_type: DstType::Postgres,
+    dst_connection_string: POSTGRES.into(),
+    dst_database: Some(DB.into()),
+    dst_schema: Some(SCHEMA.into()),
+    dst_sync_mode: DstSyncMode::Replication,
+};
+let destination_2 = DestinationOptions {
+    dst_type: DstType::Sqlite,
+    dst_connection_string: "orders-destination-2.sqlite".into(),
+    dst_database: None,
+    dst_schema: None,
+    dst_sync_mode: DstSyncMode::Replication,
+};
+
+synclite::initialize(
+    DeviceType::SQLITE,
+    DEVICE_NAME,
+    DB_PATH,
+    vec![destination_1, destination_2],
+    SyncLiteOptions::default(),
+)?;
+```
+
+Across all four SDKs, collection order defines stable one-based destination indexes. SyncLite validates the full collection first, starts destination workers sequentially in that order, and rolls back workers started by the call if a later destination fails to start. `awaitSync` / `await_sync` waits in the Rust logger until every configured destination has caught up, using one shared timeout budget.
+
 ---
 
 ## What you get in one library
 
 - **Full embedded SQL.** SQLite, DuckDB, Apache Derby, H2, HyperSQL — all behind the same APIs. Arbitrary `SELECT`, `JOIN`, multi-statement transactions, ad-hoc DDL.
 - **Three write APIs.** Plain SQL/JDBC, a typed **Store CRUD** API (`insert`/`update`/`delete`/`selectAll` — no SQL, schema evolves automatically), or a fluent **Stream** append-only API for high-throughput event ingestion.
+- **Ordered multi-destination fan-out.** Replicate one device to one or many SQLite, DuckDB, and PostgreSQL destinations with the same `initialize` entry point.
 - **Offline-first.** Works on laptops, edge boxes, phones, and containers with no connectivity. Syncs when the network returns — exactly once, no duplicates.
 - **No moving parts.** Logger + shipper + in-process consolidator are all inside the one library. No CDC tool. No Kafka. No replication agent.
 - **Any language.** Java jar, Rust crate, Python wheel. The Rust build exposes a `cdylib` ABI: call it from C/C++, Go, Node.js, Ruby, or C#.
 
 ---
 
-## Fleet — many apps, many devices, one destination
+## Fleet — many apps, many devices, one or more destinations
 
 Any number of apps embed their own runtime, in any language, all shipping to the same staging store and applying to the same destinations:
 
@@ -329,10 +432,10 @@ flowchart LR
 
     Stage -- apply --> Dst
 
-    Dst["Current embedded-runtime target<br/>PostgreSQL<br/><br/>Standalone Consolidator<br/>PostgreSQL · MySQL · MSSQL · MongoDB<br/>Iceberg · DuckDB · S3"]:::dst
+    Dst["Embedded runtime destinations<br/>SQLite · DuckDB · PostgreSQL<br/><br/>Standalone Consolidator<br/>PostgreSQL · MySQL · MSSQL · MongoDB<br/>Iceberg · DuckDB · S3"]:::dst
 ```
 
-<sub>Inside each runtime: SQL (JDBC for Java, rusqlite for Rust, native bindings for Python / Node / C/C++ / Go / Ruby / C#) plus the Store CRUD and Stream APIs all sit on top of the same embedded DB, WAL logger, shipper, and in-process consolidator. The current embedded runtime path targets PostgreSQL; the standalone Consolidator is the broader multi-destination path.</sub>
+<sub>Inside each runtime: SQL (JDBC for Java, rusqlite for Rust, native bindings for Python / Node / C/C++ / Go / Ruby / C#) plus the Store CRUD and Stream APIs all sit on top of the same embedded DB, WAL logger, shipper, and in-process consolidator. Each embedded runtime can fan out to an ordered list of SQLite, DuckDB, and PostgreSQL destinations; the standalone Consolidator supports the broader destination catalog shown above.</sub>
 
 ---
 
@@ -363,8 +466,8 @@ SyncLite ships as two things:
 
 | Component | Description | README |
 |---|---|---|
-| **SyncLite Runtime (Java)** (`synclite-<version>.jar`) | One jar = JDBC / Store / Stream APIs + logger + shipper + (optional) **in-process consolidator** (via bundled `synclite_jni` native). Call `initialize(dbPath, deviceName, destinationOptions)` for the single-jar topology, or `initialize(dbPath, conf)` for logger-only mode paired with the standalone Consolidator WAR. | [→](synclite-logger-java/README.md) |
-| **SyncLite Runtime (Rust)** | Same runtime in Rust (logger + in-process consolidator) as a single `cdylib`. Consumable from **Rust, Python, Node.js, C/C++, Go, Ruby, C#** — anywhere you can load a native library. | [→](synclite-logger-rust/README.md) |
+| **SyncLite Runtime (Java)** (`synclite-<version>.jar`) | One jar = JDBC / Store / Stream APIs + logger + shipper + (optional) **in-process consolidator** (via bundled `synclite_jni` native). Call `initialize(dbPath, deviceName, destinationOptions)` for one destination, the matching `List<DestinationOptions>` overload for many, or `initialize(dbPath, conf)` for logger-only mode paired with the standalone Consolidator WAR. | [→](synclite-logger-java/README.md) |
+| **SyncLite Runtime (Rust)** | Same runtime in Rust (logger + in-process consolidator) as a single `cdylib`, with one `initialize` API for one or many destinations. Consumable from **Rust, Python, Node.js, C/C++, Go, Ruby, C#** — anywhere you can load a native library. | [→](synclite-logger-rust/README.md) |
 
 ### Optional tooling — built on top of the runtime
 
@@ -379,7 +482,7 @@ Deploy these only when you want a managed platform. They are standard webapps th
 | **SyncLite QReader** | MQTT / IoT connector that lands broker traffic into SyncLite devices. | [→](https://github.com/syncliteio/synclite-qreader/blob/main/README.md) |
 | **SyncLite Job Monitor** | Unified job management and scheduling UI for DBReader / QReader / Consolidator jobs. | [→](https://github.com/syncliteio/synclite-job-monitor/blob/main/README.md) |
 | **SyncLite Validator** | End-to-end integration test harness for SyncLite pipelines. | [→](https://github.com/syncliteio/synclite-validator/blob/main/README.md) |
-| **Sample Web App** | JSP/Servlet demo that embeds SyncLite (Java) in logger-only mode and pairs with the standalone Consolidator WAR for sync. | [→](https://github.com/syncliteio/synclite-sample-web-app/blob/main/README.md) |
+| **Sample Web App** | JSP/Servlet demo that can run SyncLite in standalone mode or embedded mode. Embedded mode lets you add, remove, and configure multiple destinations; the displayed card order defines initialization order. | [→](https://github.com/syncliteio/synclite-sample-web-app/blob/main/README.md) |
 
 #### Tooling — how it fits together
 
@@ -443,11 +546,13 @@ cd bin/
 | http://localhost:8080/synclite-jobmonitor | Manage and schedule all SyncLite jobs |
 | http://localhost:8080/manager | Tomcat manager (user: `synclite` / pwd: `synclite`) |
 
-**Sample Web App → Consolidator** (browser-driven, no external source DB)
+**Sample Web App → embedded destination(s)** (browser-driven, no external source DB)
 
-1. Open [synclite-consolidator](http://localhost:8080/synclite-consolidator) → configure **staging** + a **destination** DB → start the consolidation job.
-2. Open [synclite-sample-app](http://localhost:8080/synclite-sample-app) → create a device that logs to the **same** staging location.
-3. Run SQL in the sample app and watch rows land in your destination.
+1. Open [synclite-sample-app](http://localhost:8080/synclite-sample-app) and choose **Embedded** as the consolidator type.
+2. Configure **Destination 1**, then use **Add Destination** for Destination 2 and each additional SQLite, DuckDB, or PostgreSQL target. Choose a sync mode per destination; destinations initialize in the displayed order.
+3. Create the device and run SQL in the sample app. Local SQLite/DuckDB destination files default to `<userHome>/synclite/<jobName>/workDir/`.
+
+Choose **Standalone** instead when you want the sample device to publish to a separately configured SyncLite Consolidator job.
 
 **DBReader → Consolidator** (database → database replication/ETL)
 
@@ -466,7 +571,7 @@ cd bin/
 
 > ⚠️ Docker helper scripts use default credentials. Change usernames, passwords, and enable TLS before any production use.
 
-Full walkthrough: [GETTING_STARTED.md - Try the tools together](GETTING_STARTED.md#try-the-tools-together).
+Return to the start of this walkthrough: [Deploy the full platform](#deploy-the-full-platform).
 
 ---
 

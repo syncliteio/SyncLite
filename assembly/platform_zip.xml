@@ -263,6 +263,7 @@
 				<include>CHANGELOG.md</include>
 				<include>DOCUMENTATION.md</include>
 				<include>GETTING_STARTED.md</include>
+				<include>SPRING_BOOT_HIBERNATE.md</include>
 				<include>LICENSE</include>
 				<include>synclite_platform_version.txt</include>
 			</includes>
