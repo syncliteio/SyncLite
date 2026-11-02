@@ -6,7 +6,7 @@ Top-of-file comments inside `appStartup()` show how to:
 
 - swap **device type** (SQLite → Derby / DuckDB / H2 / HyperSQL),
 - swap **destination** (Postgres → SQLite / DuckDB),
-- flip **sync mode** (`REPLICATION` ↔ `CONSOLIDATION` — see [../README.md § Sync modes](../README.md#sync-modes-replication-vs-consolidation)),
+- flip **sync mode** (`REPLICATION` ↔ `CONSOLIDATION` — see [../../README.md § Sync modes](../../README.md#sync-modes-replication-vs-consolidation)),
 - run in **pure-logger mode** (no inline destination — pair with a standalone Consolidator service).
 
 ## Quickest start — add the Maven dependency
@@ -29,11 +29,34 @@ implementation 'io.synclite:synclite:1.1.0'
 
 The published `synclite` jar is self-contained — it bundles the PostgreSQL JDBC driver **and** the platform `synclite_jni` native libraries (Windows x64, Linux x86_64 / aarch64), so no extra classpath entries or native installs are needed. Then jump to [step 1](#1-compile--run) to run the sample.
 
+The default Java runtime is SQLite-focused and does not package DuckDB. To use
+a DuckDB source device, add DuckDB explicitly to the application:
+
+```xml
+<dependency>
+    <groupId>org.duckdb</groupId>
+    <artifactId>duckdb_jdbc</artifactId>
+    <version>1.5.2.0</version>
+</dependency>
+```
+
+Without that dependency, `DuckDB.initialize(...)` fails with an actionable
+error instead of loading an undeclared DuckDB runtime.
+
+This standalone sample uses the jar's embedded Reload4j SLF4J provider. A
+Spring Boot application must instead follow the [Spring Boot + Hibernate
+guide](../../../SPRING_BOOT_HIBERNATE.md#11-package-synclite-safely-with-spring-boot-logging),
+which filters that embedded provider only in the application's packaged Boot
+jar. The published SyncLite jar remains unchanged.
+
+A runnable Maven verification is included in
+[../spring-boot](../spring-boot/README.md).
+
 Prefer to run entirely offline from an extracted release zip? Use [Run from the release zip](#run-from-the-release-zip) below instead.
 
 ## Run from the release zip
 
-You are already in `sample-apps/java/` of an extracted release. The release ships the runtime jar under [`../../lib/java/synclite-1.1.0.jar`](../../lib/java/synclite-1.1.0.jar).
+You are already in `sample-apps/java/core/` of an extracted release. The release ships the runtime jar under [`../../lib/java/synclite-1.1.0.jar`](../../lib/java/synclite-1.1.0.jar).
 
 ### 1. Compile + run
 
@@ -76,7 +99,7 @@ Then `SyncLite.awaitSync` blocks until the in-process shipper + consolidator hav
 
 - **`FATAL: database "syncdb" does not exist`** — create `syncdb` and `syncschema`, then rerun to verify destination apply.
 - **`password authentication failed`** — edit `POSTGRES_USER` / `POSTGRES_PASSWORD` at the top of the sample.
-- **Nothing landed on Postgres** — check the trace files documented in [../README.md § Where do the samples write files?](../README.md#where-do-the-samples-write-files).
+- **Nothing landed on Postgres** — check the trace files documented in [../../README.md § Where do the samples write files?](../../README.md#where-do-the-samples-write-files).
 
 ---
 
@@ -88,4 +111,4 @@ If you're working from a `synclite` repo checkout instead of an extracted releas
 mvn -pl :synclite-logger -am -DskipTests package
 ```
 
-That produces `synclite-logger-java\logger\target\synclite-1.0.0.jar`. Substitute that path for `..\..\lib\java\synclite-1.0.0.jar` in step 2 above.
+That produces `synclite-logger-java\logger\target\synclite-1.0.0.jar`. Substitute that path for `..\..\lib\java\synclite-1.1.0.jar` in step 2 above.
