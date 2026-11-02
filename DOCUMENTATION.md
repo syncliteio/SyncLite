@@ -49,6 +49,7 @@ These are the SQLite/DuckDB versions used by the SyncLite runtime line in genera
 2. [Architecture](#2-architecture)
 3. [Components](#3-components)
 4. [Prerequisites & Build](#4-prerequisites--build)
+    - [Android AAR (Kotlin)](#android-aar-kotlin)
 5. [Filesystem Layout](#5-filesystem-layout)
 6. [SyncLite Logger (Java JDBC) + SyncLite Runtime (Rust/Python/Node.js/C++)](#6-synclite-logger-java-jdbc--synclite-runtime-rustpythonnodejsc)
    - [Device Types](#61-device-types)
@@ -60,7 +61,7 @@ These are the SQLite/DuckDB versions used by the SyncLite runtime line in genera
    - [SyncLiteStream API](#65-synclitestream-api)
    - [Jedis (Redis-Compatible) API](#66-jedis-redis-compatible-api)
    - [Kafka Producer API](#67-kafka-producer-api)
-   - [Python Usage](#68-python-usage)
+    - [Python Usage: core, DB-API 2.0, SQLAlchemy](#68-python-usage)
     - [Node.js Usage](#681-nodejs-usage)
    - [Device Encryption](#69-device-encryption)
    - [Command Handler](#610-command-handler)
@@ -149,6 +150,11 @@ Both produce the same `.sqllog` segments, so you can mix devices (some logger-on
 | Component | Description | Port / URL |
 |---|---|---|
 | **SyncLite for Java** | One jar (`synclite-<version>.jar`) = JDBC / Store / Stream APIs + logger + shipper + in-process consolidator (via bundled `synclite_jni` native). The `initialize(...)` overloads accept one `DestinationOptions` or an ordered `List<DestinationOptions>`. Logger-only or full-runtime is an API-call choice at initialization time. | (embedded library — no port) |
+
+The default Java JAR includes SQLite support but does not bundle DuckDB native
+libraries or `duckdb_jdbc`. Applications using a DuckDB source device must add
+`org.duckdb:duckdb_jdbc:1.5.2.0` explicitly; SQLite applications require no
+DuckDB dependency.
 | **SyncLite Rust Runtime** | Same runtime in Rust (`synclite` crate) — logger + shipper + in-process consolidator. Its generic `initialize(...)` accepts zero, one, or an ordered vector of destinations. Consumable from Rust, Python, Node.js, C/C++, Go, Ruby, C# via a single `cdylib`. | (embedded library — no port) |
 | **SyncLite DB** | Standalone HTTP/JSON database server for any language | Configurable (default `5555`) |
 | **SyncLite Client** | Interactive CLI for SyncLite devices | (CLI tool — no port) |
@@ -187,6 +193,80 @@ Both produce the same `.sqllog` segments, so you can mix devices (some logger-on
 > - **macOS**: `xcode-select --install`.
 
 > The `bin/deploy.sh` / `bin/deploy.bat` scripts download Apache Tomcat 9.0.117 and OpenJDK 25 automatically. No manual installation needed for a quick start.
+
+### Android AAR (Kotlin)
+
+The Android artifact has its own Gradle project and can be built independently,
+but the full Maven platform build also orchestrates that project and stages the
+resulting AAR when the Android SDK, NDK, Cargo NDK, and Gradle wrapper are
+available. Android prerequisites remain optional for desktop/server-only builds.
+The AAR packages the existing Rust `synclite_jni` bridge as ABI-specific
+Android `.so` libraries and exposes a Kotlin/JVM API.
+
+The initial Android scope is **SQLite-focused**. It provides the same core runtime workflow as the Python and Node bindings: device initialization, logged SQLite connections, execute/query/prepared batches, transactions, flush, and `awaitSync`, plus the lower-level in-process consolidator lifecycle. The desktop Java JDBC logger is not Android-compatible and is not included. DuckDB is intentionally not exposed through the Android API at this stage.
+
+Android storage differs from desktop storage: pass an absolute database path
+under `context.filesDir`. Default staging and consolidator work directories
+are `<database-parent>/synclite/job1/stageDir` and `workDir`, respectively.
+Android never uses desktop HOME/CWD for these defaults. Keep durable sync state
+in files storage, not `cacheDir`; no external-storage permission is needed.
+If using `AndroidConsolidatorConfig` directly, all explicitly supplied stage,
+work, and device-data-root paths must also be writable app-private directories.
+
+Install these additional prerequisites on the machine that builds the AAR:
+
+| Requirement | Version / setup |
+|---|---|
+| JDK | 17 |
+| Android SDK | API 35 platform and build tools |
+| Android app target | `minSdkVersion` 26+; the native CDC sidecar is supported only on Android API 26 or newer |
+| Android NDK | r26b+; set `ANDROID_NDK_HOME` when SDK discovery cannot find it |
+| Gradle | Wrapper included; first build downloads Gradle 8.7 |
+| Rust | 1.86+ via `rustup` |
+| Cargo NDK | `cargo install cargo-ndk` |
+| Rust targets | `rustup target add aarch64-linux-android x86_64-linux-android` |
+| CMake and Ninja | Install through Android SDK Manager or make available on `PATH` |
+
+Set `ANDROID_HOME` (or `ANDROID_SDK_ROOT`), `ANDROID_NDK_HOME`, and
+`ANDROID_JAVA_HOME` (JDK 17). The platform can continue running Maven under
+JDK 25; only the Android Gradle subprocess uses `ANDROID_JAVA_HOME`.
+
+On Windows, Maven uses the current process environment first, then falls back
+to saved user/machine Android environment variables. This also supports terminals
+opened before the toolchain was installed. Maven passes the resolved SDK, NDK,
+and JDK paths to Gradle; the build-strategy summary shows those paths and whether
+the Android AAR will be built. `-DskipTests` skips tests, not the Android AAR.
+
+Build the AAR from the repository root with the platform-specific helper:
+
+```bash
+# Linux/macOS
+./synclite-logger-rust/android/build-android-aar.sh
+
+# Windows PowerShell
+.\synclite-logger-rust\android\build-android-aar.ps1
+```
+
+The same build can be run directly from `synclite-logger-rust/android` with
+`gradlew.bat assembleRelease` on Windows or `./gradlew assembleRelease` on
+Linux/macOS. The checked-in wrapper downloads Gradle 8.7 on its first run.
+Gradle invokes `cargo ndk` before packaging and creates `arm64-v8a` device and
+`x86_64` emulator variants of `libsynclite_jni.so`. The output is
+`synclite-logger-rust/android/build/outputs/aar/synclite-android-release.aar`.
+
+The Android project also contains a runnable `sample` application with editable PostgreSQL settings and an instrumentation test that replicates to a local SQLite destination:
+
+```bash
+cd synclite-logger-rust/android
+./gradlew :sample:installDebug
+./gradlew :sample:connectedDebugAndroidTest
+```
+
+On Windows, use `gradlew.bat` instead of `./gradlew`.
+
+For an existing Android app, copy `synclite-android-1.1.0.aar` from the release's `lib/android/` into `app/libs/` and add `implementation(files("libs/synclite-android-1.1.0.aar"))` to the app's Gradle dependencies. Use `context.filesDir` for the database and call `awaitSync()` on a worker thread. An emulator reaches PostgreSQL on the host via `10.0.2.2` rather than `localhost`; a physical device needs a network-reachable host or ADB forwarding. The AAR is for Android only; Spring Boot and desktop Java use the jar instead.
+
+See [the Android module README](synclite-logger-rust/android/README.md) for the Kotlin API and publishing instructions, and the [Android sample walkthrough](synclite-code-samples/android/README.md) for the SQLite-to-PostgreSQL flow.
 
 ### Build the entire platform
 
@@ -227,6 +307,8 @@ These switches combine with any flavor above:
 - `-DskipRustCrossCompile=true` — skip the two Linux cross-compile cargo executions **and** the best-effort local `manylinux` Python wheel build (use on hosts without `cargo-zigbuild` + `zig`, or without WSL + a Linux toolchain; host-arch cdylib + host wheel still built). Only relevant for flavors #1 and #3.
 - `-DskipPythonWheel=true` — skip building and staging `lib/python/synclite-*.whl`.
 - `-DskipNodePackage=true` — skip building and staging `lib/nodejs/synclite-*.tgz` (use on hosts without Node.js/npm).
+- `-DskipAndroidAar=true` — skip building and staging the Android AAR. By default, Maven attempts the Android build when the configured Gradle command is available; missing Gradle causes an automatic skip, while missing Android SDK/NDK or Cargo NDK fails the requested Android build with its setup error.
+- `-DskipNonJavaLoggers=true` — skip all non-Java Rust outputs in the Maven platform build, including host Rust, Python, Node.js, and Rust tests.
 
 ```bash
 # Fastest full platform build
@@ -239,11 +321,91 @@ mvn -Drevision=1.0.0 -DruntimeOnly=true -DskipRustCrossCompile=true -DskipTests 
 The full platform release is assembled under `SyncLite/target/synclite-platform-1.1.0/`.
 The runtime build produces `SyncLite/target/synclite-runtime-1.1.0/` (and `.zip`).
 
+> **Android build boundary.** The Rust workspace contains the Python, Node.js,
+> C, and Java binding crates, so `cargo build --workspace` builds those crates
+> for the selected host target. The full Maven platform build can also
+> orchestrate the Android AAR when Gradle is available; the Android AAR itself
+> requires the Android SDK/NDK and Cargo NDK.
+
 If you only want the embedded Rust runtime (`synclite` crate) and not the full Tomcat web stack, build just the Rust workspace:
 
 ```bash
 cd synclite-logger-rust
 cargo build --workspace
+```
+
+To build one native binding instead of the whole workspace:
+
+```bash
+cargo build --release --package synclite-bindings-python
+cargo build --release --package synclite-bindings-node
+cargo build --release --package synclite-bindings-java
+cargo build --release --package synclite-c
+```
+
+Build the Android AAR separately:
+
+```bash
+cd synclite-logger-rust/android
+./gradlew assembleRelease
+```
+
+On Windows, use `gradlew.bat assembleRelease`.
+
+The Android Gradle build invokes `cargo ndk` for `arm64-v8a` and `x86_64`.
+Use `-PskipAndroidRust=true` for a packaging/API-only check; that AAR will not
+run until its ABI-specific `libsynclite_jni.so` files are supplied.
+
+To build the entire platform and have Maven also produce the publishable AAR,
+use the normal platform build:
+
+```bash
+mvn clean install
+```
+
+When Gradle, Cargo NDK, Android SDK, or Android NDK is unavailable, Maven
+automatically skips the Android deliverable, just as it skips unavailable
+Python/Node tooling. The build-strategy summary reports the missing prerequisite.
+The AAR can also be disabled explicitly with:
+
+```bash
+mvn -DskipAndroidAar=true clean install
+```
+
+When built, Maven copies the final artifact to
+`target/synclite-android-<revision>.aar`.
+
+For developer consumption, publish the same complete AAR to a Maven-compatible
+repository from `synclite-logger-rust/android`:
+
+```bash
+./gradlew publishReleasePublicationToMavenLocal
+```
+
+On Windows, use `gradlew.bat publishReleasePublicationToMavenLocal`.
+
+Developers can then use:
+
+```kotlin
+repositories {
+    mavenLocal()
+    google()
+    mavenCentral()
+}
+
+dependencies {
+    implementation("io.synclite:synclite-android:1.1.0")
+}
+```
+
+For an internal Maven repository, pass `-PmavenRepoUrl=...` and provide
+`MAVEN_USERNAME` / `MAVEN_PASSWORD` environment variables. Maven Central adds
+its normal signing and staging requirements.
+The platform directory and platform/runtime archives also include the same
+artifact at:
+
+```text
+lib/android/synclite-android-<revision>.aar
 ```
 
 If you are packaging multi-arch Rust runtime natives (Linux x86_64 / aarch64 from a non-Linux host), install the cross-build prerequisites first:
@@ -851,7 +1013,7 @@ dst-sync-mode-2=REPLICATION
 
 Use the `SQLite` device with the `jdbc:synclite_sqlite:` URL. Initialize it before Spring creates the connection pool; the recommended pattern is a SyncLite lifecycle bean on which the application `DataSource` explicitly depends. Do not defer initialization to `ApplicationRunner`, `CommandLineRunner`, `ApplicationReadyEvent`, or an unordered `@PostConstruct`, because Hibernate or HikariCP may have opened the first connection already.
 
-See the complete [Spring Boot + Hibernate: SQLite to PostgreSQL guide](SPRING_BOOT_HIBERNATE.md) for the dependency, `application.yml`, lifecycle-managed initialization, Hibernate entity, REST endpoint, destination verification, and troubleshooting.
+See the complete [Spring Boot + Hibernate: SQLite to PostgreSQL guide](SPRING_BOOT_HIBERNATE.md) for the dependency, the required build-time filter that keeps SyncLite's embedded SLF4J provider out of the Boot executable, `application.yml`, lifecycle-managed initialization, Hibernate entity, REST endpoint, destination verification, and troubleshooting.
 
 #### Initializing and using a SQLite device
 
@@ -1171,10 +1333,7 @@ runtime. No JVM, no JAR, no `jaydebeapi` / `jpype` bridge.
 | Parameter binding | Yes (full SQL parameter binding, batched and unbatched) |
 | CPython matrix | Any 3.8+ on any OS/arch the Rust runtime supports |
 
-The five samples under
-[`synclite-code-samples/python/`](synclite-code-samples/python/)
-(`synclite_rusqlite*.py`, `synclite_streaming.py`, `synclite_duckdb*.py`)
-mirror the Rust API 1:1 — same shapes as the C++ samples in
+The [Python samples](synclite-code-samples/python/README.md) provide three application-facing layers: [core](synclite-code-samples/python/core/synclite_rusqlite_postgres.py), [DB-API 2.0](synclite-code-samples/python/dbapi/synclite_dbapi_postgres.py), and [SQLAlchemy](synclite-code-samples/python/sqlalchemy/synclite_sqlalchemy_postgres.py). The core API mirrors the Rust API 1:1 — the same shapes as the C++ samples in
 [`synclite-code-samples/cpp/`](synclite-code-samples/cpp/):
 
 ```python
@@ -1218,6 +1377,52 @@ sl.await_sync(DB_PATH, 30.0)
 # sl.resume_sync(DB_PATH)
 conn.close()
 ```
+
+**DB-API 2.0.** Use `synclite.dbapi2` with standard PEP 249 connections, cursors, positional `?` parameters, `fetch*` methods, and `commit` / `rollback`. Initialize the SyncLite device as in the core example before connecting:
+
+```python
+from synclite import dbapi2
+
+conn = dbapi2.connect(DB_PATH)
+try:
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("INSERT INTO events(id, payload) VALUES(?, ?)", (4, "from DB-API"))
+            cursor.execute("SELECT id, payload FROM events ORDER BY id")
+            print(cursor.description, cursor.fetchall())
+    conn.flush()                        # after the transaction commits
+    sl.await_sync(DB_PATH, 30.0)       # optional for a short-lived demo
+finally:
+    conn.close()
+```
+
+DB-API connections use manual transactions; closing rolls back outstanding work. `cursor.description` exists even for empty query results. SQLite exposes generated `lastrowid`; DuckDB callers should use `RETURNING`. Results are buffered eagerly. See the [DB-API sample](synclite-code-samples/python/dbapi/synclite_dbapi_postgres.py) and [SDK reference](synclite-logger-rust/python/README.md#python-db-api-20).
+
+**SQLAlchemy 2.x.** Install `synclite[sqlalchemy]` and use the `sqlite+synclite` URL after initialization:
+
+```python
+from synclite import dbapi2
+from sqlalchemy import create_engine, text
+
+engine = create_engine(f"sqlite+synclite:///{DB_PATH}")
+with engine.begin() as connection:
+    connection.execute(text("INSERT INTO events(id, payload) VALUES(:id, :payload)"),
+                       {"id": 5, "payload": "from SQLAlchemy"})
+    print(connection.execute(text("SELECT id, payload FROM events")).all())
+engine.dispose()
+
+# SQLAlchemy committed locally. Roll the active segment and wait before this
+# short-lived demo exits; production applications normally sync continuously.
+sync_conn = dbapi2.connect(DB_PATH)
+try:
+    sync_conn.flush()
+    sl.await_sync(DB_PATH, 30.0)
+    print("[SYNC] await_sync succeeded")
+finally:
+    sync_conn.close()
+```
+
+This dialect reuses SQLite SQL compilation but routes database calls through SyncLite's logged DB-API connection. The URL points to **local SQLite**, never directly to PostgreSQL. Use `duckdb+synclite` with the `synclite[sqlalchemy-duckdb]` extra for local DuckDB. The dialect uses one connection per checkout (`NullPool`) and does not support savepoints, two-phase transactions, or autocommit isolation. Committing locally does not wait for delivery; use `flush()` / `await_sync()` separately when the application needs to wait. See the [SQLAlchemy sample](synclite-code-samples/python/sqlalchemy/synclite_sqlalchemy_postgres.py).
 
 For fan-out, pass a non-empty sequence through the keyword-only `destinations` argument:
 
@@ -2697,8 +2902,12 @@ synclite-platform-1.1.0/
 +-- sample-apps/                        # Cross-language SyncLite runtime samples
     +-- README.md                       # Overview, sync modes, postgres prereq
     +-- cpp/                            # synclite_rusqlite_postgres.cpp + CMakeLists.txt
-    +-- java/                           # SyncliteSqlitePostgresApp.java
-    +-- python/                         # synclite_rusqlite_postgres.py
+    +-- java/                           # core/ + spring-boot/
+    +-- python/                         # core/ + dbapi/ + sqlalchemy/ + README.md
+    |   +-- core/                      # Direct SyncLite Connection / Statement
+    |   +-- dbapi/                     # PEP 249 cursors and transactions
+    |   +-- sqlalchemy/                # sqlite+synclite SQLAlchemy 2.x dialect
+    +-- android/                        # Kotlin/Android sample using the release AAR
     +-- rust/                           # synclite_rusqlite_postgres.rs (Cargo workspace)
 ```
 

@@ -134,6 +134,15 @@
 			<outputDirectory>lib/nodejs</outputDirectory>
 		</fileSet>
 		<fileSet>
+			<!-- Publishable Android Kotlin AAR produced by the optional Gradle/Cargo-NDK build. -->
+			<directory>${project.build.directory}</directory>
+			<includes>
+				<include>synclite-android-${revision}.aar</include>
+			</includes>
+			<fileMode>644</fileMode>
+			<outputDirectory>lib/android</outputDirectory>
+		</fileSet>
+		<fileSet>
 			<directory>${project.basedir}/synclite-code-samples</directory>
 			<outputDirectory>/sample-apps/</outputDirectory>
 			<excludes>

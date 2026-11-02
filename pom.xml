@@ -9,6 +9,8 @@
 			  <revision>1.1.0</revision>
 		<!-- Set -DskipNonJavaLoggers=true to skip non-Java logger build and packaging. -->
 		<skipNonJavaLoggers>false</skipNonJavaLoggers>
+		<!-- Android AAR follows the Python/Node best-effort model. -->
+		<skipAndroidAar>false</skipAndroidAar>
 		<!--
 		  Skip the `cargo test` execution wired into the `test` phase.
 		  Derived from `-DskipTests` or `-DskipNonJavaLoggers=true` via
@@ -142,6 +144,33 @@
 								<argument>--release</argument>
 								<argument>-p</argument>
 								<argument>synclite-c</argument>
+							</arguments>
+						</configuration>
+					</execution>
+					<!--
+					  Optional Android deliverable. It is attempted by default when Gradle
+					  is available; pass -DskipAndroidAar=true to disable it.
+					  The Gradle project owns cargo-ndk, ABI selection, AAR packaging,
+					  and the Android sample; Maven only orchestrates it and copies the
+					  publishable AAR into target/.
+					-->
+					<execution>
+						<id>build-android-aar</id>
+						<phase>package</phase>
+						<goals><goal>exec</goal></goals>
+						<configuration>
+							<skip>${effectiveSkipAndroidAar}</skip>
+							<workingDirectory>${project.basedir}/synclite-logger-rust/android</workingDirectory>
+							<executable>${androidGradleCommand}</executable>
+							<environmentVariables>
+								<JAVA_HOME>${androidJavaHome}</JAVA_HOME>
+								<ANDROID_HOME>${androidSdkHome}</ANDROID_HOME>
+								<ANDROID_SDK_ROOT>${androidSdkHome}</ANDROID_SDK_ROOT>
+								<ANDROID_NDK_HOME>${androidNdkHome}</ANDROID_NDK_HOME>
+							</environmentVariables>
+							<arguments>
+								<argument>-PsyncliteVersion=${revision}</argument>
+								<argument>:assembleRelease</argument>
 							</arguments>
 						</configuration>
 					</execution>
@@ -521,6 +550,22 @@
 			</plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-clean-plugin</artifactId>
+				<configuration>
+					<!-- `mvn clean` must also drop Android Gradle outputs (AAR and the
+					     generated Rust JNI libs) so install always rebuilds them. -->
+					<filesets>
+						<fileset>
+							<directory>${project.basedir}/synclite-logger-rust/android/build</directory>
+						</fileset>
+						<fileset>
+							<directory>${project.basedir}/synclite-logger-rust/android/.gradle</directory>
+						</fileset>
+					</filesets>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-antrun-plugin</artifactId>
 				<version>3.1.0</version>
 				<executions>
@@ -559,7 +604,10 @@
 									<attribute name="nixcmd"/>
 									<sequential>
 										<exec osfamily="windows" executable="cmd" failifexecutionfails="false" resultproperty="@{prop}.rc">
-											<arg value="/c"/><arg value="@{wincmd}"/>
+											<!-- `where.exe` lives in System32. Some developer shells expose
+											     cargo.exe but accidentally omit System32 from PATH, which
+											     otherwise makes every optional-tool probe report false. -->
+											<arg value="/c"/><arg value="set &quot;PATH=%SystemRoot%\System32;%PATH%&quot; &amp; @{wincmd}"/>
 										</exec>
 										<exec osfamily="unix" executable="sh" failifexecutionfails="false" resultproperty="@{prop}.rc">
 											<arg value="-c"/><arg value="@{nixcmd}"/>
@@ -604,6 +652,60 @@
 								-->
 								<!-- cargo: host Rust cdylib + JNI + wheels + tests. -->
 								<probe prop="cargoPresent"    wincmd="where cargo >NUL 2>NUL"           nixcmd="command -v cargo >/dev/null 2>&amp;1"/>
+								<!-- Use the checked-in Android Gradle wrapper unless explicitly overridden. -->
+								<condition property="androidGradleCommand" value="${project.basedir}/synclite-logger-rust/android/gradlew.bat"><os family="windows"/></condition>
+								<property name="androidGradleCommand" value="${project.basedir}/synclite-logger-rust/android/gradlew"/>
+								<!-- Existing Windows terminals may predate SDK installation. Process values
+								     take priority; otherwise read persisted user/machine settings. -->
+								<macrodef name="resolveAndroidEnvironment">
+									<attribute name="name"/>
+									<attribute name="prop"/>
+									<sequential>
+										<condition property="@{prop}" value="${env.@{name}}"><isset property="env.@{name}"/></condition>
+										<exec osfamily="windows" executable="powershell.exe" failifexecutionfails="false" outputproperty="@{prop}">
+											<arg value="-NoProfile"/>
+											<arg value="-NonInteractive"/>
+											<arg value="-Command"/>
+											<arg value="$v = [Environment]::GetEnvironmentVariable('@{name}', 'User'); if (-not $v) { $v = [Environment]::GetEnvironmentVariable('@{name}', 'Machine') }; if ($v) { [Console]::Write($v) }"/>
+										</exec>
+										<property name="@{prop}" value=""/>
+									</sequential>
+								</macrodef>
+								<resolveAndroidEnvironment name="ANDROID_HOME" prop="configuredAndroidHome"/>
+								<resolveAndroidEnvironment name="ANDROID_SDK_ROOT" prop="configuredAndroidSdkRoot"/>
+								<resolveAndroidEnvironment name="ANDROID_NDK_HOME" prop="androidNdkHome"/>
+								<resolveAndroidEnvironment name="ANDROID_JAVA_HOME" prop="configuredAndroidJavaHome"/>
+								<condition property="androidSdkHome" value="${configuredAndroidHome}"><not><equals arg1="${configuredAndroidHome}" arg2=""/></not></condition>
+								<property name="androidSdkHome" value="${configuredAndroidSdkRoot}"/>
+								<condition property="androidJavaHome" value="${configuredAndroidJavaHome}"><not><equals arg1="${configuredAndroidJavaHome}" arg2=""/></not></condition>
+								<property name="androidJavaHome" value="${env.JAVA_HOME}"/>
+								<!-- Gradle wrapper: Android AAR packaging. -->
+								<probe prop="gradlePresent"  wincmd="if exist &quot;${androidGradleCommand}&quot; (exit /b 0) else (where ${androidGradleCommand} >NUL 2>NUL)" nixcmd="test -x &quot;${androidGradleCommand}&quot; || command -v ${androidGradleCommand} >/dev/null 2>&amp;1"/>
+								<probe prop="cargoNdkPresent" wincmd="where cargo-ndk >NUL 2>NUL" nixcmd="command -v cargo-ndk >/dev/null 2>&amp;1"/>
+								<!-- Android SDK / NDK are configured by the Android toolchain environment. -->
+								<condition property="androidSdkPresent" value="true"><and><not><equals arg1="${androidSdkHome}" arg2=""/></not><available file="${androidSdkHome}" type="dir"/></and></condition>
+								<property name="androidSdkPresent" value="false"/>
+								<condition property="androidNdkPresent" value="true"><or><and><not><equals arg1="${androidNdkHome}" arg2=""/></not><available file="${androidNdkHome}" type="dir"/></and><and><istrue value="${androidSdkPresent}"/><available file="${androidSdkHome}/ndk" type="dir"/></and></or></condition>
+								<property name="androidNdkPresent" value="false"/>
+								<!-- Android follows the optional-binding model and is disabled by the master skip or unavailable prerequisites. -->
+								<condition property="effectiveSkipAndroidAar" value="true">
+									<or>
+										<istrue value="${skipNonJavaLoggers}"/>
+										<istrue value="${skipAndroidAar}"/>
+										<isfalse value="${gradlePresent}"/>
+										<isfalse value="${cargoNdkPresent}"/>
+										<isfalse value="${androidSdkPresent}"/>
+										<isfalse value="${androidNdkPresent}"/>
+									</or>
+								</condition>
+								<property name="effectiveSkipAndroidAar" value="false"/>
+								<condition property="status.androidAar" value="disabled (skipNonJavaLoggers)"><istrue value="${skipNonJavaLoggers}"/></condition>
+								<condition property="status.androidAar" value="disabled (-DskipAndroidAar=true)"><istrue value="${skipAndroidAar}"/></condition>
+								<condition property="status.androidAar" value="SKIP (Gradle not found)"><isfalse value="${gradlePresent}"/></condition>
+								<condition property="status.androidAar" value="SKIP (cargo-ndk not found)"><isfalse value="${cargoNdkPresent}"/></condition>
+								<condition property="status.androidAar" value="SKIP (ANDROID_HOME / ANDROID_SDK_ROOT not set)"><isfalse value="${androidSdkPresent}"/></condition>
+								<condition property="status.androidAar" value="SKIP (Android NDK not found)"><isfalse value="${androidNdkPresent}"/></condition>
+								<property name="status.androidAar" value="BUILD"/>
 								<!--
 								  zig + cargo-zigbuild: Linux cross-compile of cdylib and JNI.
 								  zig may be a standalone binary on PATH OR the `ziglang` pip
@@ -791,6 +893,11 @@
 								<echo level="info" message="  cargo-zigbuild   : ${zigbuildPresent}"/>
 								<echo level="info" message="  maturin          : ${maturinPresent}"/>
 								<echo level="info" message="  npm (Node.js)    : ${npmPresent}"/>
+								<echo level="info" message="  Gradle           : ${gradlePresent} (${androidGradleCommand})"/>
+								<echo level="info" message="  cargo-ndk        : ${cargoNdkPresent}"/>
+								<echo level="info" message="  Android SDK      : ${androidSdkPresent} (${androidSdkHome})"/>
+								<echo level="info" message="  Android NDK      : ${androidNdkPresent} (${androidNdkHome})"/>
+								<echo level="info" message="  Android JDK      : ${androidJavaHome}"/>
 								<echo level="info" message="  WSL (wsl.exe)    : ${wslPresent}"/>
 								<echo level="info" message="---------------------------------------------------------------"/>
 								<echo level="info" message="Planned artifacts:"/>
@@ -802,6 +909,7 @@
 								<echo level="info" message="  Node.js package (host OS)       : ${status.nodePackage}"/>
 								<echo level="info" message="  Node.js packages (Linux)        : ${status.linuxNodePackages}"/>
 								<echo level="info" message="  Python wheels (manylinux)       : ${status.linuxWheels}"/>
+								<echo level="info" message="  Android AAR                    : ${status.androidAar}"/>
 								<echo level="info" message="  Rust integration tests          : ${status.rustTests}"/>
 								<echo level="info" message="==============================================================="/>
 								<echo level="info" message=""/>
@@ -990,6 +1098,20 @@
 								               replace=""
 								               flags="gm"
 								               byline="false"/>
+							</target>
+						</configuration>
+					</execution>
+					<execution>
+						<id>copy-android-aar</id>
+						<phase>package</phase>
+						<goals><goal>run</goal></goals>
+						<configuration>
+							<skip>${effectiveSkipAndroidAar}</skip>
+							<target>
+								<copy
+									file="${project.basedir}/synclite-logger-rust/android/build/outputs/aar/synclite-android-release.aar"
+									tofile="${project.build.directory}/synclite-android-${revision}.aar"
+									failonerror="true"/>
 							</target>
 						</configuration>
 					</execution>

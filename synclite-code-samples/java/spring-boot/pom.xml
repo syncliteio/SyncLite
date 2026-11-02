@@ -1,0 +1,127 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.3.5</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>io.synclite.samples</groupId>
+    <artifactId>spring-boot-filter-smoke</artifactId>
+    <version>1.0.0</version>
+
+    <properties>
+        <java.version>17</java.version>
+        <synclite.version>1.1.0</synclite.version>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter</artifactId>
+        </dependency>
+        <!-- The published SyncLite artifact remains unchanged. -->
+        <dependency>
+            <groupId>io.synclite</groupId>
+            <artifactId>synclite</artifactId>
+            <version>${synclite.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>ch.qos.reload4j</groupId>
+                    <artifactId>reload4j</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-api</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-reload4j</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>commons-logging</groupId>
+                    <artifactId>commons-logging</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!-- Copy the published artifact; never modify the Maven-cache copy. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>3.8.1</version>
+                <executions>
+                    <execution>
+                        <id>copy-synclite-for-boot-filtering</id>
+                        <phase>prepare-package</phase>
+                        <goals><goal>copy</goal></goals>
+                        <configuration>
+                            <artifactItems>
+                                <artifactItem>
+                                    <groupId>io.synclite</groupId>
+                                    <artifactId>synclite</artifactId>
+                                    <version>${synclite.version}</version>
+                                    <outputDirectory>${project.build.directory}/synclite-boot-filter</outputDirectory>
+                                    <destFileName>synclite-original.jar</destFileName>
+                                </artifactItem>
+                            </artifactItems>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>repackage</id>
+                        <goals><goal>repackage</goal></goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Replace only the Boot-packaged nested copy with a version that
+                 omits SyncLite's embedded SLF4J 1.7 API and provider. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <execution>
+                        <id>replace-embedded-synclite-with-boot-safe-copy</id>
+                        <phase>package</phase>
+                        <goals><goal>run</goal></goals>
+                        <configuration>
+                            <target>
+                                <property name="filter.dir" location="${project.build.directory}/synclite-boot-filter"/>
+                                <property name="boot.jar" location="${project.build.directory}/${project.build.finalName}.jar"/>
+
+                                <zip destfile="${filter.dir}/synclite-boot-safe.jar">
+                                    <zipfileset src="${filter.dir}/synclite-original.jar"
+                                        excludes="org/slf4j/**,org/apache/commons/logging/**,META-INF/services/org.slf4j.spi.SLF4JServiceProvider"/>
+                                </zip>
+
+                                <move file="${boot.jar}" tofile="${filter.dir}/application-before-synclite-filter.jar"/>
+                                <zip destfile="${boot.jar}" compress="false">
+                                    <zipfileset src="${filter.dir}/application-before-synclite-filter.jar"
+                                        excludes="BOOT-INF/lib/synclite-*.jar"/>
+                                    <zipfileset dir="${filter.dir}"
+                                        includes="synclite-boot-safe.jar"
+                                        fullpath="BOOT-INF/lib/synclite-${synclite.version}.jar"/>
+                                </zip>
+                            </target>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

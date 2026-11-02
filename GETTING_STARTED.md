@@ -15,7 +15,7 @@
         <a href="GETTING_STARTED.md"><img src="https://img.shields.io/badge/Quickstart-Get_Started-f59e0b.svg?style=flat-square" alt="Getting Started"></a>
         <a href="https://www.synclite.io"><img src="https://img.shields.io/badge/Website-synclite.io-2563eb.svg?style=flat-square" alt="Website"></a>
         <a href="README.md#synclite--build-anything-sync-anywhere-"><img src="https://img.shields.io/badge/Runtime-Embeddable-7c3aed.svg?style=flat-square" alt="Embeddable Runtime"></a>
-        <a href="README.md#get-started-in-30-seconds"><img src="https://img.shields.io/badge/Languages-Java%20%7C%20Rust%20%7C%20Python%20%7C%20Node.js-16a34a.svg?style=flat-square" alt="Java, Rust, Python, and Node.js"></a>
+        <a href="README.md#get-started-in-30-seconds"><img src="https://img.shields.io/badge/SDKs-Java%20%7C%20Android%20%7C%20Rust%20%7C%20Python%20%7C%20Node.js-16a34a.svg?style=flat-square" alt="Java, Android, Rust, Python, and Node.js"></a>
     </p>
 </p>
 
@@ -65,11 +65,14 @@ flowchart TB
 
 ## Get started in 30 seconds
 
-Pick your language and add one dependency. No server to install. No service to configure.
+Pick your runtime and add the dependency. No separate SyncLite service is required; a PostgreSQL destination still needs to be reachable to sync.
 
 ```bash
-pip install synclite            # Python — self-contained wheel, batteries included
+pip install synclite            # Python core / DB-API
+pip install 'synclite[sqlalchemy]' # Python + SQLAlchemy 2.x
 ```
+
+For SQLAlchemy, initialize a local SQLite device before opening `create_engine(f"sqlite+synclite:///{DB_PATH}")`. See the [SQLAlchemy sample](synclite-code-samples/python/sqlalchemy/synclite_sqlalchemy_postgres.py).
 
 ```bash
 npm install synclite            # Node.js — self-contained N-API package, batteries included
@@ -80,7 +83,7 @@ cargo add synclite-rs           # Rust — cdylib also embeddable from C/C++, Go
 ```
 
 ```xml
-<!-- Java / Maven -->
+<!-- Java / Spring Boot / Maven -->
 <dependency>
     <groupId>io.synclite</groupId>
     <artifactId>synclite</artifactId>
@@ -89,11 +92,21 @@ cargo add synclite-rs           # Rust — cdylib also embeddable from C/C++, Go
 ```
 
 ```groovy
-// Java / Gradle
+// Java / Gradle — consumes the same Maven-published jar
 implementation 'io.synclite:synclite:1.1.0'
 ```
 
-The Python wheel and Java jar are **self-contained** — they bundle the native runtime, DuckDB, and the PostgreSQL driver. `pip install` is genuinely all you need on Windows, Linux, and macOS.
+Gradle resolves the **same Maven artifact** from a configured Maven repository (or `mavenLocal()` after a local install); SyncLite is not published separately for Gradle. For Spring Boot + Hibernate, follow the [Maven-based Boot setup guide](SPRING_BOOT_HIBERNATE.md) for initialization before HikariCP and build-time logging configuration. For plain JDBC, use the [Java example](synclite-code-samples/java/core/SyncliteSqlitePostgresApp.java).
+
+**Android / Kotlin:** use the AAR, not the desktop Java jar. Copy the prebuilt release artifact into `app/libs`, then in your Android application's Gradle dependencies add:
+
+```kotlin
+implementation(files("libs/synclite-android-1.1.0.aar"))
+```
+
+Use a database path under `context.filesDir`; call `awaitSync()` off the main thread. Follow the [Android sample setup](synclite-code-samples/android/README.md) for the emulator, host PostgreSQL (`10.0.2.2`), and the app manifest. The [Android API guide](synclite-logger-rust/android/README.md) covers direct Kotlin use.
+
+The Python wheel and Java jar include the runtime for supported desktop/server environments; the Android AAR includes its own native libraries.
 
 ---
 
@@ -133,7 +146,19 @@ sl.await_sync(DB_PATH, 30.0)          # optional: block until PostgreSQL confirm
 conn.close()
 ```
 
-Every `INSERT` / `UPDATE` / `DELETE` — and every `ALTER TABLE` — is durably logged and applied to PostgreSQL in the background, whether your app is online or not. Full sample: [`synclite-code-samples/python/synclite_rusqlite_postgres.py`](synclite-code-samples/python/synclite_rusqlite_postgres.py).
+Every `INSERT` / `UPDATE` / `DELETE` — and every `ALTER TABLE` — is durably logged and applied to PostgreSQL in the background, whether your app is online or not. Full sample: [`synclite-code-samples/python/core/synclite_rusqlite_postgres.py`](synclite-code-samples/python/core/synclite_rusqlite_postgres.py).
+
+### Python integration choices
+
+The example above uses the **core API**. Once `sl.initialize(...)` has registered the local SQLite device and PostgreSQL destination, choose the interface your application uses:
+
+| Interface | Typical connection | Example |
+| --- | --- | --- |
+| Core | `sl.Connection.open(DB_PATH)` | [Core sample](synclite-code-samples/python/core/synclite_rusqlite_postgres.py) |
+| DB-API 2.0 | `dbapi2.connect(DB_PATH)` and cursors | [DB-API sample](synclite-code-samples/python/dbapi/synclite_dbapi_postgres.py) |
+| SQLAlchemy | `create_engine(f"sqlite+synclite:///{DB_PATH}")` | [SQLAlchemy sample](synclite-code-samples/python/sqlalchemy/synclite_sqlalchemy_postgres.py) |
+
+Install `synclite[sqlalchemy]` to use SQLAlchemy 2.x; the other two APIs need only `synclite`. Commit locally before calling `flush()` and, in short-lived demos, `sl.await_sync(DB_PATH, 30.0)`. `sqlite+synclite` connects to **local SQLite**, not directly to the PostgreSQL destination. For API details and limitations, see [Python Usage](DOCUMENTATION.md#68-python-usage).
 
 To fan out to multiple destinations, keep the same `initialize` function and replace the singular `destination=` argument with the keyword-only `destinations=` sequence:
 
@@ -272,7 +297,7 @@ SyncLite.awaitSync(DB_PATH, Duration.ofSeconds(30)); // optional: block until Po
 SQLite.closeDevice(DB_PATH);
 ```
 
-The in-process consolidator is bundled inside the jar — no external service needed. Full JDBC surface: arbitrary `SELECT`, `JOIN`, multi-statement transactions, stored procedures. Full sample: [`synclite-code-samples/java/SyncliteSqlitePostgresApp.java`](synclite-code-samples/java/SyncliteSqlitePostgresApp.java).
+The in-process consolidator is bundled inside the jar — no external service needed. Full JDBC surface: arbitrary `SELECT`, `JOIN`, multi-statement transactions, stored procedures. Full sample: [`synclite-code-samples/java/core/SyncliteSqlitePostgresApp.java`](synclite-code-samples/java/core/SyncliteSqlitePostgresApp.java).
 
 For multiple destinations, use the matching `List<DestinationOptions>` overload. The existing single-`DestinationOptions` overload remains unchanged:
 

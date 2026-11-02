@@ -104,6 +104,15 @@
 			<outputDirectory>lib/nodejs</outputDirectory>
 		</fileSet>
 		<fileSet>
+			<!-- Publishable Android Kotlin AAR produced by the optional Gradle/Cargo-NDK build. -->
+			<directory>${project.build.directory}</directory>
+			<includes>
+				<include>synclite-android-${revision}.aar</include>
+			</includes>
+			<fileMode>644</fileMode>
+			<outputDirectory>lib/android</outputDirectory>
+		</fileSet>
+		<fileSet>
 			<!--
 			  Self-contained Rust SDK source tree staged by pom.xml's
 			  `stage-rust-source-tree` antrun step. Cargo workspace with all

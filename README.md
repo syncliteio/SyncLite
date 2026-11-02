@@ -15,7 +15,7 @@
         <a href="GETTING_STARTED.md"><img src="https://img.shields.io/badge/Quickstart-Get_Started-f59e0b.svg?style=flat-square" alt="Getting Started"></a>
         <a href="https://www.synclite.io"><img src="https://img.shields.io/badge/Website-synclite.io-2563eb.svg?style=flat-square" alt="Website"></a>
         <a href="README.md#synclite--build-anything-sync-anywhere-"><img src="https://img.shields.io/badge/Runtime-Embeddable-7c3aed.svg?style=flat-square" alt="Embeddable Runtime"></a>
-        <a href="README.md#get-started-in-30-seconds"><img src="https://img.shields.io/badge/Languages-Java%20%7C%20Rust%20%7C%20Python%20%7C%20Node.js-16a34a.svg?style=flat-square" alt="Java, Rust, Python, and Node.js"></a>
+        <a href="README.md#get-started-in-30-seconds"><img src="https://img.shields.io/badge/SDKs-Java%20%7C%20Android%20%7C%20Rust%20%7C%20Python%20%7C%20Node.js-16a34a.svg?style=flat-square" alt="Java, Android, Rust, Python, and Node.js"></a>
     </p>
 </p>
 
@@ -119,11 +119,14 @@ flowchart TB
 
 ## Get started in 30 seconds
 
-Pick your language and add one dependency. No server to install. No service to configure.
+Pick your runtime and add the dependency. The logger and consolidator run in your app; to replicate to PostgreSQL, you still need a reachable PostgreSQL destination.
 
 ```bash
-pip install synclite            # Python — self-contained wheel, batteries included
+pip install synclite            # Python core / DB-API — self-contained wheel
+pip install 'synclite[sqlalchemy]' # Python + SQLAlchemy 2.x
 ```
+
+Initialize the local SQLite device first, then use `create_engine(f"sqlite+synclite:///{DB_PATH}")`. See the [SQLAlchemy sample](synclite-code-samples/python/sqlalchemy/synclite_sqlalchemy_postgres.py) or the [core API sample](synclite-code-samples/python/core/synclite_rusqlite_postgres.py).
 
 ```bash
 npm install synclite            # Node.js — self-contained N-API package, batteries included
@@ -134,7 +137,7 @@ cargo add synclite-rs           # Rust — cdylib also embeddable from C/C++, Go
 ```
 
 ```xml
-<!-- Java / Maven -->
+<!-- Java / Spring Boot / Maven -->
 <dependency>
     <groupId>io.synclite</groupId>
     <artifactId>synclite</artifactId>
@@ -143,11 +146,24 @@ cargo add synclite-rs           # Rust — cdylib also embeddable from C/C++, Go
 ```
 
 ```groovy
-// Java / Gradle
+// Java / Gradle — consumes the same Maven-published jar
 implementation 'io.synclite:synclite:1.1.0'
 ```
 
-The Python wheel, Java JAR, Node.js package, Rust crate, and C++ distribution are self-contained — they bundle the native runtime and required dependencies, including DuckDB and the PostgreSQL driver where applicable. No separate runtime installation or native dependency setup is required. Just install or add the package for your language, and you’re ready to use SyncLite on Windows, Linux, and macOS.
+Gradle resolves the **same Maven artifact** from a configured Maven repository (or `mavenLocal()` after a local install); there is no separate Gradle publication. For Spring Boot with JPA/Hibernate, follow the [Maven-based Boot guide](SPRING_BOOT_HIBERNATE.md): the dependency is only the first step, and the executable jar needs build-time logging filtering and initialization before HikariCP. For plain JDBC, see the [Java sample](synclite-code-samples/java/core/SyncliteSqlitePostgresApp.java).
+
+**Android / Kotlin:** use the Android AAR, **not** the desktop Java jar. Copy the prebuilt AAR from the platform release into your app's `app/libs` directory, then add:
+
+```kotlin
+// app/build.gradle.kts
+dependencies {
+    implementation(files("libs/synclite-android-1.1.0.aar"))
+}
+```
+
+Use a database under `context.filesDir` and run blocking sync operations off the main thread. See the [Android emulator walkthrough](synclite-code-samples/android/README.md) and [Kotlin API guide](synclite-logger-rust/android/README.md). The emulator reaches PostgreSQL on its host via `10.0.2.2`, not `localhost` (a physical device needs a reachable host or ADB port forwarding).
+
+The Python wheel and Java jar bundle the runtime for their supported desktop/server environments; the Android AAR includes its own ABI-specific native libraries. No separate SyncLite server is needed.
 
 ---
 
@@ -187,7 +203,19 @@ sl.await_sync(DB_PATH, 30.0)          # optional: block until PostgreSQL confirm
 conn.close()
 ```
 
-Every `INSERT` / `UPDATE` / `DELETE` — and every `ALTER TABLE` — is durably logged and applied to PostgreSQL in the background, whether your app is online or not. Full sample: [`synclite-code-samples/python/synclite_rusqlite_postgres.py`](synclite-code-samples/python/synclite_rusqlite_postgres.py).
+Every `INSERT` / `UPDATE` / `DELETE` — and every `ALTER TABLE` — is durably logged and applied to PostgreSQL in the background, whether your app is online or not. Full sample: [`synclite-code-samples/python/core/synclite_rusqlite_postgres.py`](synclite-code-samples/python/core/synclite_rusqlite_postgres.py).
+
+### Choose a Python API
+
+All three interfaces write to the same **local SQLite device**; SyncLite sends committed changes to the configured PostgreSQL destination. Initialize the device with `sl.initialize(...)` as above before opening a connection.
+
+| Interface | Connect and write | Runnable sample |
+| --- | --- | --- |
+| Core | `sl.Connection.open(DB_PATH)`; `conn.execute(sql, params)` | [Core API](synclite-code-samples/python/core/synclite_rusqlite_postgres.py) |
+| Python DB-API 2.0 | `dbapi2.connect(DB_PATH)`; `cursor.execute(sql, params)`; `conn.commit()` | [DB-API](synclite-code-samples/python/dbapi/synclite_dbapi_postgres.py) |
+| SQLAlchemy | `create_engine(f"sqlite+synclite:///{DB_PATH}")`; `engine.begin()` | [SQLAlchemy](synclite-code-samples/python/sqlalchemy/synclite_sqlalchemy_postgres.py) |
+
+Install `synclite` for the core and DB-API examples; install `synclite[sqlalchemy]` for SQLAlchemy. The `sqlite+synclite` URL selects SQLite SQL with SyncLite's logged driver; it is **not** a direct PostgreSQL connection. See the [Python API guide](synclite-logger-rust/python/README.md) for transaction, `flush()`, and backend limitations.
 
 ---
 
@@ -274,9 +302,55 @@ SyncLite.awaitSync(DB_PATH, Duration.ofSeconds(30)); // optional: block until Po
 SQLite.closeDevice(DB_PATH);
 ```
 
-The in-process consolidator is bundled inside the jar — no external service needed. Full JDBC surface: arbitrary `SELECT`, `JOIN`, multi-statement transactions, stored procedures. Full sample: [`synclite-code-samples/java/SyncliteSqlitePostgresApp.java`](synclite-code-samples/java/SyncliteSqlitePostgresApp.java).
+The in-process consolidator is bundled inside the jar — no external service needed. Full JDBC surface: arbitrary `SELECT`, `JOIN`, multi-statement transactions, stored procedures. Full sample: [`synclite-code-samples/java/core/SyncliteSqlitePostgresApp.java`](synclite-code-samples/java/core/SyncliteSqlitePostgresApp.java).
 
 > **Sample failing?** Check `<dbPath>.synclite/<dbName>.trace` (logger errors) and `<userHome>/synclite/job1/workDir/synclite_<deviceName>_<uuid>/synclite_device.trace` (consolidator errors).
+
+---
+
+## Android / Kotlin — SQLite → PostgreSQL
+
+Use the **Android AAR**, not the desktop Java jar. Copy `lib/android/synclite-android-1.1.0.aar` from the platform release into your app's `app/libs` directory and add `implementation(files("libs/synclite-android-1.1.0.aar"))` to your app's Gradle dependencies.
+
+```kotlin
+import android.content.Context
+import io.synclite.AndroidDestination
+import io.synclite.AndroidDeviceOptions
+import io.synclite.SyncLiteAndroid
+import io.synclite.SyncLiteConnection
+
+// Call from a worker thread or Dispatchers.IO, never the Android main thread.
+fun syncOrders(context: Context) {
+    val dbPath = context.filesDir.resolve("sampledevice.db").path
+
+    SyncLiteAndroid.initialize(
+        AndroidDeviceOptions(
+            deviceName = "sampledevice",
+            databasePath = dbPath,
+            destination = AndroidDestination(
+                type = "POSTGRES",
+                connectionString = "postgresql://postgres:postgres@10.0.2.2:5432/syncdb",
+                database = "syncdb",
+                schema = "syncschema",
+                syncMode = "REPLICATION"
+            )
+        )
+    )
+
+    val connection = SyncLiteConnection.open(dbPath)
+    try {
+        connection.execute("CREATE TABLE IF NOT EXISTS orders(id INTEGER PRIMARY KEY, item TEXT)")
+        connection.execute("INSERT INTO orders(id, item) VALUES (?, ?)", listOf(1L, "widget"))
+        connection.commit()
+        connection.flush() // publish the active segment before waiting for sync
+        SyncLiteAndroid.awaitSync(dbPath, 30_000)
+    } finally {
+        connection.close()
+    }
+}
+```
+
+Add the Android `INTERNET` permission for a network destination. `10.0.2.2` reaches PostgreSQL on the host **from an emulator**; on a physical device, use a reachable host address or ADB forwarding instead. The [Android sample walkthrough](synclite-code-samples/android/README.md) covers project setup, running PostgreSQL, and verification; see the [full Kotlin sample](synclite-code-samples/android/SyncLiteAndroidSample.kt) and [Android API guide](synclite-logger-rust/android/README.md).
 
 ---
 
@@ -676,11 +750,6 @@ synclite-runtime-1.1.0/
 |   |   +-- synclite-<version>-cp38-abi3-win_amd64.whl
 |   |   +-- synclite-<version>-cp38-abi3-manylinux_2_28_x86_64.whl
 |   |   +-- synclite-<version>-cp38-abi3-manylinux_2_28_aarch64.whl
-|   +-- nodejs/
-|   |   +-- synclite-1.1.0.tgz
-|   |   +-- synclite-native-win32-x64-msvc-1.1.0.tgz
-|   |   +-- synclite-native-linux-arm64-gnu-1.1.0.tgz
-|   |   +-- synclite-native-linux-x64-gnu-1.1.0.tgz
 |   +-- rust/
 |       +-- synclite-source/                    # Self-contained Cargo workspace
 +-- sample-apps/                                # One sample per language
@@ -688,7 +757,6 @@ synclite-runtime-1.1.0/
 |   +-- java/                                   # javac + lib/java/synclite-<version>.jar
 |   +-- python/                                 # pip install lib/python/*.whl
 |   +-- rust/                                   # cargo run, path-deps into lib/rust
-|   +-- nodejs/                                 # npm install lib/nodejs/synclite-1.1.0.tgz
 +-- LICENSE
 +-- synclite_platform_version.txt
 ```
