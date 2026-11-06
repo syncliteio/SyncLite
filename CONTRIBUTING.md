@@ -88,9 +88,9 @@ Optional but recommended:
 
 4. **Build the project** to verify your environment:
    ```bash
-   mvn -Drevision=1.1.0 clean install
+   mvn -Drevision=1.2.0 clean install
    ```
-   A successful build creates the platform release under `target/synclite-platform-1.0.0/`.
+   A successful build creates the platform release under `target/synclite-platform-1.2.0/`.
 
    **Build flavors** — SyncLite has three top-level reactor flavors, ordered largest → smallest. Pick the smallest one that meets your need.
 
@@ -102,13 +102,13 @@ Optional but recommended:
 
    ```bash
    # 1. Full platform (default)
-   mvn -Drevision=1.0.0 clean install
+   mvn -Drevision=1.2.0 clean install
 
    # 2. Full platform, Java-only
-   mvn -Drevision=1.1.0 -DskipNonJavaLoggers=true clean install
+   mvn -Drevision=1.2.0 -DskipNonJavaLoggers=true clean install
 
    # 3. Runtime
-   mvn -Drevision=1.1.0 -DruntimeOnly=true clean install
+   mvn -Drevision=1.2.0 -DruntimeOnly=true clean install
    ```
 
    > For just the synclite logger jar, or just the Rust cdylibs, build the subproject directly (`cd synclite-logger-java && mvn install`, or `cd synclite-logger-rust && cargo build --workspace --release`).
@@ -120,10 +120,10 @@ Optional but recommended:
 
    ```bash
    # Fastest full platform build
-   mvn -Drevision=1.1.0 -DskipTests clean install
+   mvn -Drevision=1.2.0 -DskipTests clean install
 
    # Fastest runtime build on a host without zig
-   mvn -Drevision=1.0.0 -DruntimeOnly=true -DskipRustCrossCompile=true -DskipTests clean install
+   mvn -Drevision=1.2.0 -DruntimeOnly=true -DskipRustCrossCompile=true -DskipTests clean install
    ```
 
 5. **Create a branch** for your change (see [Branch Naming](#branch-naming) below).
@@ -207,7 +207,7 @@ Run the Maven test phase for the specific submodule you changed:
 ```bash
 # Example: test the logger
 cd synclite-logger-java/logger
-mvn -Drevision=1.1.0 test
+mvn -Drevision=1.2.0 test
 ```
 
 ### Integration tests (SyncLite Validator)
@@ -218,7 +218,7 @@ Refer to [synclite-validator/README.md](synclite-validator/README.md) for setup 
 
 ### What we check in CI
 
-- `mvn -Drevision=1.1.0 clean install` (full multi-module build)
+- `mvn -Drevision=1.2.0 clean install` (full multi-module build)
 - All unit tests pass
 - No compiler warnings treated as errors
 

@@ -23,7 +23,7 @@ libraries to be stored.
 
 - Java 17 or later.
 - Maven 3.9 or later.
-- SyncLite `1.1.0` available from the configured Maven repository or the local
+- SyncLite `1.2.0` available from the configured Maven repository or the local
   Maven cache.
 
 Do not add `org.slf4j:log4j-over-slf4j`: SyncLite retains Reload4j for its

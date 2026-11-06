@@ -11,20 +11,20 @@ One end-to-end sample per language, each demonstrating the same story: a local S
 | C++    | [`synclite_rusqlite_postgres.cpp`](cpp/synclite_rusqlite_postgres.cpp)             | [cpp/README.md](cpp/README.md) |
 | Kotlin / Android | [`SyncLiteAndroidSample.kt`](android/SyncLiteAndroidSample.kt) | [android/README.md](android/README.md) |
 
-## Install the SyncLite runtime (v1.1.0)
+## Install the SyncLite runtime (v1.2.0)
 
 Each sample can run against the **published** SyncLite runtime for its language — no repo checkout required. Grab the one for your stack, then follow that folder's README:
 
 | Language | Install | Registry |
 |---|---|---|
-| Python | `pip install synclite==1.1.0` | [PyPI](https://pypi.org/project/synclite/) |
-| Node.js | `npm install synclite@1.1.0` | [npm](https://www.npmjs.com/package/synclite) |
-| Rust   | `cargo add synclite-rs@1.1.0` (or `synclite = { package = "synclite-rs", version = "1.1.0" }` in `Cargo.toml`) | [crates.io](https://crates.io/crates/synclite-rs) |
-| Java   | `io.synclite:synclite:1.1.0` (Maven / Gradle — see [java/core/README.md](java/core/README.md#quickest-start--add-the-maven-dependency)) | Maven Central |
+| Python | `pip install synclite==1.2.0` | [PyPI](https://pypi.org/project/synclite/) |
+| Node.js | `npm install synclite@1.2.0` | [npm](https://www.npmjs.com/package/synclite) |
+| Rust   | `cargo add synclite-rs@1.2.0` (or `synclite = { package = "synclite-rs", version = "1.2.0" }` in `Cargo.toml`) | [crates.io](https://crates.io/crates/synclite-rs) |
+| Java   | `io.synclite:synclite:1.2.0` (Maven / Gradle — see [java/core/README.md](java/core/README.md#quickest-start--add-the-maven-dependency)) | Maven Central |
 | C++    | Link the native `synclite` cdylib (built from the `synclite` crate / bundled SDK — see [cpp/README.md](cpp/README.md)) | crates.io / release zip |
-| Kotlin / Android | Use `lib/android/synclite-android-1.1.0.aar` from the release | Android AAR |
+| Kotlin / Android | `implementation("io.synclite:synclite-android:1.2.0")` with `mavenCentral()` | Maven Central (Android AAR) |
 
-The Python wheel, Java jar, and Node npm tarball are self-contained (they bundle their native runtime + DuckDB). The Rust crate and C++ binding compile the native DuckDB dependency, so a C/C++ toolchain + CMake are required. Prefer a fully offline flow? Every folder README also documents running straight from an extracted release zip.
+The Python wheel, Java jar, and Node npm package are self-contained for their supported platforms. The Rust crate and C++ binding compile the native DuckDB dependency, so a C/C++ toolchain + CMake are required. Each sample keeps both published-package and bundled-release options where applicable: Node.js can use npm or the release's `lib/nodejs/` packages; Android can use Maven Central or `lib/android/synclite-android-1.2.0.aar`. Choose one route per run. Release `1.2.0` must be published before registry coordinates can be installed; the bundled release route does not require that publication.
 
 All six samples share the same story:
 

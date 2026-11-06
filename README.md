@@ -141,23 +141,34 @@ cargo add synclite-rs           # Rust — cdylib also embeddable from C/C++, Go
 <dependency>
     <groupId>io.synclite</groupId>
     <artifactId>synclite</artifactId>
-    <version>1.1.0</version>
+    <version>1.2.0</version>
 </dependency>
 ```
 
 ```groovy
 // Java / Gradle — consumes the same Maven-published jar
-implementation 'io.synclite:synclite:1.1.0'
+implementation 'io.synclite:synclite:1.2.0'
 ```
 
 Gradle resolves the **same Maven artifact** from a configured Maven repository (or `mavenLocal()` after a local install); there is no separate Gradle publication. For Spring Boot with JPA/Hibernate, follow the [Maven-based Boot guide](SPRING_BOOT_HIBERNATE.md): the dependency is only the first step, and the executable jar needs build-time logging filtering and initialization before HikariCP. For plain JDBC, see the [Java sample](synclite-code-samples/java/core/SyncliteSqlitePostgresApp.java).
 
-**Android / Kotlin:** use the Android AAR, **not** the desktop Java jar. Copy the prebuilt AAR from the platform release into your app's `app/libs` directory, then add:
+**Android / Kotlin:** resolve the Android AAR from Maven Central, **not** the desktop Java jar. Ensure your `settings.gradle.kts` includes:
+
+```kotlin
+dependencyResolutionManagement {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+```
+
+Then add the Maven dependency:
 
 ```kotlin
 // app/build.gradle.kts
 dependencies {
-    implementation(files("libs/synclite-android-1.1.0.aar"))
+    implementation("io.synclite:synclite-android:1.2.0")
 }
 ```
 
@@ -263,7 +274,7 @@ The npm package contains the same embedded Rust runtime as the Python wheel: loc
 <dependency>
     <groupId>io.synclite</groupId>
     <artifactId>synclite</artifactId>
-    <version>1.1.0</version>
+    <version>1.2.0</version>
 </dependency>
 ```
 
@@ -310,7 +321,7 @@ The in-process consolidator is bundled inside the jar — no external service ne
 
 ## Android / Kotlin — SQLite → PostgreSQL
 
-Use the **Android AAR**, not the desktop Java jar. Copy `lib/android/synclite-android-1.1.0.aar` from the platform release into your app's `app/libs` directory and add `implementation(files("libs/synclite-android-1.1.0.aar"))` to your app's Gradle dependencies.
+Use the **Android AAR**, not the desktop Java jar. With `google()` and `mavenCentral()` configured in your Android project's dependency repositories, add `implementation("io.synclite:synclite-android:1.2.0")` to the app's Gradle dependencies. No AAR copying or native source build is required.
 
 ```kotlin
 import android.content.Context
@@ -703,16 +714,16 @@ cd SyncLite
 
 ```bash
 # 1. Full platform (default)
-mvn -Drevision=1.1.0 clean install
+mvn -Drevision=1.2.0 clean install
 
 # 2. Full platform, Java-only (no Rust toolchain required)
-mvn -Drevision=1.1.0 -DskipNonJavaLoggers=true clean install
+mvn -Drevision=1.2.0 -DskipNonJavaLoggers=true clean install
 
 # 3. Runtime only — slim embeddable zip
-mvn -Drevision=1.1.0 -DruntimeOnly=true clean install
+mvn -Drevision=1.2.0 -DruntimeOnly=true clean install
 
 # Fastest build on a host without zig
-mvn -Drevision=1.1.0 -DruntimeOnly=true -DskipRustCrossCompile=true -DskipTests clean install
+mvn -Drevision=1.2.0 -DruntimeOnly=true -DskipRustCrossCompile=true -DskipTests clean install
 ```
 
 > For just the Java jar or just the Rust cdylibs, build individual subprojects directly: `cd synclite-logger-java && mvn install` or `cd synclite-logger-rust && cargo build --workspace --release`.
@@ -732,7 +743,7 @@ rustup target add x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu
 ### Runtime-only zip (`-DruntimeOnly=true`)
 
 ```
-synclite-runtime-1.1.0/
+synclite-runtime-1.2.0/
 +-- lib/
 |   +-- java/
 |   |   +-- synclite-<version>.jar              # Add to your app classpath
@@ -764,7 +775,7 @@ synclite-runtime-1.1.0/
 ### Full platform zip (default)
 
 ```
-synclite-platform-1.1.0/
+synclite-platform-1.2.0/
 +-- bin/
 |   +-- deploy.sh / deploy.bat        # One-command setup: downloads Tomcat + JDK, deploys WARs
 |   +-- start.sh / start.bat          # Start Tomcat + all SyncLite apps
@@ -890,7 +901,7 @@ SyncLite DB is a local-first HTTP/JSON database service that wraps embedded data
 
 The sample below uses Python for brevity; the same HTTP calls work from Go (`net/http`) and Node.js (`fetch` / `axios`).
 
-Deploy `synclite-db-1.1.0.war` (bundled under `tools/synclite-db/`) to Tomcat, open `http://localhost:8080/synclite-db`, and configure + start the DB server from the browser GUI. It then serves the HTTP/JSON API on the port set in the GUI.
+Deploy `synclite-db-1.2.0.war` (bundled under `tools/synclite-db/`) to Tomcat, open `http://localhost:8080/synclite-db`, and configure + start the DB server from the browser GUI. It then serves the HTTP/JSON API on the port set in the GUI.
 
 ```python
 # Python client (plain HTTP — no SDK needed)

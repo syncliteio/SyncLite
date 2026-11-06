@@ -7,8 +7,12 @@ Top-of-file comments show where to flip **sync mode** (`REPLICATION` ↔ `CONSOL
 ## Quickest start — install from npm
 
 ```bash
-npm install synclite@1.1.0
+npm install synclite@1.2.0
 ```
+
+The main package and matching native package must be published at `1.2.0`
+before npm can resolve this version. The bundled release option below does
+not require a published SyncLite package.
 
 That's it — npm automatically installs the matching native optional dependency
 (`@synclite/native-win32-x64-msvc`, `@synclite/native-linux-x64-gnu`, or
@@ -29,12 +33,12 @@ You are already in `sample-apps/nodejs/` of an extracted release. The release sh
 node install-synclite.js
 ```
 
-The installer detects your OS/architecture and installs `synclite-1.1.0.tgz`
+The installer detects your OS/architecture and installs `synclite-1.2.0.tgz`
 plus its matching scoped native package from `../../lib/nodejs/`. It works
 unchanged on Windows x64, Linux x86_64, and Linux aarch64 — no registry access,
 native build, or manual platform selection required.
 
-> For a registry install, use `npm install synclite`. npm resolves the matching
+> For a registry install, use `npm install synclite@1.2.0`. npm resolves the matching
 > `@synclite/native-<platform>` optional dependency automatically.
 
 ### 2. Install `pg` (for the post-sync Postgres verification)
@@ -85,11 +89,16 @@ Then `awaitSync` blocks until the in-process shipper + consolidator have drained
 If you're working from a `synclite` repo checkout instead of an extracted release, install from the built npm tarball:
 
 ```bash
-npm install ../../synclite-logger-rust/nodejs/dist/synclite-1.1.0-<tag>.tgz
+npm install ../../synclite-logger-rust/nodejs/dist/synclite-1.2.0.tgz ../../synclite-logger-rust/nodejs/dist/synclite-native-<platform>-1.2.0.tgz
 ```
 
-Or build from source by running the root Maven build, which produces the tarball and places it in the release staging area
-```
+Replace `<platform>` with `win32-x64-msvc`, `linux-x64-gnu`, or
+`linux-arm64-gnu`. Install both packages from this sample directory, not
+from the SDK source directory; the SDK must not depend on its own tarballs.
+
+Alternatively, run the root Maven build to stage the release, then follow
+the release-zip instructions above. The npm registry route remains available
+for testing the published binary.
 
 The Node addon is built by napi-rs from `crates/logger/bindings-node` and embeds the same Rust logger, shipper, and consolidator runtime used by the Python wheel.
 
@@ -120,13 +129,13 @@ npm install
 Then run the full Maven package build from the repository root:
 
 ```powershell
-mvn -Drevision=1.1.0 clean install
+mvn -Drevision=1.2.0 clean install
 ```
 
 The resulting artifacts are staged under:
 
 ```text
-target/synclite-platform-1.1.0/lib/nodejs/
+target/synclite-platform-1.2.0/lib/nodejs/
 ```
 
 If WSL/Linux, Zig, or the Linux toolchain is unavailable, Maven still builds

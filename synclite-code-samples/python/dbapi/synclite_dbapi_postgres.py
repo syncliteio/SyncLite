@@ -6,9 +6,9 @@ try:
     from synclite import dbapi2
 except ImportError as exc:
     raise ImportError(
-        "This sample requires synclite 1.1.0 or newer, which exports "
+        "This sample requires synclite 1.2.0 or newer, which exports "
         "synclite.dbapi2. Upgrade with: python -m pip install --upgrade "
-        "synclite==1.1.0"
+        "synclite==1.2.0"
     ) from exc
 
 DB_PATH = "sample_dbapi.db"

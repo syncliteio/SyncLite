@@ -33,8 +33,8 @@
 		</fileSet>
 		<!-- Rust cdylibs (multi-arch via glob) -->
 		<fileSet>
-			<!-- C/C++ SDK only: the C-ABI cdylib (synclite_1_0_0.dll on Windows,
-			     libsynclite_1_0_0.so/.dylib on Linux/macOS) + its Windows import/static
+			<!-- C/C++ SDK only: the C-ABI cdylib (synclite_1_2_0.dll on Windows,
+			     libsynclite_1_2_0.so/.dylib on Linux/macOS) + its Windows import/static
 			     libs + cross-compiled Linux .so variants. The Java JNI native (synclite_jni)
 			     is shipped inside the logger jar under lib/java
 			     (META-INF/native/<classifier>/libsynclite_<rev>_jni.<ext>) and the

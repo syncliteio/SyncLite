@@ -2,7 +2,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 
-const version = '1.1.0';
+const version = '1.2.0';
 const tags = {
   'win32-x64': 'win32-x64-msvc',
   'linux-x64': 'linux-x64-gnu',
@@ -32,7 +32,7 @@ const result = process.platform === 'win32'
   ? spawnSync(
     path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'cmd.exe'),
     ['/d', '/c', `npm install --offline "${mainPackage}" "${nativePackage}"`],
-    { cwd: __dirname, stdio: 'inherit', shell: false },
+    { cwd: __dirname, stdio: 'inherit', shell: false, windowsVerbatimArguments: true },
   )
   : spawnSync('npm', ['install', '--offline', mainPackage, nativePackage], {
     cwd: __dirname,

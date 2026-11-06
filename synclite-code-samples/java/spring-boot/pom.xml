@@ -16,7 +16,7 @@
 
     <properties>
         <java.version>17</java.version>
-        <synclite.version>1.1.0</synclite.version>
+        <synclite.version>1.2.0</synclite.version>
     </properties>
 
     <dependencies>

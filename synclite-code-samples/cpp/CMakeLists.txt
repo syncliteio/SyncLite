@@ -188,7 +188,7 @@ if(WIN32)
     endif()
 else()
     # On Unix the cdylib we linked against IS the runtime shared object, so we
-    # stage that exact file (e.g. libsynclite_1_0_0.so / .dylib) next to the
+    # stage that exact file (e.g. libsynclite_1_2_0.so / .dylib) next to the
     # sample so developers do not have to fiddle with LD_LIBRARY_PATH.
     set(SYNCLITE_RUNTIME_LIB "${SYNCLITE_LIB}")
 
