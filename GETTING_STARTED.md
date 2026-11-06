@@ -65,14 +65,12 @@ flowchart TB
 
 ## Get started in 30 seconds
 
-Pick your runtime and add the dependency. No separate SyncLite service is required; a PostgreSQL destination still needs to be reachable to sync.
+Pick your runtime and add the dependency.
 
 ```bash
 pip install synclite            # Python core / DB-API
 pip install 'synclite[sqlalchemy]' # Python + SQLAlchemy 2.x
 ```
-
-For SQLAlchemy, initialize a local SQLite device before opening `create_engine(f"sqlite+synclite:///{DB_PATH}")`. See the [SQLAlchemy sample](synclite-code-samples/python/sqlalchemy/synclite_sqlalchemy_postgres.py).
 
 ```bash
 npm install synclite            # Node.js — self-contained N-API package, batteries included
@@ -92,21 +90,17 @@ cargo add synclite-rs           # Rust — cdylib also embeddable from C/C++, Go
 ```
 
 ```groovy
-// Java / Gradle — consumes the same Maven-published jar
+// Java / Gradle
 implementation 'io.synclite:synclite:1.2.0'
 ```
 
-Gradle resolves the **same Maven artifact** from a configured Maven repository (or `mavenLocal()` after a local install); SyncLite is not published separately for Gradle. For Spring Boot + Hibernate, follow the [Maven-based Boot setup guide](SPRING_BOOT_HIBERNATE.md) for initialization before HikariCP and build-time logging configuration. For plain JDBC, use the [Java example](synclite-code-samples/java/core/SyncliteSqlitePostgresApp.java).
-
-**Android / Kotlin:** consume the Android AAR from Maven Central, not the desktop Java jar. Ensure your `settings.gradle.kts` dependency repositories include `google()` and `mavenCentral()`, then add to your application's Gradle dependencies:
+**Android / Kotlin:**
 
 ```kotlin
 implementation("io.synclite:synclite-android:1.2.0")
 ```
 
-Use a database path under `context.filesDir`; call `awaitSync()` off the main thread. Follow the [Android sample setup](synclite-code-samples/android/README.md) for the emulator, host PostgreSQL (`10.0.2.2`), and the app manifest. The [Android API guide](synclite-logger-rust/android/README.md) covers direct Kotlin use.
-
-The Python wheel and Java jar include the runtime for supported desktop/server environments; the Android AAR includes its own native libraries.
+For complete examples, see the [code samples](synclite-code-samples/README.md).
 
 ---
 
