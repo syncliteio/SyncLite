@@ -268,6 +268,17 @@
       flex-shrink: 0; white-space: nowrap;
     }
     .tab-btn.active, .tab-btn:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .tab-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .sample-subtabs { min-height: 2.4rem; }
+    .sample-subtabs[hidden] { display: none; }
+    .sample-subtabs .tab-btn {
+      border-radius: 0; border-color: transparent; border-bottom-width: 2px;
+      padding: .4rem .75rem;
+    }
+    .sample-subtabs .tab-btn.active, .sample-subtabs .tab-btn:hover {
+      background: transparent; color: var(--text);
+    }
+    .sample-subtabs .tab-btn.active { border-bottom-color: var(--accent); }
     .tab-new {
       display: inline-block; margin-left: .35rem; padding: .1rem .35rem;
       border-radius: 4px; background: var(--green); color: #052e16;
@@ -618,38 +629,49 @@
         </div>
         <div class="install-cmd">
           <span class="install-cmd-tag">Android</span>
-          <code>lib/android/synclite-android-1.2.0.aar</code>
+          <code>io.synclite:synclite-android:1.2.0</code>
         </div>
       </div>
-      <div class="install-strip-note">Python (PyPI) and Rust (crates.io) grab the newest release automatically. Node.js ships as an offline npm tarball and Android as a prebuilt AAR in the platform release. Python wheel, Node package, Java jar, and Android AAR bundle their native runtime; the Rust crate builds it. Android apps must use the AAR, not the desktop Java jar. Full setup: <a href="https://github.com/syncliteio/SyncLite/blob/main/GETTING_STARTED.md" target="_blank">Getting Started →</a></div>
+      <div class="install-strip-note">For full setup and bundled-package installation, see <a href="https://github.com/syncliteio/SyncLite/blob/main/GETTING_STARTED.md" target="_blank">Getting Started →</a></div>
     </div>
 
     <div class="tabs">
-      <div class="tab-row">
-        <button class="tab-btn active" onclick="showTab('python', this)">Python (Core API)</button>
-        <button class="tab-btn" onclick="showTab('python-dbapi', this)">Python (DB-API) <span class="tab-new">NEW</span></button>
-        <button class="tab-btn" onclick="showTab('python-sqlalchemy', this)">Python (SQLAlchemy) <span class="tab-new">NEW</span></button>
+      <div class="tab-row language-tabs" role="tablist" aria-label="Sample languages">
+        <button class="tab-btn active" type="button" role="tab" aria-selected="true" onclick="showLanguage('python', this)">Python</button>
+        <button class="tab-btn" type="button" role="tab" aria-selected="false" tabindex="-1" onclick="showLanguage('java', this)">Java</button>
+        <button class="tab-btn" type="button" role="tab" aria-selected="false" tabindex="-1" onclick="showLanguage('kotlin', this)">Kotlin <span class="tab-new">NEW</span></button>
+        <button class="tab-btn" type="button" role="tab" aria-selected="false" tabindex="-1" onclick="showLanguage('nodejs', this)">Node.js</button>
+        <button class="tab-btn" type="button" role="tab" aria-selected="false" tabindex="-1" onclick="showLanguage('cpp', this)">C++</button>
+        <button class="tab-btn" type="button" role="tab" aria-selected="false" tabindex="-1" onclick="showLanguage('rust', this)">Rust</button>
+        <button class="tab-btn" type="button" role="tab" aria-selected="false" tabindex="-1" onclick="showLanguage('services', this)">Services/Tools</button>
       </div>
-      <div class="tab-row">
-        <button class="tab-btn" onclick="showTab('jdbc', this)">Java (JDBC)</button>
-        <button class="tab-btn" onclick="showTab('spring-boot', this)">Java (Spring Boot)</button>
-        <button class="tab-btn" onclick="showTab('store', this)">Java (CRUD)</button>
-        <button class="tab-btn" onclick="showTab('stream', this)">Java (Streaming)</button>
-        <button class="tab-btn" onclick="showTab('jedis', this)">Java (Jedis)</button>
-        <button class="tab-btn" onclick="showTab('kafka', this)">Java (Kafka)</button>
+      <div class="tab-row sample-subtabs" data-language="python" role="tablist" aria-label="Python APIs">
+        <button class="tab-btn active" onclick="showTab('python', this)">Core API</button>
+        <button class="tab-btn" onclick="showTab('python-dbapi', this)">DB-API <span class="tab-new">NEW</span></button>
+        <button class="tab-btn" onclick="showTab('python-sqlalchemy', this)">SQLAlchemy <span class="tab-new">NEW</span></button>
       </div>
-      <div class="tab-row">
-        <button class="tab-btn" onclick="showTab('android', this)">Android (Kotlin) <span class="tab-new">NEW</span></button>
+      <div class="tab-row sample-subtabs" data-language="java" role="tablist" aria-label="Java APIs and frameworks" hidden>
+        <button class="tab-btn active" onclick="showTab('jdbc', this)">JDBC</button>
+        <button class="tab-btn" onclick="showTab('spring-boot', this)">Spring Boot <span class="tab-new">NEW</span></button>
+        <button class="tab-btn" onclick="showTab('store', this)">CRUD</button>
+        <button class="tab-btn" onclick="showTab('stream', this)">Streaming</button>
+        <button class="tab-btn" onclick="showTab('jedis', this)">Jedis</button>
+        <button class="tab-btn" onclick="showTab('kafka', this)">Kafka</button>
       </div>
-      <div class="tab-row">
-        <button class="tab-btn" onclick="showTab('nodejs', this)">Node.js</button>
+      <div class="tab-row sample-subtabs" data-language="kotlin" role="tablist" aria-label="Kotlin platforms" hidden>
+        <button class="tab-btn active" onclick="showTab('android', this)">Android</button>
       </div>
-      <div class="tab-row">
-        <button class="tab-btn" onclick="showTab('cpp', this)">C++</button>
-        <button class="tab-btn" onclick="showTab('rust', this)">Rust</button>
+      <div class="tab-row sample-subtabs" data-language="nodejs" role="tablist" aria-label="Node.js APIs" hidden>
+        <button class="tab-btn active" onclick="showTab('nodejs', this)">Core API</button>
       </div>
-      <div class="tab-row">
-        <button class="tab-btn" onclick="showTab('http', this)">SyncLite DB (HTTP)</button>
+      <div class="tab-row sample-subtabs" data-language="cpp" role="tablist" aria-label="C++ APIs" hidden>
+        <button class="tab-btn active" onclick="showTab('cpp', this)">Core API</button>
+      </div>
+      <div class="tab-row sample-subtabs" data-language="rust" role="tablist" aria-label="Rust APIs" hidden>
+        <button class="tab-btn active" onclick="showTab('rust', this)">Core API</button>
+      </div>
+      <div class="tab-row sample-subtabs" data-language="services" role="tablist" aria-label="Services and tools" hidden>
+        <button class="tab-btn active" onclick="showTab('http', this)">SyncLite DB (HTTP)</button>
         <button class="tab-btn" onclick="showTab('dbreader', this)">DBReader ETL</button>
         <button class="tab-btn" onclick="showTab('qreader', this)">QReader MQTT</button>
       </div>
@@ -816,8 +838,7 @@ conn.<span class="fn">close</span>();
     conn.<span class="fn">close</span>()
   }
 }
-<span class="cmt">// Add android.permission.INTERNET for a network destination.</span>
-<span class="cmt">// 10.0.2.2 reaches the host from an emulator; physical devices need a reachable host.</span>
+<span class="cmt">// Replace 10.0.2.2 with your PostgreSQL hostname or IP address.</span>
 <a href="https://github.com/syncliteio/SyncLite/blob/main/synclite-code-samples/android/README.md" target="_blank" rel="noopener noreferrer">Full Android setup and sample →</a></pre>
   </div>
 
@@ -1355,12 +1376,69 @@ props.<span class="fn">put</span>(<span class="str">"value.serializer"</span>, <
 </footer>
 
 <script>
-  function showTab(name, button) {
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-    document.getElementById('tab-' + name).classList.add('active');
-    button.classList.add('active');
+  function showLanguage(name, button) {
+    document.querySelectorAll('.language-tabs .tab-btn').forEach(languageButton => {
+      const selected = languageButton === button;
+      languageButton.classList.toggle('active', selected);
+      languageButton.setAttribute('aria-selected', String(selected));
+      languageButton.tabIndex = selected ? 0 : -1;
+    });
+    document.querySelectorAll('.sample-subtabs').forEach(group => {
+      group.hidden = group.dataset.language !== name;
+    });
+    const group = document.querySelector('.sample-subtabs[data-language="' + name + '"]');
+    const selectedButton = group.querySelector('.tab-btn.active');
+    selectedButton.click();
   }
+
+  function showTab(name, button) {
+    button.closest('.sample-subtabs').querySelectorAll('.tab-btn').forEach(sampleButton => {
+      const selected = sampleButton === button;
+      sampleButton.classList.toggle('active', selected);
+      sampleButton.setAttribute('aria-selected', String(selected));
+      sampleButton.tabIndex = selected ? 0 : -1;
+    });
+    document.querySelectorAll('.tab-pane').forEach(pane => {
+      const selected = pane.id === 'tab-' + name;
+      pane.classList.toggle('active', selected);
+      pane.hidden = !selected;
+    });
+    document.querySelector('.language-tabs .tab-btn.active').setAttribute('aria-controls', 'tab-' + name);
+  }
+
+  document.querySelectorAll('.sample-subtabs .tab-btn').forEach(button => {
+    const sampleName = button.getAttribute('onclick').match(/showTab\('([^']+)'/)[1];
+    const selected = button.classList.contains('active');
+    button.id = 'sample-' + sampleName;
+    button.type = 'button';
+    button.setAttribute('role', 'tab');
+    button.setAttribute('aria-selected', String(selected));
+    button.setAttribute('aria-controls', 'tab-' + sampleName);
+    button.tabIndex = selected ? 0 : -1;
+    const pane = document.getElementById('tab-' + sampleName);
+    pane.setAttribute('role', 'tabpanel');
+    pane.setAttribute('aria-labelledby', button.id);
+  });
+
+  document.querySelectorAll('.tabs [role="tablist"]').forEach(tablist => {
+    tablist.addEventListener('keydown', event => {
+      const buttons = Array.from(tablist.querySelectorAll('[role="tab"]'));
+      const currentIndex = buttons.indexOf(document.activeElement);
+      if (currentIndex < 0) return;
+      let nextIndex;
+      if (event.key === 'ArrowRight') nextIndex = (currentIndex + 1) % buttons.length;
+      else if (event.key === 'ArrowLeft') nextIndex = (currentIndex + buttons.length - 1) % buttons.length;
+      else if (event.key === 'Home') nextIndex = 0;
+      else if (event.key === 'End') nextIndex = buttons.length - 1;
+      else return;
+      event.preventDefault();
+      buttons[nextIndex].focus();
+      buttons[nextIndex].click();
+      buttons[nextIndex].scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    });
+  });
+
+  showLanguage('python', document.querySelector('.language-tabs .tab-btn.active'));
 
   const nav = document.querySelector('nav');
   const navToggle = document.querySelector('.nav-toggle');
