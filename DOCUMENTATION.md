@@ -10,36 +10,56 @@
 
 ---
 
-## Quick Install (published packages, v1.1.0)
+## Quick Install (registry packages, v1.2.0)
 
-Embed the SyncLite runtime by pulling the **published** package for your language — no repo checkout or source build required:
+Embed the SyncLite runtime by pulling the registry package for your language, without a repo checkout or source build. These coordinates target release `1.2.0`; the release must be published to the indicated registry before consumers can install it.
 
 | Language | Install | Registry |
 |---|---|---|
-| **Python** | `pip install synclite==1.1.0` | PyPI |
-| **Node.js** | `npm install synclite@1.1.0` | npm |
-| **Rust** | `cargo add synclite-rs@1.1.0` (or `synclite = { package = "synclite-rs", version = "1.1.0" }` in `Cargo.toml`) | crates.io |
-| **Java** | Maven: `io.synclite:synclite:1.1.0` &nbsp;·&nbsp; Gradle: `implementation 'io.synclite:synclite:1.1.0'` | Maven Central |
+| **Python** | `pip install synclite==1.2.0` | PyPI |
+| **Node.js** | `npm install synclite@1.2.0` | npm |
+| **Rust** | `cargo add synclite-rs@1.2.0` (or `synclite = { package = "synclite-rs", version = "1.2.0" }` in `Cargo.toml`) | crates.io |
+| **Java** | Maven: `io.synclite:synclite:1.2.0` &nbsp;·&nbsp; Gradle: `implementation 'io.synclite:synclite:1.2.0'` | Maven Central |
+| **Android / Kotlin** | `implementation("io.synclite:synclite-android:1.2.0")` with `google()` and `mavenCentral()` in Gradle dependency repositories | Maven Central (AAR) |
 
 ```xml
 <!-- Maven — pom.xml -->
 <dependency>
     <groupId>io.synclite</groupId>
     <artifactId>synclite</artifactId>
-    <version>1.1.0</version>
+    <version>1.2.0</version>
 </dependency>
 ```
 
 The Python wheel and Node.js npm tarball are self-contained (they bundle the platform native runtime). The Java jar bundles SQLite and PostgreSQL dependencies; DuckDB JDBC is intentionally marked `provided` and should be added by DuckDB users. The Rust crate builds the native runtime with SQLite and DuckDB support from Cargo-managed dependencies, so a C/C++ toolchain + CMake are required — see [Prerequisites & Build](#4-prerequisites--build). To build everything from source instead, follow the same section.
 
-### Bundled SQLite and DuckDB versions (runtime v1.1.0)
+### Bundled SQLite and DuckDB versions (runtime v1.2.0)
 
-These are the SQLite/DuckDB versions used by the SyncLite runtime line in general for `1.1.0`:
+These are the SQLite/DuckDB versions used by the SyncLite runtime line in general for `1.2.0`:
 
 | Runtime surface | SQLite | DuckDB |
 |---|---|---|
-| Java (`io.synclite:synclite`) | `org.xerial:sqlite-jdbc:3.53.0.0` | `org.duckdb:duckdb_jdbc:1.5.2.0` (declared by SyncLite as `provided`; add explicitly in your app when using DuckDB devices) |
-| Rust runtime (`synclite-rs`) and its Python/Node bindings | `rusqlite:0.39.0` with `libsqlite3-sys:0.37.0` (`bundled` feature enabled) | `duckdb:1.10502.0` (maps to DuckDB `1.5.2`) |
+| Java (`io.synclite:synclite`) | `org.xerial:sqlite-jdbc:3.54.1.0` | `org.duckdb:duckdb_jdbc:2.0.0.0` (declared by SyncLite as `provided`; add explicitly in your app when using DuckDB devices) |
+| Rust runtime (`synclite-rs`) and its Python/Node bindings | `rusqlite:0.41.1` with `libsqlite3-sys:0.39.1` (`bundled` SQLite `3.54.1`) | `duckdb:1.20000.0` (maps to DuckDB `2.0.0`; `download-lib` feature enabled) |
+
+### Other Java dependency versions (source builds)
+
+The current source POMs use these versions wherever the corresponding dependency is declared:
+
+| Dependency | Version |
+|---|---|
+| PostgreSQL JDBC (`org.postgresql:postgresql`) | `42.7.14` |
+| SQL Server JDBC (`com.microsoft.sqlserver:mssql-jdbc`) | `13.6.2.jre11` |
+| MySQL JDBC (`com.mysql:mysql-connector-j`) | `26.10.0` |
+| Kafka clients (`org.apache.kafka:kafka-clients`) | `4.4.0` |
+| AWS SDK Java v2 S3 (`software.amazon.awssdk:s3`) | `2.57.8` |
+| JSch (`com.github.mwiede:jsch`) | `2.28.8` |
+| Jedis (`redis.clients:jedis`) | `8.0.2` |
+| MinIO (`io.minio:minio`) | `9.0.4` |
+| HikariCP (`com.zaxxer:HikariCP`) | `7.1.0` |
+| OkHttp JVM (`com.squareup.okhttp3:okhttp-jvm`, required by MinIO) | `5.5.1` |
+
+Java S3 integrations use AWS SDK v2 with the existing endpoint, access-key and secret-key settings. The signing region is inferred from AWS regional endpoints; for custom S3-compatible endpoints, it comes from the `aws.region` JVM property or `AWS_REGION`, falling back to `us-east-1`. Custom endpoints use path-style bucket addressing.
 
 ---
 
@@ -153,7 +173,7 @@ Both produce the same `.sqllog` segments, so you can mix devices (some logger-on
 
 The default Java JAR includes SQLite support but does not bundle DuckDB native
 libraries or `duckdb_jdbc`. Applications using a DuckDB source device must add
-`org.duckdb:duckdb_jdbc:1.5.2.0` explicitly; SQLite applications require no
+`org.duckdb:duckdb_jdbc:2.0.0.0` explicitly; SQLite applications require no
 DuckDB dependency.
 | **SyncLite Rust Runtime** | Same runtime in Rust (`synclite` crate) — logger + shipper + in-process consolidator. Its generic `initialize(...)` accepts zero, one, or an ordered vector of destinations. Consumable from Rust, Python, Node.js, C/C++, Go, Ruby, C# via a single `cdylib`. | (embedded library — no port) |
 | **SyncLite DB** | Standalone HTTP/JSON database server for any language | Configurable (default `5555`) |
@@ -264,7 +284,7 @@ cd synclite-logger-rust/android
 
 On Windows, use `gradlew.bat` instead of `./gradlew`.
 
-For an existing Android app, copy `synclite-android-1.1.0.aar` from the release's `lib/android/` into `app/libs/` and add `implementation(files("libs/synclite-android-1.1.0.aar"))` to the app's Gradle dependencies. Use `context.filesDir` for the database and call `awaitSync()` on a worker thread. An emulator reaches PostgreSQL on the host via `10.0.2.2` rather than `localhost`; a physical device needs a network-reachable host or ADB forwarding. The AAR is for Android only; Spring Boot and desktop Java use the jar instead.
+For an existing Android app, configure `google()` and `mavenCentral()` in `settings.gradle.kts` dependency repositories and add `implementation("io.synclite:synclite-android:1.2.0")` to the app's Gradle dependencies. Gradle downloads the AAR and its transitive dependencies; no manual AAR copying or Rust toolchain is required. Use `context.filesDir` for the database and call `awaitSync()` on a worker thread. An emulator reaches PostgreSQL on the host via `10.0.2.2` rather than `localhost`; a physical device needs a network-reachable host or ADB forwarding. The AAR is for Android only; Spring Boot and desktop Java use the jar instead.
 
 See [the Android module README](synclite-logger-rust/android/README.md) for the Kotlin API and publishing instructions, and the [Android sample walkthrough](synclite-code-samples/android/README.md) for the SQLite-to-PostgreSQL flow.
 
@@ -273,7 +293,7 @@ See [the Android module README](synclite-logger-rust/android/README.md) for the 
 ```bash
 git clone --recurse-submodules git@github.com:syncliteio/SyncLite.git SyncLite
 cd SyncLite
-mvn -Drevision=1.0.0 clean install
+mvn -Drevision=1.2.0 clean install
 ```
 
 ### Build flavors
@@ -288,13 +308,13 @@ SyncLite has **three** top-level reactor build flavors, ordered from largest to 
 
 ```bash
 # 1. Full platform (default)
-mvn -Drevision=1.0.0 clean install
+mvn -Drevision=1.2.0 clean install
 
 # 2. Full platform, Java-only
-mvn -Drevision=1.0.0 -DskipNonJavaLoggers=true clean install
+mvn -Drevision=1.2.0 -DskipNonJavaLoggers=true clean install
 
 # 3. Runtime — fastest path for embedded use
-mvn -Drevision=1.0.0 -DruntimeOnly=true clean install
+mvn -Drevision=1.2.0 -DruntimeOnly=true clean install
 ```
 
 > For just the synclite logger jar, or just the Rust cdylibs, build the subproject directly (`cd synclite-logger-java && mvn install`, or `cd synclite-logger-rust && cargo build --workspace --release`).
@@ -312,14 +332,14 @@ These switches combine with any flavor above:
 
 ```bash
 # Fastest full platform build
-mvn -Drevision=1.0.0 -DskipTests clean install
+mvn -Drevision=1.2.0 -DskipTests clean install
 
 # Fastest runtime build on a host without zig
-mvn -Drevision=1.0.0 -DruntimeOnly=true -DskipRustCrossCompile=true -DskipTests clean install
+mvn -Drevision=1.2.0 -DruntimeOnly=true -DskipRustCrossCompile=true -DskipTests clean install
 ```
 
-The full platform release is assembled under `SyncLite/target/synclite-platform-1.1.0/`.
-The runtime build produces `SyncLite/target/synclite-runtime-1.1.0/` (and `.zip`).
+The full platform release is assembled under `SyncLite/target/synclite-platform-1.2.0/`.
+The runtime build produces `SyncLite/target/synclite-runtime-1.2.0/` (and `.zip`).
 
 > **Android build boundary.** The Rust workspace contains the Python, Node.js,
 > C, and Java binding crates, so `cargo build --workspace` builds those crates
@@ -375,7 +395,11 @@ mvn -DskipAndroidAar=true clean install
 When built, Maven copies the final artifact to
 `target/synclite-android-<revision>.aar`.
 
-For developer consumption, publish the same complete AAR to a Maven-compatible
+For application consumption, use the Maven Central coordinate
+`io.synclite:synclite-android:1.2.0` with `google()` and `mavenCentral()` in
+the application's dependency repositories.
+
+For maintainer testing only, publish the complete AAR to the local Maven
 repository from `synclite-logger-rust/android`:
 
 ```bash
@@ -384,17 +408,12 @@ repository from `synclite-logger-rust/android`:
 
 On Windows, use `gradlew.bat publishReleasePublicationToMavenLocal`.
 
-Developers can then use:
+Local source-build testing can then use `mavenLocal()` in the dependency
+repositories alongside `google()` and `mavenCentral()`, with the same dependency:
 
 ```kotlin
-repositories {
-    mavenLocal()
-    google()
-    mavenCentral()
-}
-
 dependencies {
-    implementation("io.synclite:synclite-android:1.1.0")
+    implementation("io.synclite:synclite-android:1.2.0")
 }
 ```
 
@@ -448,35 +467,35 @@ To build specific SyncLite components individually (useful for development or fa
 
 ```bash
 cd synclite-logger-java/logger
-mvn -Drevision=1.0.0 clean install
+mvn -Drevision=1.2.0 clean install
 ```
 
 - Build the Consolidator (server):
 
 ```bash
 cd synclite-consolidator
-mvn -Drevision=1.0.0 clean install
+mvn -Drevision=1.2.0 clean install
 ```
 
 - Build SyncLite DB server (root module):
 
 ```bash
 cd synclite-db/root
-mvn -Drevision=1.0.0 clean install
+mvn -Drevision=1.2.0 clean install
 ```
 
 - Build the CLI client:
 
 ```bash
 cd synclite-client/client
-mvn -Drevision=1.0.0 clean install
+mvn -Drevision=1.2.0 clean install
 ```
 
 - Build the Job Monitor web app:
 
 ```bash
 cd synclite-job-monitor/root
-mvn -Drevision=1.0.0 clean install
+mvn -Drevision=1.2.0 clean install
 ```
 
 - Build the Rust runtime workspace and bindings:
@@ -490,16 +509,16 @@ cargo build --workspace
 
 ```bash
 cd synclite-dbreader/root
-mvn -Drevision=1.0.0 clean install
+mvn -Drevision=1.2.0 clean install
 
 cd synclite-qreader/root
-mvn -Drevision=1.0.0 clean install
+mvn -Drevision=1.2.0 clean install
 
 cd synclite-validator/root
-mvn -Drevision=1.0.0 clean install
+mvn -Drevision=1.2.0 clean install
 ```
 
-When these individual builds complete, their artifacts appear under their respective `target/` directories. The full platform assembly is produced by running `mvn -Drevision=1.0.0 clean install` from the repository root.
+When these individual builds complete, their artifacts appear under their respective `target/` directories. The full platform assembly is produced by running `mvn -Drevision=1.2.0 clean install` from the repository root.
 
 `deploy.sh` / `deploy.bat` automatically:
 - Downloads Apache Tomcat 9.0.117
@@ -787,7 +806,7 @@ Notes:
 > <dependency>
 >     <groupId>org.duckdb</groupId>
 >     <artifactId>duckdb_jdbc</artifactId>
->     <version>1.5.2.0</version>
+>     <version>2.0.0.0</version>
 > </dependency>
 > ```
 >
@@ -1328,7 +1347,7 @@ runtime. No JVM, no JAR, no `jaydebeapi` / `jpype` bridge.
 |---|---|
 | Backed by | PyO3 over the SyncLite Rust runtime |
 | Install (source) | `pip install maturin && cd synclite-logger-rust/python && maturin develop --release` |
-| Install (wheel) | `pip install synclite==1.1.0` |
+| Install (wheel) | `pip install synclite==1.2.0` |
 | Surface | `Connection` / `Statement`, `DuckDBConnection` / `DuckDBStatement`, plus module-level `initialize`, `await_sync`, `pause_sync`, `resume_sync` |
 | Parameter binding | Yes (full SQL parameter binding, batched and unbatched) |
 | CPython matrix | Any 3.8+ on any OS/arch the Rust runtime supports |
@@ -1473,15 +1492,14 @@ same Rust runtime used by the Python wheel: SQLite/DuckDB device, segment
 shipper, and in-process consolidator. Install it from npm:
 
 ```bash
-npm install synclite@1.1.0
+npm install synclite@1.2.0
 ```
 
-An offline tarball is also staged in an extracted platform release under
-`lib/nodejs/` for air-gapped installs:
-
-```bash
-npm install ./lib/nodejs/synclite-1.1.0-<platform>.tgz
-```
+npm automatically resolves the matching `@synclite/native-<platform>` optional
+dependency. Do not install local `dist/*.tgz` files into the SDK source package
+directory; those are maintainer build outputs, not application dependencies.
+For air-gapped deployment, maintainers can provide a private npm registry with
+the main package and its matching native package at the same version.
 
 Use the `initialize(...)` API to wire up the destination, then the SQLite
 or DuckDB connection API:
@@ -1962,7 +1980,7 @@ Your App (any language)  --HTTP/JSON-->  SyncLite DB Server  -->  Staging Storag
 
 ### 7.1 Starting the Server
 
-Deploy `synclite-db-1.1.0.war` (bundled under `tools/synclite-db/`) into your Apache Tomcat `webapps/` directory, then open the browser GUI to configure and start the server:
+Deploy `synclite-db-1.2.0.war` (bundled under `tools/synclite-db/`) into your Apache Tomcat `webapps/` directory, then open the browser GUI to configure and start the server:
 
 ```
 http://localhost:8080/synclite-db
@@ -2860,7 +2878,7 @@ bin/dst/mysql/docker-start.sh
 ## 17. Release Structure
 
 ```
-synclite-platform-1.1.0/
+synclite-platform-1.2.0/
 +-- bin/
 |   +-- deploy.sh / deploy.bat          # One-command setup: downloads Tomcat + JDK, deploys WARs
 |   +-- start.sh / start.bat            # Start Tomcat + all SyncLite apps

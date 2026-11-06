@@ -19,10 +19,10 @@ running on the host without a source change.
 - An API 26 or newer `x86_64` Android emulator. API 35 is recommended.
 - PostgreSQL reachable from the emulator, or Docker Desktop to start the
 	disposable PostgreSQL container shown below.
-- The extracted SyncLite release, which contains
-	`lib/android/synclite-android-1.1.0.aar`.
+- Either access to Maven Central for `io.synclite:synclite-android:1.2.0`,
+  or an extracted release containing `lib/android/synclite-android-1.2.0.aar`.
 
-The release AAR is prebuilt. Running this sample does not require Rust, Cargo,
+Both the Maven-published and release-bundled AARs are prebuilt. Running this sample does not require Rust, Cargo,
 the Android NDK, CMake, Cargo NDK, or a SyncLite source build.
 
 ## 1. Start PostgreSQL on the host
@@ -71,7 +71,8 @@ recommended configuration.
 ## Run the sample
 
 The following steps wire [SyncLiteAndroidSample.kt](SyncLiteAndroidSample.kt)
-into a new Android Studio application and use the prebuilt release AAR.
+into a new Android Studio application. Choose either the published Maven
+artifact or the AAR bundled in the platform release.
 
 ### 1. Create the application
 
@@ -81,19 +82,52 @@ into a new Android Studio application and use the prebuilt release AAR.
 4. Select Kotlin and minimum SDK 26 or newer.
 5. Wait for Gradle synchronization to complete.
 
-### 2. Add the SyncLite AAR
+### 2. Add the SyncLite library
 
-Create an `app/libs` directory in the new project. Copy
-`lib/android/synclite-android-1.1.0.aar` from the extracted SyncLite release
-into it. Add this dependency to the new application's `app/build.gradle.kts`:
+Choose exactly one of the following options; do not add both dependencies.
+
+#### Option A: Published Maven artifact
+
+Ensure the application's `settings.gradle.kts` contains:
+
+```kotlin
+dependencyResolutionManagement {
+	repositories {
+		google()
+		mavenCentral()
+	}
+}
+```
+
+Add this dependency to the application's `app/build.gradle.kts`:
 
 ```kotlin
 dependencies {
-		implementation(files("libs/synclite-android-1.1.0.aar"))
+		implementation("io.synclite:synclite-android:1.2.0")
 }
 ```
 
 Click **Sync Project with Gradle Files**.
+
+The `1.2.0` AAR must be published to Maven Central first. If Gradle cannot
+resolve it, check release availability and repository access; do not switch
+to the desktop Java artifact or copy unrelated native libraries into the app.
+
+#### Option B: Bundled release AAR
+
+Create an `app/libs` directory in the new project. Copy
+`lib/android/synclite-android-1.2.0.aar` from the extracted release into it,
+then use this dependency instead of Option A:
+
+```kotlin
+dependencies {
+	implementation(files("libs/synclite-android-1.2.0.aar"))
+}
+```
+
+Click **Sync Project with Gradle Files**. This option does not require the
+SyncLite artifact to have been published to Maven Central; normal Android
+project dependencies still use their configured repositories.
 
 ### 3. Add and invoke the sample
 

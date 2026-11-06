@@ -1,6 +1,6 @@
 # Changelog
 
-## SyncLite 1.1.0
+## SyncLite 1.2.0
 
 - SyncLite Consolidator: added SQL Server destination support, tightened MSSQL type mapping, and fixed column-rename SQL generation for SQL Server.
 - SyncLite Logger (Rust): added Node.js N-API bindings, offline packaging helpers, Windows DLL handling, and idle-segment/transaction logging improvements.
@@ -8,7 +8,7 @@
 - SyncLite Client: cleaned up the CLI, aligned it with the DB API changes, and refreshed project docs and packaging metadata.
 - Sample Web App: added embedded consolidator support, validation hooks, and dynamic UI behavior updates for deployment workflows.
 - SyncLite DB: refreshed startup/docs guidance, updated versioning, and extended result-set metadata/format support for the DB server.
-- Platform/docs: expanded README and getting-started content for SQLite, Node.js, Rust, and Python usage, plus final 1.1.0 versioning updates.
+- Platform/docs: expanded README and getting-started content for SQLite, Node.js, Rust, and Python usage, plus final 1.2.0 versioning updates.
 
 ---
 

@@ -87,21 +87,21 @@ cargo add synclite-rs           # Rust — cdylib also embeddable from C/C++, Go
 <dependency>
     <groupId>io.synclite</groupId>
     <artifactId>synclite</artifactId>
-    <version>1.1.0</version>
+    <version>1.2.0</version>
 </dependency>
 ```
 
 ```groovy
 // Java / Gradle — consumes the same Maven-published jar
-implementation 'io.synclite:synclite:1.1.0'
+implementation 'io.synclite:synclite:1.2.0'
 ```
 
 Gradle resolves the **same Maven artifact** from a configured Maven repository (or `mavenLocal()` after a local install); SyncLite is not published separately for Gradle. For Spring Boot + Hibernate, follow the [Maven-based Boot setup guide](SPRING_BOOT_HIBERNATE.md) for initialization before HikariCP and build-time logging configuration. For plain JDBC, use the [Java example](synclite-code-samples/java/core/SyncliteSqlitePostgresApp.java).
 
-**Android / Kotlin:** use the AAR, not the desktop Java jar. Copy the prebuilt release artifact into `app/libs`, then in your Android application's Gradle dependencies add:
+**Android / Kotlin:** consume the Android AAR from Maven Central, not the desktop Java jar. Ensure your `settings.gradle.kts` dependency repositories include `google()` and `mavenCentral()`, then add to your application's Gradle dependencies:
 
 ```kotlin
-implementation(files("libs/synclite-android-1.1.0.aar"))
+implementation("io.synclite:synclite-android:1.2.0")
 ```
 
 Use a database path under `context.filesDir`; call `awaitSync()` off the main thread. Follow the [Android sample setup](synclite-code-samples/android/README.md) for the emulator, host PostgreSQL (`10.0.2.2`), and the app manifest. The [Android API guide](synclite-logger-rust/android/README.md) covers direct Kotlin use.
@@ -258,7 +258,7 @@ initialize({
 <dependency>
     <groupId>io.synclite</groupId>
     <artifactId>synclite</artifactId>
-    <version>1.1.0</version>
+    <version>1.2.0</version>
 </dependency>
 ```
 
@@ -683,16 +683,16 @@ cd SyncLite
 
 ```bash
 # 1. Full platform (default)
-mvn -Drevision=1.1.0 clean install
+mvn -Drevision=1.2.0 clean install
 
 # 2. Full platform, Java-only (no Rust toolchain required)
-mvn -Drevision=1.1.0 -DskipNonJavaLoggers=true clean install
+mvn -Drevision=1.2.0 -DskipNonJavaLoggers=true clean install
 
 # 3. Runtime only — slim embeddable zip
-mvn -Drevision=1.1.0 -DruntimeOnly=true clean install
+mvn -Drevision=1.2.0 -DruntimeOnly=true clean install
 
 # Fastest build on a host without zig
-mvn -Drevision=1.1.0 -DruntimeOnly=true -DskipRustCrossCompile=true -DskipTests clean install
+mvn -Drevision=1.2.0 -DruntimeOnly=true -DskipRustCrossCompile=true -DskipTests clean install
 ```
 
 > For just the Java jar or just the Rust cdylibs, build individual subprojects directly: `cd synclite-logger-java && mvn install` or `cd synclite-logger-rust && cargo build --workspace --release`.
@@ -712,7 +712,7 @@ rustup target add x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu
 ### Runtime-only zip (`-DruntimeOnly=true`)
 
 ```
-synclite-runtime-1.1.0/
+synclite-runtime-1.2.0/
 +-- lib/
 |   +-- java/
 |   |   +-- synclite-<version>.jar              # Add to your app classpath
@@ -744,7 +744,7 @@ synclite-runtime-1.1.0/
 ### Full platform zip (default)
 
 ```
-synclite-platform-1.1.0/
+synclite-platform-1.2.0/
 +-- bin/
 |   +-- deploy.sh / deploy.bat        # One-command setup: downloads Tomcat + JDK, deploys WARs
 |   +-- start.sh / start.bat          # Start Tomcat + all SyncLite apps
@@ -870,7 +870,7 @@ SyncLite DB is a local-first HTTP/JSON database service that wraps embedded data
 
 The sample below uses Python for brevity; the same HTTP calls work from Go (`net/http`) and Node.js (`fetch` / `axios`).
 
-Deploy `synclite-db-1.1.0.war` (bundled under `tools/synclite-db/`) to Tomcat, open `http://localhost:8080/synclite-db`, and configure + start the DB server from the browser GUI. It then serves the HTTP/JSON API on the port set in the GUI.
+Deploy `synclite-db-1.2.0.war` (bundled under `tools/synclite-db/`) to Tomcat, open `http://localhost:8080/synclite-db`, and configure + start the DB server from the browser GUI. It then serves the HTTP/JSON API on the port set in the GUI.
 
 ```python
 # Python client (plain HTTP — no SDK needed)
