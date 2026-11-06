@@ -284,7 +284,7 @@ cd synclite-logger-rust/android
 
 On Windows, use `gradlew.bat` instead of `./gradlew`.
 
-For an existing Android app, configure `google()` and `mavenCentral()` in `settings.gradle.kts` dependency repositories and add `implementation("io.synclite:synclite-android:1.2.0")` to the app's Gradle dependencies. Gradle downloads the AAR and its transitive dependencies; no manual AAR copying or Rust toolchain is required. Use `context.filesDir` for the database and call `awaitSync()` on a worker thread. An emulator reaches PostgreSQL on the host via `10.0.2.2` rather than `localhost`; a physical device needs a network-reachable host or ADB forwarding. The AAR is for Android only; Spring Boot and desktop Java use the jar instead.
+For an existing Android app, configure `google()` and `mavenCentral()` in `settings.gradle.kts` dependency repositories and add `implementation("io.synclite:synclite-android:1.2.0")` to the app's Gradle dependencies. Use `context.filesDir` for the database and call `awaitSync()` on a worker thread. Use your PostgreSQL hostname or IP address for the destination.
 
 See [the Android module README](synclite-logger-rust/android/README.md) for the Kotlin API and publishing instructions, and the [Android sample walkthrough](synclite-code-samples/android/README.md) for the SQLite-to-PostgreSQL flow.
 
