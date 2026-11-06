@@ -119,14 +119,12 @@ flowchart TB
 
 ## Get started in 30 seconds
 
-Pick your runtime and add the dependency. The logger and consolidator run in your app; to replicate to PostgreSQL, you still need a reachable PostgreSQL destination.
+Pick your runtime and add the dependency.
 
 ```bash
 pip install synclite            # Python core / DB-API — self-contained wheel
 pip install 'synclite[sqlalchemy]' # Python + SQLAlchemy 2.x
 ```
-
-Initialize the local SQLite device first, then use `create_engine(f"sqlite+synclite:///{DB_PATH}")`. See the [SQLAlchemy sample](synclite-code-samples/python/sqlalchemy/synclite_sqlalchemy_postgres.py) or the [core API sample](synclite-code-samples/python/core/synclite_rusqlite_postgres.py).
 
 ```bash
 npm install synclite            # Node.js — self-contained N-API package, batteries included
@@ -146,24 +144,11 @@ cargo add synclite-rs           # Rust — cdylib also embeddable from C/C++, Go
 ```
 
 ```groovy
-// Java / Gradle — consumes the same Maven-published jar
+// Java / Gradle
 implementation 'io.synclite:synclite:1.2.0'
 ```
 
-Gradle resolves the **same Maven artifact** from a configured Maven repository (or `mavenLocal()` after a local install); there is no separate Gradle publication. For Spring Boot with JPA/Hibernate, follow the [Maven-based Boot guide](SPRING_BOOT_HIBERNATE.md): the dependency is only the first step, and the executable jar needs build-time logging filtering and initialization before HikariCP. For plain JDBC, see the [Java sample](synclite-code-samples/java/core/SyncliteSqlitePostgresApp.java).
-
-**Android / Kotlin:** resolve the Android AAR from Maven Central, **not** the desktop Java jar. Ensure your `settings.gradle.kts` includes:
-
-```kotlin
-dependencyResolutionManagement {
-    repositories {
-        google()
-        mavenCentral()
-    }
-}
-```
-
-Then add the Maven dependency:
+**Android / Kotlin:**
 
 ```kotlin
 // app/build.gradle.kts
@@ -172,9 +157,7 @@ dependencies {
 }
 ```
 
-Use a database under `context.filesDir` and run blocking sync operations off the main thread. See the [Android emulator walkthrough](synclite-code-samples/android/README.md) and [Kotlin API guide](synclite-logger-rust/android/README.md). The emulator reaches PostgreSQL on its host via `10.0.2.2`, not `localhost` (a physical device needs a reachable host or ADB port forwarding).
-
-The Python wheel and Java jar bundle the runtime for their supported desktop/server environments; the Android AAR includes its own ABI-specific native libraries. No separate SyncLite server is needed.
+For complete examples, see the [code samples](synclite-code-samples/README.md).
 
 ---
 
@@ -226,7 +209,7 @@ All three interfaces write to the same **local SQLite device**; SyncLite sends c
 | Python DB-API 2.0 | `dbapi2.connect(DB_PATH)`; `cursor.execute(sql, params)`; `conn.commit()` | [DB-API](synclite-code-samples/python/dbapi/synclite_dbapi_postgres.py) |
 | SQLAlchemy | `create_engine(f"sqlite+synclite:///{DB_PATH}")`; `engine.begin()` | [SQLAlchemy](synclite-code-samples/python/sqlalchemy/synclite_sqlalchemy_postgres.py) |
 
-Install `synclite` for the core and DB-API examples; install `synclite[sqlalchemy]` for SQLAlchemy. The `sqlite+synclite` URL selects SQLite SQL with SyncLite's logged driver; it is **not** a direct PostgreSQL connection. See the [Python API guide](synclite-logger-rust/python/README.md) for transaction, `flush()`, and backend limitations.
+Install `synclite` for the core and DB-API examples; install `synclite[sqlalchemy]` for SQLAlchemy. With `sqlite+synclite`, SQLAlchemy reads and writes the local SQLite database. SyncLite replicates committed changes to the PostgreSQL destination configured in `sl.initialize(...)`. See the [Python API guide](synclite-logger-rust/python/README.md) for transaction and synchronization details.
 
 ---
 
@@ -321,7 +304,7 @@ The in-process consolidator is bundled inside the jar — no external service ne
 
 ## Android / Kotlin — SQLite → PostgreSQL
 
-Use the **Android AAR**, not the desktop Java jar. With `google()` and `mavenCentral()` configured in your Android project's dependency repositories, add `implementation("io.synclite:synclite-android:1.2.0")` to the app's Gradle dependencies. No AAR copying or native source build is required.
+Add `implementation("io.synclite:synclite-android:1.2.0")` to your app's Gradle dependencies.
 
 ```kotlin
 import android.content.Context
@@ -361,7 +344,7 @@ fun syncOrders(context: Context) {
 }
 ```
 
-Add the Android `INTERNET` permission for a network destination. `10.0.2.2` reaches PostgreSQL on the host **from an emulator**; on a physical device, use a reachable host address or ADB forwarding instead. The [Android sample walkthrough](synclite-code-samples/android/README.md) covers project setup, running PostgreSQL, and verification; see the [full Kotlin sample](synclite-code-samples/android/SyncLiteAndroidSample.kt) and [Android API guide](synclite-logger-rust/android/README.md).
+Replace `10.0.2.2` with your PostgreSQL hostname or IP address. The [Android sample walkthrough](synclite-code-samples/android/README.md) covers project setup, running PostgreSQL, and verification; see the [full Kotlin sample](synclite-code-samples/android/SyncLiteAndroidSample.kt) and [Android API guide](synclite-logger-rust/android/README.md).
 
 ---
 
