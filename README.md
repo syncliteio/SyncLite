@@ -250,7 +250,7 @@ The npm package contains the same embedded Rust runtime as the Python wheel: loc
 
 ## Java — one jar, full JDBC
 
-> Building with Spring Data JPA or Hibernate? Follow the complete [Spring Boot + Hibernate SQLite-to-PostgreSQL example](SPRING_BOOT_HIBERNATE.md). It initializes the `SQLite` device before HikariCP and configures an embedded PostgreSQL destination.
+> Building with Spring Data JPA or Hibernate? Follow the complete [Spring Boot + Hibernate SQLite-to-PostgreSQL example](DOCUMENTATION.md#spring-boot-and-hibernate). It initializes the `SQLite` device before HikariCP and configures an embedded PostgreSQL destination.
 
 ```xml
 <!-- Maven -->
