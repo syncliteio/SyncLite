@@ -76,7 +76,7 @@ Java S3 integrations use AWS SDK v2 with the existing endpoint, access-key and s
    - [Configuration Reference](#62-configuration-reference-syncliteconf)
     - [Multiple-Destination Initialization](#621-multiple-destination-initialization)
    - [Java JDBC API](#63-java-jdbc-api)
-        - [Spring Boot + Hibernate: SQLite to PostgreSQL](SPRING_BOOT_HIBERNATE.md)
+        - [Spring Boot + Hibernate: SQLite to PostgreSQL](#spring-boot-and-hibernate)
    - [SyncLiteStore API](#64-synclitestore-api)
    - [SyncLiteStream API](#65-synclitestream-api)
    - [Jedis (Redis-Compatible) API](#66-jedis-redis-compatible-api)
@@ -1032,7 +1032,450 @@ dst-sync-mode-2=REPLICATION
 
 Use the `SQLite` device with the `jdbc:synclite_sqlite:` URL. Initialize it before Spring creates the connection pool; the recommended pattern is a SyncLite lifecycle bean on which the application `DataSource` explicitly depends. Do not defer initialization to `ApplicationRunner`, `CommandLineRunner`, `ApplicationReadyEvent`, or an unordered `@PostConstruct`, because Hibernate or HikariCP may have opened the first connection already.
 
-See the complete [Spring Boot + Hibernate: SQLite to PostgreSQL guide](SPRING_BOOT_HIBERNATE.md) for the dependency, the required build-time filter that keeps SyncLite's embedded SLF4J provider out of the Boot executable, `application.yml`, lifecycle-managed initialization, Hibernate entity, REST endpoint, destination verification, and troubleshooting.
+Use Spring Data JPA against a local SyncLite SQLite device. Hibernate commits
+locally; the embedded SyncLite consolidator applies committed changes to
+PostgreSQL asynchronously. PostgreSQL is the replication destination, not the
+application's JPA datasource.
+
+This example uses SyncLite 1.2.0, Spring Boot 3.3.5, Hibernate 6, Maven 3.9+,
+and Java 17 or later. It is intended for the packaged executable Boot JAR.
+The application keeps accepting local writes while PostgreSQL is unavailable;
+the optional verification endpoint requires the destination to be reachable.
+
+##### 1. Maven Setup
+
+Create a Maven application with the following POM. All Java examples below
+belong in package `io.synclite.samples.orders`, under the matching Maven source
+directory. Put the YAML configuration in the application's resources directory.
+
+###### 1.1 Package SyncLite safely with Spring Boot logging
+
+The published SyncLite fat JAR contains an embedded SLF4J API/provider. Maven
+dependency exclusions alone cannot remove classes embedded inside that JAR.
+Boot must retain its Logback and Spring JCL implementations without loading
+SyncLite's embedded SLF4J or legacy Commons Logging classes.
+
+The three packaging plugins below copy the published artifact, filter only that
+temporary copy, then replace the nested SyncLite JAR in the Boot executable.
+Neither the published artifact nor the Maven-cache copy is modified. Embedded
+Reload4j classes remain available for SyncLite's direct device tracing. Nested
+JAR entries are stored without compression, as required by the Boot launcher.
+
+Do not add `org.slf4j:log4j-over-slf4j`; it conflicts with the retained Reload4j
+classes. The repository's [Boot logging smoke sample](synclite-code-samples/java/spring-boot/README.md)
+demonstrates this same packaging filter independently of JPA and PostgreSQL.
+
+```xml
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.3.5</version>
+        <relativePath/>
+    </parent>
+    <groupId>io.synclite.samples</groupId>
+    <artifactId>orders-app</artifactId>
+    <version>1.0.0</version>
+    <properties>
+        <java.version>17</java.version>
+        <synclite.version>1.2.0</synclite.version>
+    </properties>
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.hibernate.orm</groupId>
+            <artifactId>hibernate-community-dialects</artifactId>
+            <version>${hibernate.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.synclite</groupId>
+            <artifactId>synclite</artifactId>
+            <version>${synclite.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>ch.qos.reload4j</groupId>
+                    <artifactId>reload4j</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-api</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-reload4j</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>commons-logging</groupId>
+                    <artifactId>commons-logging</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+    </dependencies>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>3.8.1</version>
+                <executions>
+                    <execution>
+                        <id>copy-synclite-for-boot-filtering</id>
+                        <phase>prepare-package</phase>
+                        <goals><goal>copy</goal></goals>
+                        <configuration>
+                            <artifactItems>
+                                <artifactItem>
+                                    <groupId>io.synclite</groupId>
+                                    <artifactId>synclite</artifactId>
+                                    <version>${synclite.version}</version>
+                                    <outputDirectory>${project.build.directory}/synclite-boot-filter</outputDirectory>
+                                    <destFileName>synclite-original.jar</destFileName>
+                                </artifactItem>
+                            </artifactItems>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>repackage</id>
+                        <goals><goal>repackage</goal></goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <execution>
+                        <id>replace-embedded-synclite-with-boot-safe-copy</id>
+                        <phase>package</phase>
+                        <goals><goal>run</goal></goals>
+                        <configuration>
+                            <target>
+                                <property name="filter.dir" location="${project.build.directory}/synclite-boot-filter"/>
+                                <property name="boot.jar" location="${project.build.directory}/${project.build.finalName}.jar"/>
+                                <zip destfile="${filter.dir}/synclite-boot-safe.jar">
+                                    <zipfileset src="${filter.dir}/synclite-original.jar"
+                                        excludes="org/slf4j/**,org/apache/commons/logging/**,META-INF/services/org.slf4j.spi.SLF4JServiceProvider"/>
+                                </zip>
+                                <move file="${boot.jar}" tofile="${filter.dir}/application-before-synclite-filter.jar"/>
+                                <zip destfile="${boot.jar}" compress="false">
+                                    <zipfileset src="${filter.dir}/application-before-synclite-filter.jar"
+                                        excludes="BOOT-INF/lib/synclite-*.jar"/>
+                                    <zipfileset dir="${filter.dir}" includes="synclite-boot-safe.jar"
+                                        fullpath="BOOT-INF/lib/synclite-${synclite.version}.jar"/>
+                                </zip>
+                            </target>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>
+```
+
+Use `mvn clean package` followed by `java -jar target/orders-app-1.0.0.jar`.
+Do not substitute `spring-boot:run` or an IDE's unfiltered dependency classpath:
+those launch paths bypass the nested-JAR replacement shown here.
+
+##### 2. PostgreSQL and Application Configuration
+
+For this demo, create the database and schema as the destination user:
+
+```sql
+CREATE DATABASE syncdb;
+```
+
+Connect to `syncdb`, then run:
+
+```sql
+CREATE SCHEMA IF NOT EXISTS syncschema;
+```
+
+Use this application YAML:
+
+```yaml
+server:
+  port: 8080
+spring:
+  jpa:
+    database-platform: org.hibernate.community.dialect.SQLiteDialect
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+app:
+  synclite:
+    sqlite-path: "${SQLITE_PATH:./data/orders.db}"
+    device-name: ordersdevice
+    postgres-url: "${POSTGRES_URL:jdbc:postgresql://localhost:5432/syncdb?user=postgres&password=postgres}"
+    postgres-database: syncdb
+    postgres-schema: syncschema
+```
+
+The credentials are local demo defaults. Supply `POSTGRES_URL` through your
+deployment's secret configuration for real credentials; the destination user
+needs permission to create/alter tables and apply changes in `syncschema`.
+Do not configure a PostgreSQL `spring.datasource.url`: the datasource is the
+local SyncLite JDBC connection defined below. The community dialect version
+must match Boot's managed Hibernate version.
+
+##### 3. Initialize Before Opening the Datasource
+
+```java
+package io.synclite.samples.orders;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.sql.SQLException;
+import javax.sql.DataSource;
+
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
+import io.synclite.DestinationOptions;
+import io.synclite.DstSyncMode;
+import io.synclite.DstType;
+import io.synclite.SQLite;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
+
+@Configuration(proxyBeanMethods = false)
+public class SyncLiteConfiguration {
+    @Bean(destroyMethod = "close")
+    SyncLiteDevice syncLiteDevice(
+            @Value("${app.synclite.sqlite-path}") String sqlitePath,
+            @Value("${app.synclite.device-name}") String deviceName,
+            @Value("${app.synclite.postgres-url}") String postgresUrl,
+            @Value("${app.synclite.postgres-database}") String postgresDatabase,
+            @Value("${app.synclite.postgres-schema}") String postgresSchema)
+            throws IOException, SQLException {
+        Path dbPath = Path.of(sqlitePath).toAbsolutePath().normalize();
+        Path parent = dbPath.getParent();
+        if (parent != null) Files.createDirectories(parent);
+
+        DestinationOptions postgres = DestinationOptions.builder()
+            .dstType(DstType.POSTGRES).connectionString(postgresUrl)
+            .database(postgresDatabase).schema(postgresSchema)
+            .syncMode(DstSyncMode.REPLICATION).build();
+        SQLite.initialize(dbPath, deviceName, postgres);
+        return new SyncLiteDevice(dbPath);
+    }
+
+    @Bean(destroyMethod = "close")
+    @Primary
+    DataSource dataSource(SyncLiteDevice device) {
+        HikariConfig config = new HikariConfig();
+        config.setDriverClassName(SQLite.class.getName());
+        config.setJdbcUrl("jdbc:synclite_sqlite:" + device.databasePath());
+        config.setMaximumPoolSize(1);
+        config.setMinimumIdle(1);
+        return new HikariDataSource(config);
+    }
+
+    public static final class SyncLiteDevice implements AutoCloseable {
+        private final Path databasePath;
+        SyncLiteDevice(Path path) { databasePath = path; }
+        public Path databasePath() { return databasePath; }
+        @Override
+        public void close() throws SQLException {
+            SQLite.closeDevice(databasePath);
+        }
+    }
+}
+```
+
+Injecting `SyncLiteDevice` into the datasource bean enforces startup ordering.
+Spring closes dependent beans first: Hibernate and HikariCP stop before the
+device is closed. A single pooled connection keeps the SQLite demo serialized;
+do not treat it as a high-concurrency PostgreSQL connection pool.
+
+##### 4. Entity and Repository
+
+```java
+package io.synclite.samples.orders;
+
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+
+@Entity
+@Table(name = "orders")
+public class PurchaseOrder {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    private String item;
+    private int quantity;
+
+    protected PurchaseOrder() {}
+    public PurchaseOrder(String item, int quantity) {
+        this.item = item;
+        this.quantity = quantity;
+    }
+    public Long getId() { return id; }
+    public String getItem() { return item; }
+    public int getQuantity() { return quantity; }
+}
+```
+
+```java
+package io.synclite.samples.orders;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface PurchaseOrderRepository extends JpaRepository<PurchaseOrder, Long> {}
+```
+
+##### 5. REST Endpoints and Application
+
+```java
+package io.synclite.samples.orders;
+
+import java.sql.SQLException;
+import java.time.Duration;
+import java.util.List;
+import java.util.Map;
+
+import io.synclite.SyncLite;
+import io.synclite.samples.orders.SyncLiteConfiguration.SyncLiteDevice;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/orders")
+public class PurchaseOrderController {
+    private final PurchaseOrderRepository orders;
+    private final SyncLiteDevice device;
+
+    public PurchaseOrderController(PurchaseOrderRepository orders, SyncLiteDevice device) {
+        this.orders = orders;
+        this.device = device;
+    }
+
+    @PostMapping
+    @Transactional
+    public PurchaseOrder create(@RequestBody CreateOrder request) {
+        return orders.save(new PurchaseOrder(request.item(), request.quantity()));
+    }
+
+    @GetMapping
+    @Transactional(readOnly = true)
+    public List<PurchaseOrder> list() {
+        return orders.findAll();
+    }
+
+    @PostMapping("/sync")
+    public Map<String, String> sync() throws SQLException {
+        SyncLite.awaitSync(device.databasePath(), Duration.ofSeconds(30));
+        return Map.of("status", "synced");
+    }
+
+    public record CreateOrder(String item, int quantity) {}
+}
+```
+
+```java
+package io.synclite.samples.orders;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class OrdersApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(OrdersApplication.class, args);
+    }
+}
+```
+
+The POST transaction commits when the proxied controller method returns.
+Call `/orders/sync` only after that request succeeds. It is deliberately not
+transactional: `awaitSync()` waits for destination delivery of committed work
+while Java's logger ships it in the background. The Java API does not expose
+`SQLite.flush(Path)`; do not copy the explicit flush calls from other SDKs.
+Waiting does not replace a JPA commit. Normal writes
+do not need to wait for PostgreSQL. The sync endpoint is a demo verification
+tool; protect or remove it in production.
+
+##### 6. Build, Write, and Verify
+
+```bash
+mvn clean package
+java -jar target/orders-app-1.0.0.jar
+```
+
+In another terminal, use `curl` (or `curl.exe` on Windows PowerShell):
+
+```bash
+curl -X POST http://localhost:8080/orders \
+  -H 'Content-Type: application/json' \
+  -d '{"item":"widget","quantity":100}'
+curl http://localhost:8080/orders
+curl -X POST http://localhost:8080/orders/sync
+```
+
+The GET reads local SQLite, not PostgreSQL. After the sync request succeeds,
+connect to PostgreSQL's `syncdb` database and verify:
+
+```sql
+SELECT id, item, quantity FROM syncschema.orders ORDER BY id;
+```
+
+To demonstrate offline operation, stop PostgreSQL after a successful startup,
+POST more orders, then restore PostgreSQL and call the sync endpoint. Do not
+delete the SQLite database, its `.synclite` directory, or the runtime's staged
+segments between those steps.
+
+##### 7. Troubleshooting
+
+- SLF4J provider or `LoggerContext` errors: launch the filtered executable JAR,
+  not an unfiltered IDE classpath. Inspect the nested SyncLite JAR as described
+  in the [logging smoke sample](synclite-code-samples/java/spring-boot/README.md).
+- Missing `SQLiteDialect`: include `hibernate-community-dialects` with the same
+  version as `hibernate-core`; keep Boot's dependency management intact.
+- Database locked: keep the demo pool at one connection and avoid another
+  process writing the same device database.
+- Destination authentication or schema errors: check `POSTGRES_URL`, database,
+  schema, and the destination user's privileges. Local GET success does not
+  prove that replication has completed.
+- Sync timeout: confirm PostgreSQL is reachable and the write transaction has
+  committed. Review the device trace under the database's `.synclite` directory
+  and consolidator traces under the runtime work directory.
+- Native loading failure: use a supported 64-bit platform and the matching
+  SyncLite artifact; the Java SDK's [installation guide](synclite-logger-java/README.md)
+  describes its embedded native runtime.
+
+##### Related Spring Boot Samples
+
+- [Java JDBC sample](synclite-code-samples/java/core/README.md)
+- [Spring Boot logging packaging smoke sample](synclite-code-samples/java/spring-boot/README.md)
+- [Java SDK API guide](synclite-logger-java/README.md)
+- [Configuration reference](#62-configuration-reference-syncliteconf)
+- [Website samples](docs/index.html#samples)
 
 #### Initializing and using a SQLite device
 
