@@ -67,4 +67,4 @@ classes remain. The original copied input remains at
 Copy the three build plugins from this sample's `pom.xml` into the consuming
 Spring Boot Maven application and retain the normal SyncLite dependency. The
 complete Hibernate/SQLite/PostgreSQL setup is documented in
-[SPRING_BOOT_HIBERNATE.md](../../../SPRING_BOOT_HIBERNATE.md).
+[Spring Boot + Hibernate guide](../../../DOCUMENTATION.md#spring-boot-and-hibernate).
