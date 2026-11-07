@@ -45,7 +45,7 @@ error instead of loading an undeclared DuckDB runtime.
 
 This standalone sample uses the jar's embedded Reload4j SLF4J provider. A
 Spring Boot application must instead follow the [Spring Boot + Hibernate
-guide](../../../SPRING_BOOT_HIBERNATE.md#11-package-synclite-safely-with-spring-boot-logging),
+guide](../../../DOCUMENTATION.md#11-package-synclite-safely-with-spring-boot-logging),
 which filters that embedded provider only in the application's packaged Boot
 jar. The published SyncLite jar remains unchanged.
 
