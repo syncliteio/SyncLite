@@ -197,7 +197,7 @@ sl.await_sync(DB_PATH, 30.0)          # optional: block until PostgreSQL confirm
 conn.close()
 ```
 
-Every `INSERT` / `UPDATE` / `DELETE` — and every `ALTER TABLE` — is durably logged and applied to PostgreSQL in the background, whether your app is online or not. Full sample: [`synclite-code-samples/python/core/synclite_rusqlite_postgres.py`](synclite-code-samples/python/core/synclite_rusqlite_postgres.py).
+Every `INSERT` / `UPDATE` / `DELETE` — and every DDL — is durably logged and applied to PostgreSQL in the background, whether your app is online or not. Full sample: [`synclite-code-samples/python/core/synclite_rusqlite_postgres.py`](synclite-code-samples/python/core/synclite_rusqlite_postgres.py).
 
 ### Choose a Python API
 
