@@ -51,7 +51,7 @@ RUN groupadd -r synclite && \
 
 ENV HOME=/home/synclite \
     JAVA_HOME=/synclite/bin/jdk-25 \
-    CATALINA_HOME=/synclite/bin/apache-tomcat-9.0.117
+    CATALINA_HOME=/synclite/bin/apache-tomcat-9.0.123
 ENV PATH="${JAVA_HOME}/bin:${CATALINA_HOME}/bin:${PATH}"
 
 COPY --from=builder --chown=synclite:synclite /synclite /synclite
