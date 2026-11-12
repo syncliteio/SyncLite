@@ -15,7 +15,7 @@ echo !INFO!SyncLite Platform Start!RESET!
 echo !INFO!========================================!RESET!
 echo.
 
-set "TOMCAT_VER=9.0.117"
+set "TOMCAT_VER=9.0.123"
 set "TOMCAT_DIR=apache-tomcat-%TOMCAT_VER%"
 set "SCRIPT_DIR=%~dp0"
 set "CATALINA_HOME=%SCRIPT_DIR%%TOMCAT_DIR%"
