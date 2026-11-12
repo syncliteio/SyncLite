@@ -19,7 +19,7 @@ echo !INFO!========================================!RESET!
 echo.
 
 REM ── Versions ─────────────────────────────────────────────────────────────
-set TOMCAT_VER=9.0.117
+set TOMCAT_VER=9.0.123
 set JDK_VER=25
 
 set TOMCAT_DIR=apache-tomcat-%TOMCAT_VER%
