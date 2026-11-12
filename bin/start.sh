@@ -69,7 +69,7 @@ log_info "SyncLite Platform Start"
 log_info "========================================"
 echo
 
-TOMCAT_VER="9.0.117"
+TOMCAT_VER="9.0.123"
 TOMCAT_DIR="apache-tomcat-${TOMCAT_VER}"
 CATALINA_HOME="${SCRIPT_DIR}/${TOMCAT_DIR}"
 CATALINA_BIN="${CATALINA_HOME}/bin"
@@ -151,4 +151,3 @@ log_step "[4/4] Starting Tomcat..."
 log_ok "[4/4] Tomcat startup command completed."
 echo
 log_ok "Start script finished."
-
