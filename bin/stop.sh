@@ -46,7 +46,7 @@ echo
 
 export JAVA_HOME="${SCRIPT_DIR}/jdk-25"
 export JRE_HOME="${JAVA_HOME}"
-TOMCAT_VER="9.0.117"
+TOMCAT_VER="9.0.123"
 TOMCAT_DIR="apache-tomcat-${TOMCAT_VER}"
 
 # ── Graceful Tomcat shutdown ──────────────────────────────────────────────────────
@@ -95,4 +95,3 @@ log_step "[3/3] Finalizing stop workflow..."
 log_ok "[3/3] Stop workflow complete."
 echo
 log_ok "Stop script finished."
-
