@@ -101,7 +101,7 @@ log_info "========================================"
 echo
 
 # ── Versions ──────────────────────────────────────────────────────────────────
-TOMCAT_VER="9.0.117"
+TOMCAT_VER="9.0.123"
 JDK_VER="25"
 TOMCAT_DIR="apache-tomcat-${TOMCAT_VER}"
 JDK_DIR="jdk-${JDK_VER}"
@@ -246,4 +246,3 @@ log_ok "[7/7] WAR deployment complete."
 
 echo
 log_ok "Deploy complete. Tomcat and JDK are ready under $(pwd)."
-
