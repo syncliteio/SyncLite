@@ -29,7 +29,7 @@ exit /b 0
 
 :after_helpers
 
-set "TOMCAT_VER=9.0.117"
+set "TOMCAT_VER=9.0.123"
 set "TOMCAT_DIR=apache-tomcat-%TOMCAT_VER%"
 
 echo !STEP![1/3] Requesting Tomcat shutdown...!RESET!
@@ -68,4 +68,3 @@ echo.
 echo !OK!Stop script finished.!RESET!
 call :hold_window success
 endlocal
-
