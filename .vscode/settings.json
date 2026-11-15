@@ -1,0 +1,7 @@
+{
+	"java.autobuild.enabled": false,
+	"cmake.sourceDirectory": "C:/work/synclite/repos/SyncLite/synclite-code-samples/cpp",
+	"rust-analyzer.linkedProjects": [
+		"synclite-logger-rust/Cargo.toml"
+	]
+}

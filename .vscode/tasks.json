@@ -1,0 +1,20 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Rust: build pipeline debug sample",
+            "type": "process",
+            "command": "powershell.exe",
+            "args": [
+                "-NoProfile",
+                "-ExecutionPolicy", "Bypass",
+                "-File", "${workspaceFolder}\\synclite-logger-rust\\scripts\\build-debug-sample.ps1"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}\\synclite-logger-rust"
+            },
+            "problemMatcher": ["$rustc"],
+            "group": "build"
+        }
+    ]
+}

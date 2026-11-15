@@ -1,0 +1,32 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Rust: logger -> shipper -> consolidator",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceFolder}\\synclite-logger-rust\\target\\debug\\examples\\pipeline_debug.exe",
+            "cwd": "${workspaceFolder}\\synclite-logger-rust",
+            "preLaunchTask": "Rust: build pipeline debug sample",
+            "stopOnEntry": true,
+            "preRunCommands": [
+                "breakpoint set --name pipeline_debug::seed_source",
+                "breakpoint set --name pipeline_debug::write_changes",
+                "breakpoint set --file \"${workspaceFolder}\\synclite-logger-rust\\crates\\logger\\db-sqlite\\src\\lib.rs\" --line 700",
+                "breakpoint set --file \"${workspaceFolder}\\synclite-logger-rust\\crates\\logger\\log\\src\\segment.rs\" --line 301",
+                "breakpoint set --name logger_log::segment::LogSegmentWriter::finalize_internal",
+                "breakpoint set --name logger_shipper::ship_one",
+                "breakpoint set --name consolidator_runtime::process_stage_path_ready",
+                "breakpoint set --name consolidator_runtime::replay_segment_with_native_cdc",
+                "breakpoint set --name consolidator_runtime::native_change_callback",
+                "breakpoint set --name consolidator_runtime::NativeCdcLogWriter::write_dml_record",
+                "breakpoint set --name consolidator_runtime::NativeCdcLogWriter::step_insert",
+                "breakpoint set --name consolidator_runtime::NativeCdcLogWriter::commit_tran",
+                "breakpoint set --name consolidator_runtime::apply_to_sqlite_destination",
+                "breakpoint set --file \"${workspaceFolder}\\synclite-logger-rust\\crates\\consolidator\\runtime\\src\\lib.rs\" --line 8760",
+                "breakpoint set --file \"${workspaceFolder}\\synclite-logger-rust\\crates\\consolidator\\runtime\\src\\lib.rs\" --line 8797",
+                "breakpoint set --name pipeline_debug::verify_destination"
+            ]
+        }
+    ]
+}
