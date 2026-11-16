@@ -79,6 +79,39 @@ resolve_war() {
 	return 1
 }
 
+normalize_war_shell_scripts() {
+	local war_path="$1"
+	local jar_cmd="$(pwd)/${JDK_DIR}/bin/jar"
+	local entries
+	local entry
+	local scripts=()
+	local temp_dir
+
+	entries="$("${jar_cmd}" tf "${war_path}")"
+	while IFS= read -r entry; do
+		if [[ "${entry}" == *.sh ]]; then
+			scripts+=("${entry}")
+		fi
+	done <<< "${entries}"
+	if (( ${#scripts[@]} == 0 )); then
+		return
+	fi
+
+	war_path="$(cd "$(dirname "${war_path}")" && pwd)/$(basename "${war_path}")"
+	temp_dir="$(mktemp -d)"
+	if ! (
+		cd "${temp_dir}" &&
+		"${jar_cmd}" xf "${war_path}" "${scripts[@]}" &&
+		find . -type f -name '*.sh' -exec sed -i 's/\r$//' {} + &&
+		"${jar_cmd}" uf "${war_path}" "${scripts[@]}"
+	); then
+		rm -rf "${temp_dir}"
+		log_error "ERROR: Failed to normalize shell scripts in ${war_path}."
+		exit 1
+	fi
+	rm -rf "${temp_dir}"
+}
+
 copy_war() {
 	local label="$1"
 	local target_path="$2"
@@ -92,6 +125,7 @@ copy_war() {
 
 	log_info "  - Deploying ${label} WAR from ${source_path}"
 	cp -f "${source_path}" "${target_path}"
+	normalize_war_shell_scripts "${target_path}"
 	log_ok "  - ${label} WAR deployed."
 }
 
@@ -107,6 +141,7 @@ TOMCAT_DIR="apache-tomcat-${TOMCAT_VER}"
 JDK_DIR="jdk-${JDK_VER}"
 
 require_tool tar "archive extraction"
+require_tool sed "shell script line-ending normalization"
 
 is_tomcat_ready() {
 	[[ -f "${TOMCAT_DIR}/conf/server.xml" && -f "${TOMCAT_DIR}/bin/catalina.sh" ]]
