@@ -23,7 +23,8 @@ RUN tar -xf /synclite/synclite-platform.tar.gz -C /synclite && \
 
 # Override packaged scripts with current hardened scripts from build context.
 COPY deploy.sh deploy.bat start.sh start.bat stop.sh stop.bat docker-deploy.sh docker-start.sh docker-stop.sh /synclite/bin/
-RUN chmod +x /synclite/bin/*.sh
+RUN find /synclite/bin -maxdepth 1 -type f -name '*.sh' -exec sed -i 's/\r$//' {} + && \
+    chmod +x /synclite/bin/*.sh
 
 WORKDIR /synclite/bin
 
