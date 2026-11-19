@@ -445,41 +445,38 @@
 </nav>
 
 <section class="hero">
-  <div class="hero-badge"><span class="dot"></span> Open Source &middot; Apache 2.0<br/>The Right Architecture for Data-Intensive Apps</div>
+  <div class="hero-badge"><span class="dot"></span> SyncLite &middot; Open Source &middot; Apache 2.0</div>
   <h1>
-    The <span class="grad">Sync Layer</span><br/>Your App Has Been Missing
+    Your apps work offline.<br/><span class="grad">Your agents learn together.</span>
   </h1>
   <p class="hero-sub">
-    <strong>Write to a local database at native speed — SyncLite streams every committed transaction to your cloud store automatically.</strong><br/>
-    Embed SQLite, DuckDB, Derby, H2, or HyperSQL. Full ACID transactions. Works offline. Zero data loss.
-  </p>
-  <p class="hero-sub hero-sub-ai">
-    <strong>Building AI agents?</strong> Same engine, new frontier — give every agent durable local memory that syncs into a shared intelligence layer. <a href="#ai-agents">See the agent story →</a>
+    <strong>With embedded mode, each edge app or local agent keeps its own logs and consolidates changes on-device.</strong><br/>
+    Choose per-device or centralized consolidation, with devices syncing to your destination as your fleet grows. <a href="#ai-agents">See how agents share what they learn →</a>
   </p>
   <p class="hero-conviction">
     <span class="hero-conviction-items">
-      <span>🚫 No custom CDC code.</span>
-      <span>🚫 No message brokers to operate.</span>
-      <span>🛡️ No data loss on network failure.</span>
+      <span>1 app or agent: its own local memory.</span>
+      <span>A growing fleet: every device keeps working offline.</span>
+      <span>One shared data layer: local changes come together.</span>
     </span>
-    <strong style="color:var(--text)">This is how modern apps should handle data &mdash; and SyncLite makes it a one-day integration.</strong>
+    <strong style="color:var(--text)">Start with one. Grow to a fleet. Keep the same simple data story.</strong>
   </p>
 
   <div class="hero-pillars">
     <div class="hero-pillar">
       <div class="hp-icon">⚡</div>
       <div class="hp-title">Native Database Speed</div>
-      <div class="hp-desc">Reads and writes hit an embedded engine directly — no network roundtrip, no latency penalty. Your app is always fast.</div>
+      <div class="hp-desc">Apps and agents read and write locally, without a network roundtrip on the hot path.</div>
     </div>
     <div class="hero-pillar">
       <div class="hp-icon">🔒</div>
       <div class="hp-title">Zero Data Loss, Offline-Ready</div>
-      <div class="hp-desc">Every committed transaction is logged locally. SyncLite delivers it to the destination when connectivity allows — exactly once, automatically.</div>
+      <div class="hp-desc">Committed changes stay local through network outages, then sync when connectivity returns.</div>
     </div>
     <div class="hero-pillar">
       <div class="hp-icon">🧹</div>
-      <div class="hp-title">Cut Your Data Stack in Half</div>
-      <div class="hp-desc">Batching, retries, schema evolution, exactly-once delivery — all handled. You write SQL. SyncLite replaces 4–5 point solutions with one platform.</div>
+      <div class="hp-title">Replace the sync stack</div>
+      <div class="hp-desc">Skip custom CDC pipelines, broker clusters, retry services, and glue code. SyncLite handles capture, delivery, and consolidation for your apps and agents.</div>
     </div>
   </div>
 
@@ -503,17 +500,17 @@
   <h2>How It Works</h2>
   <div class="pipeline">
     <div class="pipe-node">
-      <div class="label">Your App</div>
+      <div class="label">Edge / Desktop App<br/>or Local Agent</div>
       <div class="name">SyncLite Logger<br/><small style="color:var(--muted);font-size:.7rem">SQLite · DuckDB · Derby · H2 · HyperSQL</small></div>
     </div>
     <div class="pipe-arrow">──▶</div>
     <div class="pipe-node">
-      <div class="label">Binary Log Files</div>
-      <div class="name">Staging Storage<br/><small style="color:var(--muted);font-size:.7rem">Local · SFTP · S3 · MinIO · Kafka</small></div>
+      <div class="label">On-Device Staging</div>
+      <div class="name">Local Log Files</div>
     </div>
     <div class="pipe-arrow">──▶</div>
     <div class="pipe-node">
-      <div class="label">Always-On Sink (Embedded/Standalone)</div>
+      <div class="label">Embedded, Per Device</div>
       <div class="name">SyncLite Consolidator</div>
     </div>
     <div class="pipe-arrow">──▶</div>
@@ -523,7 +520,7 @@
     </div>
   </div>
   <p style="text-align:center;color:var(--muted);font-size:.85rem;margin-top:1.5rem;">
-    Sources produce compact binary logs → shipped to staging → Consolidator delivers in real time. Sub-second latency on local stages.
+    Each device stages and consolidates its own logs → changes sync independently to your destination. No central staging service or consolidator required.
   </p>
 </div>
 
