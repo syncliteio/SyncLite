@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SyncLite — Build Anything, Sync Anywhere</title>
-  <meta name="description" content="SyncLite is an open-source, low-code relational data synchronization platform. Embed SQLite/DuckDB in your app, stream changes to any cloud database — in minutes." />
+  <title>SyncLite — Offline-First Data Sync for Apps and Agents</title>
+  <meta name="description" content="SyncLite is an open-source, low-code data synchronization platform. Embed SQLite or DuckDB, stream changes to cloud databases, and keep apps working offline." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
@@ -450,33 +450,33 @@
     Your apps work offline.<br/><span class="grad">Your agents learn together.</span>
   </h1>
   <p class="hero-sub">
-    <strong>From one edge app to a growing fleet of AI agents, work starts with local data and keeps going without a network connection.</strong><br/>
-    SyncLite syncs local changes from every app and agent to one shared data layer. <a href="#ai-agents">See how agents share what they learn →</a>
+    <strong>From one edge app to a fleet of AI agents, work starts with local data and continues offline.</strong><br/>
+    SyncLite syncs changes from every app and agent into one shared data layer. <a href="#ai-agents">See how agents share what they learn →</a>
   </p>
   <p class="hero-conviction">
     <span class="hero-conviction-items">
-      <span>1 app or agent: its own local memory.</span>
-      <span>A growing fleet: every device keeps working offline.</span>
-      <span>One shared data layer: local changes come together.</span>
+      <span>Each app or agent gets local memory.</span>
+      <span>Every device keeps working offline.</span>
+      <span>Local changes converge in one shared layer.</span>
     </span>
-    <strong style="color:var(--text)">Start with one. Grow to a fleet. Keep the same simple data story.</strong>
+    <strong style="color:var(--text)">Start with one. Scale to a fleet on the same sync layer.</strong>
   </p>
 
   <div class="hero-pillars">
     <div class="hero-pillar">
       <div class="hp-icon">⚡</div>
       <div class="hp-title">Native Database Speed</div>
-      <div class="hp-desc">Apps and agents read and write locally, without a network roundtrip on the hot path.</div>
+      <div class="hp-desc">Apps and agents read and write locally, with no network round trip on the hot path.</div>
     </div>
     <div class="hero-pillar">
       <div class="hp-icon">🔒</div>
       <div class="hp-title">Zero Data Loss, Offline-Ready</div>
-      <div class="hp-desc">Committed changes stay local through network outages, then sync when connectivity returns.</div>
+      <div class="hp-desc">Committed changes stay local through outages and sync when connectivity returns.</div>
     </div>
     <div class="hero-pillar">
       <div class="hp-icon">🧹</div>
-      <div class="hp-title">Replace the sync stack</div>
-      <div class="hp-desc">Skip custom CDC pipelines, broker clusters, retry services, and glue code. SyncLite handles capture, delivery, and consolidation for your apps and agents.</div>
+      <div class="hp-title">Replace the Sync Stack</div>
+      <div class="hp-desc">Replace custom CDC pipelines, broker clusters, retry services, and glue code. SyncLite captures, delivers, and consolidates changes for your apps and agents.</div>
     </div>
   </div>
 
@@ -520,7 +520,7 @@
     </div>
   </div>
   <p style="text-align:center;color:var(--muted);font-size:.85rem;margin-top:1.5rem;">
-    In embedded mode, each device stages and consolidates locally. Standalone consolidation is also available for centralized deployments.
+    Each device can stage and consolidate locally, or ship completed log segments to a standalone consolidator.
   </p>
 </div>
 
@@ -531,7 +531,7 @@
   <div class="section-inner">
     <div class="section-label">For AI Builders</div>
     <h2>Local Memory → Collective Intelligence</h2>
-    <p class="section-desc">Every agent writes what it learns to its own embedded database — no network on the hot path. SyncLite streams that memory into a shared central layer, so your whole fleet learns from what any single agent discovers.</p>
+    <p class="section-desc">Every agent writes to its own embedded database with no network on the hot path. SyncLite streams that memory to shared storage, so the whole fleet learns from any agent’s discoveries.</p>
     <div class="ai-flow">
       <div class="ai-agents-col">
         <div class="ai-agent"><span class="ai-agent-icon">🤖</span> Agent A <small>local memory</small></div>
@@ -558,37 +558,37 @@
   <div class="section-inner">
     <div class="section-label">Use Cases</div>
     <h2>Built for Every Data Sync Problem</h2>
-    <p class="section-desc">One platform, five problem domains. Pick the one you need today — the architecture handles the rest.</p>
+    <p class="section-desc">One platform. Five problem domains. Start with one use case and expand without rebuilding your sync architecture.</p>
     <div class="cards">
       <div class="card">
         <div class="card-icon">📱</div>
         <h3>Local-First &amp; Offline Apps</h3>
-        <p>Embed SQLite or DuckDB in your desktop, mobile, or edge app. SyncLite replicates every write to the cloud automatically — your app keeps working offline, data syncs when connectivity returns.</p>
+        <p>Embed SQLite or DuckDB in desktop, mobile, or edge apps. SyncLite replicates every write automatically, so apps keep working offline and sync when connectivity returns.</p>
       </div>
       <div class="card">
         <div class="card-icon">☁️</div>
         <h3>Edge-to-Cloud Sync</h3>
-        <p>Deploy hundreds of edge devices. Each runs a local embedded DB. SyncLite consolidates all of them into a single cloud database in real time — without you writing a line of replication code.</p>
+        <p>Deploy hundreds of edge devices with local databases. SyncLite consolidates their changes into a shared cloud database in real time, without custom replication code.</p>
       </div>
       <div class="card">
         <div class="card-icon">⚡</div>
         <h3>Real-Time Streaming Pipelines</h3>
-        <p>Use the SyncLiteStream API or Kafka Producer-compatible interface for high-throughput append-only event ingestion. Land events in any data warehouse or lake with exactly-once semantics.</p>
+        <p>Use SyncLiteStream or the Kafka Producer-compatible API for high-throughput, append-only ingestion. Land events in any data warehouse or lake with exactly-once semantics.</p>
       </div>
       <div class="card">
         <div class="card-icon">🔄</div>
         <h3>Database ETL &amp; Replication</h3>
-        <p>SyncLite DBReader connects to PostgreSQL, MySQL, Oracle, SQL Server, and more. Replicate tables incrementally via watermarks, or capture changes at the binary log level for near-zero latency.</p>
+        <p>DBReader connects to PostgreSQL, MySQL, Oracle, SQL Server, and more. Replicate tables incrementally with watermarks or capture changes from binary logs for near-zero latency.</p>
       </div>
       <div class="card">
         <div class="card-icon">📡</div>
         <h3>IoT &amp; MQTT Ingestion</h3>
-        <p>SyncLite QReader subscribes to any MQTT v3.1 broker — Mosquitto, EMQX, AWS IoT Core, Azure IoT Hub. Parse CSV or JSON payloads and land sensor data in your analytics DB in minutes.</p>
+        <p>QReader subscribes to any MQTT v3.1 broker, including Mosquitto, EMQX, AWS IoT Core, and Azure IoT Hub. Parse CSV or JSON payloads and land sensor data in your analytics database in minutes.</p>
       </div>
       <div class="card">
         <div class="card-icon">🤖</div>
         <h3>Agent Memory &amp; GenAI</h3>
-        <p>Give AI agents a durable, queryable local memory store backed by SQLite. All state changes are automatically replicated to a central database for observability, replayability, and multi-agent coordination.</p>
+        <p>Give agents durable, queryable SQLite memory. SyncLite automatically replicates state changes to a central database for observability, replay, and multi-agent coordination.</p>
       </div>
     </div>
   </div>
@@ -598,7 +598,7 @@
 <section id="code" class="code-section">
   <div class="tabs-wrap">
     <h2>Start Syncing in Minutes</h2>
-    <p class="sub">Native libraries for Rust, Python, Node.js, C++, and Android — plus the Java JDBC driver and a language-agnostic HTTP API. Pick your stack, SyncLite handles the rest.</p>
+    <p class="sub">SDKs for Rust, Python, Node.js, C++, and Android, plus Java/JDBC and a language-agnostic HTTP API. Choose your stack; SyncLite handles capture and sync.</p>
 
     <!-- Published packages: install from PyPI / crates.io / Maven Central, no build required -->
     <div class="install-strip">
@@ -1212,15 +1212,15 @@ props.<span class="fn">put</span>(<span class="str">"device-type"</span>, <span 
   <div class="section-inner">
     <div class="section-label">Platform Features</div>
     <h2>Everything You Need. Nothing You Don't.</h2>
-    <p class="section-desc">SyncLite is designed to disappear into your stack — minimal config, maximum reliability.</p>
+    <p class="section-desc">Minimal configuration. Reliable capture, delivery, and consolidation.</p>
     <div class="feat-grid">
       <div class="feat"><div class="feat-icon">🔁</div><div><h3>Exactly-Once Semantics</h3><p>Transactional log capture ensures every committed write is delivered exactly once to the destination — no duplicates, no gaps.</p></div></div>
-      <div class="feat"><div class="feat-icon">📶</div><div><h3>Offline Resilient</h3><p>Edge devices work fully offline. Log files accumulate locally and sync automatically when connectivity is restored.</p></div></div>
+      <div class="feat"><div class="feat-icon">📶</div><div><h3>Offline Resilient</h3><p>Edge devices work fully offline. Log files accumulate locally and sync automatically when connectivity returns.</p></div></div>
       <div class="feat"><div class="feat-icon">🔀</div><div><h3>Many-to-Many</h3><p>Thousands of edge devices consolidating into a single destination. One source fanning out to multiple destinations simultaneously.</p></div></div>
-      <div class="feat"><div class="feat-icon">🧬</div><div><h3>Schema Evolution</h3><p>Add a column on the edge and it appears in the destination automatically. No manual migration scripts.</p></div></div>
+      <div class="feat"><div class="feat-icon">🧬</div><div><h3>Schema Evolution</h3><p>Add a column on the edge and it appears in the destination automatically, without manual migration scripts.</p></div></div>
       <div class="feat"><div class="feat-icon">🔐</div><div><h3>Log Encryption</h3><p>Encrypt log files in transit with a public/private key pair. The destination only decrypts — the edge never holds the private key.</p></div></div>
-      <div class="feat"><div class="feat-icon">📊</div><div><h3>Live Dashboard</h3><p>Per-device replication lag, throughput metrics, and error tracking — all in the Consolidator web UI, updated in real time.</p></div></div>
-      <div class="feat"><div class="feat-icon">�️</div><div><h3>Rich Data Mapping &amp; Transformation</h3><p>Shape replication per destination: filter and rename tables &amp; columns, map data types (best-effort or exact), remap values, install replication triggers, choose write modes, and tune batch sizes — all with detailed throughput and statistics reporting.</p></div></div>
+      <div class="feat"><div class="feat-icon">📊</div><div><h3>Live Dashboard</h3><p>Track per-device replication lag, throughput, and errors in the Consolidator web UI, updated in real time.</p></div></div>
+      <div class="feat"><div class="feat-icon">🧩</div><div><h3>Rich Data Mapping &amp; Transformation</h3><p>Filter and rename tables or columns, map types (best-effort or exact) and values, install replication triggers, choose write modes, and tune batch sizes, with detailed throughput statistics.</p></div></div>
       <div class="feat"><div class="feat-icon">🚫</div><div><h3>No Vendor Lock-In</h3><p>Entirely open-source (Apache 2.0). Works with your existing stack. Swap staging or destination without touching application code.</p></div></div>
     </div>
   </div>
@@ -1233,7 +1233,7 @@ props.<span class="fn">put</span>(<span class="str">"device-type"</span>, <span 
   <div class="section-inner">
     <div class="section-label">Supported Destinations</div>
     <h2>Connect to Any System</h2>
-    <p class="section-desc">SyncLite Consolidator delivers to wherever your data needs to live.</p>
+    <p class="section-desc">SyncLite Consolidator delivers to the systems where your data needs to live.</p>
     <p style="font-size:.82rem;color:var(--muted);margin-bottom:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;">Relational</p>
     <div class="dest-grid" style="margin-bottom:1.5rem;">
       <span class="dest-tag">PostgreSQL</span><span class="dest-tag">MySQL</span><span class="dest-tag">Microsoft SQL Server</span>
@@ -1257,7 +1257,7 @@ props.<span class="fn">put</span>(<span class="str">"device-type"</span>, <span 
   <div class="section-inner">
     <div class="section-label">Components</div>
     <h2>A Complete Platform, Modular by Design</h2>
-    <p class="section-desc">Use only what you need. Every component is independently deployable.</p>
+    <p class="section-desc">Use only what you need. Deploy components independently or combine them in one workflow.</p>
     <div class="comp-table-wrap">
       <table>
         <thead>
@@ -1266,22 +1266,22 @@ props.<span class="fn">put</span>(<span class="str">"device-type"</span>, <span 
         <tbody>
           <tr>
             <td>SyncLite Logger</td>
-            <td>The embeddable runtime component for your app: local DB, write-ahead log, shipper, and optional in-process consolidator. It wraps SQLite, DuckDB, Derby, H2, or HyperSQL and handles local durability plus downstream sync.</td>
+            <td>Embeddable runtime that wraps SQLite, DuckDB, Derby, H2, or HyperSQL. It captures changes, writes and ships log segments, and can consolidate in-process.</td>
             <td><a href="https://github.com/syncliteio/synclite-logger-java">Java · Rust · Python</a></td>
           </tr>
           <tr>
             <td>SyncLite Consolidator</td>
-            <td>Standalone central consolidation service. It accepts log segments from many embedded devices and applies them to destinations, keeping the data path separate from the embedded runtime.</td>
+            <td>Accepts log segments from embedded devices and applies them to configured destinations.</td>
             <td><a href="https://github.com/syncliteio/synclite-consolidator">Java WAR</a></td>
           </tr>
           <tr>
             <td>SyncLite DBReader</td>
-            <td>Configurable ETL, replication, and migration jobs that move data from source databases into SyncLite devices and onward to destinations.</td>
+            <td>Runs configured ETL, replication, and migration jobs from source databases into SyncLite devices.</td>
             <td><a href="https://github.com/syncliteio/synclite-dbreader">Java WAR</a></td>
           </tr>
           <tr>
             <td>SyncLite QReader</td>
-            <td>MQTT and IoT connector that lands broker traffic into SyncLite devices for downstream replication and sync.</td>
+            <td>MQTT connector that writes broker traffic into SyncLite devices for downstream replication.</td>
             <td><a href="https://github.com/syncliteio/synclite-qreader">Java WAR</a></td>
           </tr>
           <tr>
@@ -1291,12 +1291,12 @@ props.<span class="fn">put</span>(<span class="str">"device-type"</span>, <span 
           </tr>
           <tr>
             <td>SyncLite Job Monitor</td>
-            <td>Unified operations dashboard for scheduling and monitoring Consolidator, DBReader, and QReader jobs from a single web UI.</td>
+            <td>Web UI for scheduling and monitoring Consolidator, DBReader, and QReader jobs.</td>
             <td><a href="https://github.com/syncliteio/synclite-job-monitor">Java WAR</a></td>
           </tr>
           <tr>
             <td>SyncLite DB</td>
-            <td>Local-first, sync-enabled database server that exposes the runtime over HTTP/JSON. Use it when you want the runtime available from a language that does not yet embed the native library, or when multiple processes share one device.</td>
+            <td>Exposes the local database runtime over HTTP/JSON for clients that cannot embed the native library or need to share a device across processes.</td>
             <td><a href="https://github.com/syncliteio/synclite-db">Any (HTTP)</a></td>
           </tr>
         </tbody>
@@ -1310,36 +1310,36 @@ props.<span class="fn">put</span>(<span class="str">"device-type"</span>, <span 
   <div class="section-inner">
     <div class="section-label">Get In Touch</div>
     <h2>Contact</h2>
-    <p class="section-desc">Questions, feedback, or just want to say hi? Here's where to find us.</p>
+    <p class="section-desc">For setup questions, feedback, or contributions, contact us here.</p>
     <div class="contact-grid">
       <div class="contact-card">
         <div class="cc-icon">✉️</div>
         <div class="cc-title">Support Email</div>
-        <div class="cc-detail">Need help with setup, configuration, or production use?</div>
+        <div class="cc-detail">Get help with setup, configuration, or production use.</div>
         <a href="mailto:support@synclite.io">support@synclite.io</a>
       </div>
       <div class="contact-card">
         <div class="cc-icon">🐙</div>
         <div class="cc-title">GitHub Issues</div>
-        <div class="cc-detail">Found a bug or have a feature request? Open an issue on GitHub.</div>
+        <div class="cc-detail">Report a bug or request a feature on GitHub.</div>
         <a href="https://github.com/syncliteio/SyncLite/issues" target="_blank">Open an Issue →</a>
       </div>
       <div class="contact-card">
         <div class="cc-icon">📖</div>
         <div class="cc-title">Documentation</div>
-        <div class="cc-detail">Full platform docs, quickstarts, config reference, and API guides.</div>
+        <div class="cc-detail">Find quickstarts, configuration reference, and API guides.</div>
         <a href="https://github.com/syncliteio/SyncLite/blob/main/DOCUMENTATION.md" target="_blank">Read the Docs →</a>
       </div>
       <div class="contact-card">
         <div class="cc-icon">🤝</div>
         <div class="cc-title">Contribute</div>
-        <div class="cc-detail">PRs welcome. Read the contributing guide before opening a pull request.</div>
+        <div class="cc-detail">Read the contributing guide before opening a pull request.</div>
         <a href="https://github.com/syncliteio/SyncLite/blob/main/CONTRIBUTING.md" target="_blank">Contributing Guide →</a>
       </div>
       <div class="contact-card">
         <div class="cc-icon">ℹ️</div>
         <div class="cc-title">About SyncLite</div>
-        <div class="cc-detail">Mission, patent info, author background, and the story behind the platform.</div>
+        <div class="cc-detail">Learn about SyncLite's mission, background, and patent.</div>
         <a href="about.html">Read About Page →</a>
       </div>
     </div>
@@ -1351,7 +1351,7 @@ props.<span class="fn">put</span>(<span class="str">"device-type"</span>, <span 
 <!-- ═════════════════════════  CTA BANNER  ═══════════════════════ -->
 <div class="cta-banner">
   <h2>Ship Your First Sync in Under 5 Minutes</h2>
-  <p>One command deploys Tomcat, downloads OpenJDK 25, and starts all SyncLite apps. No cloud account. No signup. Fully local.</p>
+  <p>One command deploys Tomcat, downloads OpenJDK 25, and starts SyncLite locally. No cloud account or signup required.</p>
   <div class="cta-actions">
     <a class="btn btn-primary btn-lg" href="https://github.com/syncliteio/SyncLite/blob/main/DOCUMENTATION.md" target="_blank">Read the Docs →</a>
     <a class="btn btn-outline btn-lg" href="https://github.com/syncliteio/SyncLite" target="_blank">★ Star on GitHub</a>
